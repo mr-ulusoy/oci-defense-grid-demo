@@ -1,3 +1,5 @@
+<img width="484" height="745" alt="image" src="https://github.com/user-attachments/assets/634f786e-6ec2-4137-911f-7965187b02c3" />
+
 # OCI Defense Grid Demo
 
 OCI Defense Grid is a V1 customer-demo remix of a Phaser space shooter. The player defends an Oracle Cloud region while the app shows live cloud telemetry: Compute VMs, Load Balancer, API Gateway, Streaming, Autonomous Database, Object Storage, Analytics and an AI copilot.
