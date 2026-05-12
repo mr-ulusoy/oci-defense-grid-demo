@@ -22,6 +22,8 @@ const elements = {
   gateway: document.getElementById("hudGateway"),
   loadBalancer: document.getElementById("hudLoadBalancer"),
   vm: document.getElementById("hudVm"),
+  vmCount: document.getElementById("hudVmCount"),
+  vmList: document.getElementById("hudVmList"),
   cores: document.getElementById("hudCores"),
   cpu: document.getElementById("hudCpu"),
   ram: document.getElementById("hudRam"),
@@ -32,6 +34,9 @@ const elements = {
   askCopilot: document.getElementById("askCopilot"),
   refreshLeaderboard: document.getElementById("refreshLeaderboard")
 };
+
+const observedVms = new Map();
+let activeVmKey = null;
 
 function setConnection(offline) {
   if (!elements.connectionStatus) return;
@@ -44,7 +49,8 @@ function renderStatus(status) {
 
   elements.gateway.textContent = status.gateway ?? "public";
   elements.loadBalancer.textContent = status.loadBalancer ?? "healthy";
-  elements.vm.textContent = status.vm?.name ?? "unknown";
+  updateObservedVms(status.vm);
+  renderVmFleet();
 
   const metrics = status.vm?.metrics;
   elements.cores.textContent = metrics?.cpuCores == null ? "--" : String(metrics.cpuCores);
@@ -56,6 +62,80 @@ function renderStatus(status) {
   elements.disk.textContent = diskIo
     ? `${formatThroughput(diskIo.readKbps)}/${formatThroughput(diskIo.writeKbps)}`
     : "--";
+}
+
+function updateObservedVms(vm) {
+  const name = vm?.name ?? "unknown";
+  const key = vm?.id && vm.id !== "local-instance" ? vm.id : name;
+  activeVmKey = key;
+
+  const previous = observedVms.get(key);
+  observedVms.set(key, {
+    id: key,
+    name,
+    availabilityDomain: vm?.availabilityDomain ?? previous?.availabilityDomain ?? "--",
+    region: vm?.region ?? previous?.region ?? "--",
+    metrics: vm?.metrics ?? previous?.metrics ?? {},
+    firstSeen: previous?.firstSeen ?? Date.now(),
+    lastSeen: Date.now()
+  });
+}
+
+function renderVmFleet() {
+  const vms = [...observedVms.values()].sort((left, right) => {
+    if (left.id === activeVmKey) return -1;
+    if (right.id === activeVmKey) return 1;
+    return left.name.localeCompare(right.name);
+  });
+
+  const activeVm = vms.find((vm) => vm.id === activeVmKey);
+  elements.vm.textContent = activeVm ? `Active: ${activeVm.name}` : "Active: unknown";
+  elements.vmCount.textContent = String(vms.length);
+  elements.vmList.innerHTML = "";
+
+  for (const vm of vms) {
+    const item = document.createElement("li");
+    item.className = vm.id === activeVmKey ? "is-active" : "";
+
+    const header = document.createElement("div");
+    header.className = "vm-list-header";
+
+    const name = document.createElement("strong");
+    name.textContent = vm.name;
+
+    const status = document.createElement("span");
+    status.textContent = vm.id === activeVmKey ? "routing now" : `${secondsSince(vm.lastSeen)}s ago`;
+
+    header.append(name, status);
+
+    const metrics = document.createElement("div");
+    metrics.className = "vm-list-metrics";
+    metrics.textContent = [
+      `CPU ${formatPercent(vm.metrics?.cpuPercent)}`,
+      `RAM ${formatPercent(vm.metrics?.ramPercent)}`,
+      `${vm.metrics?.cpuCores ?? "--"} cores`,
+      `I/O ${formatDiskIo(vm.metrics?.diskIo)}`
+    ].join(" | ");
+
+    item.append(header, metrics);
+    elements.vmList.appendChild(item);
+  }
+}
+
+function secondsSince(timestamp) {
+  return Math.max(0, Math.round((Date.now() - timestamp) / 1000));
+}
+
+function formatPercent(value) {
+  return value == null ? "--%" : `${value}%`;
+}
+
+function formatDiskIo(diskIo) {
+  if (!diskIo) {
+    return "--";
+  }
+
+  return `${formatThroughput(diskIo.readKbps)}/${formatThroughput(diskIo.writeKbps)}`;
 }
 
 function formatThroughput(kbps) {
