@@ -12,6 +12,11 @@ The game can run locally with offline fallbacks, then be deployed to OCI with Te
 - Player view: `http://localhost:5173/` locally, or `http://<web-lb-ip>/` on OCI.
 - Presenter/ops view: add `?ops=1`, for example `http://<web-lb-ip>/?ops=1`.
 
+Current demo endpoints:
+
+- Player URL: `http://207.127.95.12/`
+- Presenter/ops URL: `http://207.127.95.12/?ops=1`
+
 The player view keeps the game clean for public visitors. The ops view adds the Cloud Ops HUD with active VM, CPU, RAM, cores, disk throughput, LB/API status, latency, events/sec and AI insight.
 
 ## Local Run
@@ -103,10 +108,23 @@ Telemetry events use this envelope:
 ## OCI Deploy
 
 1. Push this repo to a Git remote that the OCI VMs can clone.
-2. Copy `infra/terraform/terraform.tfvars.example` to a real `.tfvars` file.
+2. Create `infra/terraform/demo.tfvars` from the sanitized example.
 3. Fill in tenancy, compartment, region, SSH key, Ubuntu image OCID and `app_repo_url`.
 4. Keep `instance_pool_min_size = 2`, `instance_pool_initial_size = 2`, `instance_pool_max_size = 4` for the default autoscaling demo.
 5. Run:
+
+```bash
+cp infra/terraform/terraform.tfvars.example infra/terraform/demo.tfvars
+```
+
+Use the local working `demo.tfvars` as the reference for real values, but do not copy secrets into GitHub. Keep these values local only:
+
+- `oci_genai_bearer_token`
+- `adb_admin_password`
+- private SSH keys in `infra/terraform/.keys/`
+- Terraform state and plan files
+
+`demo.tfvars` is intentionally ignored by Git. The checked-in `terraform.tfvars.example` should stay sanitized so others can copy it safely.
 
 ```bash
 terraform -chdir=infra/terraform init
