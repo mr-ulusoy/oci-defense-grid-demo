@@ -1,0 +1,507 @@
+data "oci_identity_availability_domains" "ads" {
+  compartment_id = var.tenancy_ocid
+}
+
+data "oci_objectstorage_namespace" "namespace" {
+  compartment_id = var.compartment_ocid
+}
+
+resource "random_id" "suffix" {
+  byte_length = 3
+}
+
+locals {
+  name_prefix  = "${var.project_name}-${random_id.suffix.hex}"
+  vcn_cidr     = "10.42.0.0/16"
+  public_cidr  = "10.42.10.0/24"
+  private_cidr = "10.42.20.0/24"
+  api_base_url = var.public_api_base_url != "" ? trimsuffix(var.public_api_base_url, "/") : "https://${oci_apigateway_gateway.demo.hostname}/api"
+  api_lb_ip    = oci_load_balancer_load_balancer.api.ip_address_details[0].ip_address
+  app_user_data = base64encode(templatefile("${path.module}/templates/cloud-init.yaml.tftpl", {
+    app_repo_url       = var.app_repo_url
+    app_git_ref        = var.app_git_ref
+    api_base_url       = local.api_base_url
+    api_gateway_name   = oci_apigateway_gateway.demo.display_name
+    load_balancer_name = oci_load_balancer_load_balancer.web.display_name
+    stream_ocid        = oci_streaming_stream.events.id
+    stream_endpoint    = oci_streaming_stream.events.messages_endpoint
+    bucket_name        = oci_objectstorage_bucket.raw_events.name
+    namespace          = data.oci_objectstorage_namespace.namespace.namespace
+    region             = var.region
+  }))
+}
+
+resource "oci_core_vcn" "demo" {
+  cidr_block     = local.vcn_cidr
+  compartment_id = var.compartment_ocid
+  display_name   = "${local.name_prefix}-vcn"
+  dns_label      = "ocidefense"
+}
+
+resource "oci_core_internet_gateway" "demo" {
+  compartment_id = var.compartment_ocid
+  display_name   = "${local.name_prefix}-igw"
+  vcn_id         = oci_core_vcn.demo.id
+}
+
+resource "oci_core_nat_gateway" "demo" {
+  compartment_id = var.compartment_ocid
+  display_name   = "${local.name_prefix}-nat"
+  vcn_id         = oci_core_vcn.demo.id
+}
+
+resource "oci_core_route_table" "public" {
+  compartment_id = var.compartment_ocid
+  display_name   = "${local.name_prefix}-public-rt"
+  vcn_id         = oci_core_vcn.demo.id
+
+  route_rules {
+    network_entity_id = oci_core_internet_gateway.demo.id
+    destination       = "0.0.0.0/0"
+  }
+}
+
+resource "oci_core_route_table" "private" {
+  compartment_id = var.compartment_ocid
+  display_name   = "${local.name_prefix}-private-rt"
+  vcn_id         = oci_core_vcn.demo.id
+
+  route_rules {
+    network_entity_id = oci_core_nat_gateway.demo.id
+    destination       = "0.0.0.0/0"
+  }
+}
+
+resource "oci_core_security_list" "public_lb" {
+  compartment_id = var.compartment_ocid
+  display_name   = "${local.name_prefix}-public-lb-sl"
+  vcn_id         = oci_core_vcn.demo.id
+
+  ingress_security_rules {
+    protocol = "6"
+    source   = "0.0.0.0/0"
+    tcp_options {
+      min = 80
+      max = 80
+    }
+  }
+
+  ingress_security_rules {
+    protocol = "6"
+    source   = "0.0.0.0/0"
+    tcp_options {
+      min = 443
+      max = 443
+    }
+  }
+
+  egress_security_rules {
+    protocol    = "all"
+    destination = "0.0.0.0/0"
+  }
+}
+
+resource "oci_core_security_list" "private_app" {
+  compartment_id = var.compartment_ocid
+  display_name   = "${local.name_prefix}-private-app-sl"
+  vcn_id         = oci_core_vcn.demo.id
+
+  ingress_security_rules {
+    protocol = "6"
+    source   = local.public_cidr
+    tcp_options {
+      min = 80
+      max = 80
+    }
+  }
+
+  ingress_security_rules {
+    protocol = "6"
+    source   = local.public_cidr
+    tcp_options {
+      min = 3000
+      max = 3000
+    }
+  }
+
+  ingress_security_rules {
+    protocol = "6"
+    source   = local.private_cidr
+    tcp_options {
+      min = 3000
+      max = 3000
+    }
+  }
+
+  egress_security_rules {
+    protocol    = "all"
+    destination = "0.0.0.0/0"
+  }
+}
+
+resource "oci_core_subnet" "public" {
+  cidr_block                 = local.public_cidr
+  compartment_id             = var.compartment_ocid
+  display_name               = "${local.name_prefix}-public"
+  dns_label                  = "public"
+  prohibit_public_ip_on_vnic = false
+  route_table_id             = oci_core_route_table.public.id
+  security_list_ids          = [oci_core_security_list.public_lb.id]
+  vcn_id                     = oci_core_vcn.demo.id
+}
+
+resource "oci_core_subnet" "private" {
+  cidr_block                 = local.private_cidr
+  compartment_id             = var.compartment_ocid
+  display_name               = "${local.name_prefix}-private"
+  dns_label                  = "private"
+  prohibit_public_ip_on_vnic = true
+  route_table_id             = oci_core_route_table.private.id
+  security_list_ids          = [oci_core_security_list.private_app.id]
+  vcn_id                     = oci_core_vcn.demo.id
+}
+
+resource "oci_load_balancer_load_balancer" "web" {
+  compartment_id = var.compartment_ocid
+  display_name   = "${local.name_prefix}-web-lb"
+  shape          = "flexible"
+  subnet_ids     = [oci_core_subnet.public.id]
+
+  shape_details {
+    minimum_bandwidth_in_mbps = 10
+    maximum_bandwidth_in_mbps = 10
+  }
+}
+
+resource "oci_load_balancer_load_balancer" "api" {
+  compartment_id = var.compartment_ocid
+  display_name   = "${local.name_prefix}-api-lb"
+  is_private     = true
+  shape          = "flexible"
+  subnet_ids     = [oci_core_subnet.private.id]
+
+  shape_details {
+    minimum_bandwidth_in_mbps = 10
+    maximum_bandwidth_in_mbps = 10
+  }
+}
+
+resource "oci_core_instance_configuration" "app" {
+  compartment_id = var.compartment_ocid
+  display_name   = "${local.name_prefix}-app-config"
+
+  instance_details {
+    instance_type = "compute"
+
+    launch_details {
+      compartment_id = var.compartment_ocid
+      display_name   = "${local.name_prefix}-vm"
+      shape          = var.instance_shape
+
+      create_vnic_details {
+        assign_public_ip = false
+        display_name     = "${local.name_prefix}-app-vnic"
+        subnet_id        = oci_core_subnet.private.id
+      }
+
+      metadata = {
+        ssh_authorized_keys = var.ssh_public_key
+        user_data           = local.app_user_data
+      }
+
+      shape_config {
+        memory_in_gbs = var.instance_memory_gbs
+        ocpus         = var.instance_ocpus
+      }
+
+      source_details {
+        image_id    = var.instance_image_ocid
+        source_type = "image"
+      }
+    }
+  }
+}
+
+resource "oci_load_balancer_backend_set" "web" {
+  load_balancer_id = oci_load_balancer_load_balancer.web.id
+  name             = "web-backends"
+  policy           = "ROUND_ROBIN"
+
+  health_checker {
+    protocol = "HTTP"
+    port     = 80
+    url_path = "/"
+  }
+}
+
+resource "oci_load_balancer_listener" "web" {
+  default_backend_set_name = oci_load_balancer_backend_set.web.name
+  load_balancer_id         = oci_load_balancer_load_balancer.web.id
+  name                     = "http"
+  port                     = 80
+  protocol                 = "HTTP"
+}
+
+resource "oci_load_balancer_backend_set" "api" {
+  load_balancer_id = oci_load_balancer_load_balancer.api.id
+  name             = "api-backends"
+  policy           = "ROUND_ROBIN"
+
+  health_checker {
+    protocol = "HTTP"
+    port     = 3000
+    url_path = "/healthz"
+  }
+}
+
+resource "oci_core_instance_pool" "app" {
+  compartment_id              = var.compartment_ocid
+  display_name                = "${local.name_prefix}-app-pool"
+  instance_configuration_id   = oci_core_instance_configuration.app.id
+  instance_hostname_formatter = "ocidefense-${random_id.suffix.hex}-$${launchCount}"
+  size                        = var.instance_pool_initial_size
+
+  dynamic "placement_configurations" {
+    for_each = data.oci_identity_availability_domains.ads.availability_domains
+
+    content {
+      availability_domain = placement_configurations.value.name
+
+      primary_vnic_subnets {
+        subnet_id = oci_core_subnet.private.id
+      }
+    }
+  }
+
+  load_balancers {
+    backend_set_name = oci_load_balancer_backend_set.web.name
+    load_balancer_id = oci_load_balancer_load_balancer.web.id
+    port             = 80
+    vnic_selection   = "PrimaryVnic"
+  }
+
+  load_balancers {
+    backend_set_name = oci_load_balancer_backend_set.api.name
+    load_balancer_id = oci_load_balancer_load_balancer.api.id
+    port             = 3000
+    vnic_selection   = "PrimaryVnic"
+  }
+}
+
+resource "oci_load_balancer_listener" "api" {
+  default_backend_set_name = oci_load_balancer_backend_set.api.name
+  load_balancer_id         = oci_load_balancer_load_balancer.api.id
+  name                     = "api"
+  port                     = 3000
+  protocol                 = "HTTP"
+}
+
+resource "oci_autoscaling_auto_scaling_configuration" "app" {
+  compartment_id       = var.compartment_ocid
+  cool_down_in_seconds = var.autoscaling_cooldown_seconds
+  display_name         = "${local.name_prefix}-autoscaling"
+  is_enabled           = var.enable_autoscaling
+
+  auto_scaling_resources {
+    id   = oci_core_instance_pool.app.id
+    type = "instancePool"
+  }
+
+  policies {
+    display_name = "${local.name_prefix}-cpu-policy"
+    is_enabled   = var.enable_autoscaling
+    policy_type  = "threshold"
+
+    capacity {
+      initial = var.instance_pool_initial_size
+      max     = var.instance_pool_max_size
+      min     = var.instance_pool_min_size
+    }
+
+    rules {
+      display_name = "scale-out-cpu"
+
+      action {
+        type  = "CHANGE_COUNT_BY"
+        value = 1
+      }
+
+      metric {
+        metric_type = "CPU_UTILIZATION"
+
+        threshold {
+          operator = "GT"
+          value    = var.autoscaling_cpu_scale_out_threshold
+        }
+      }
+    }
+
+    rules {
+      display_name = "scale-in-cpu"
+
+      action {
+        type  = "CHANGE_COUNT_BY"
+        value = -1
+      }
+
+      metric {
+        metric_type = "CPU_UTILIZATION"
+
+        threshold {
+          operator = "LT"
+          value    = var.autoscaling_cpu_scale_in_threshold
+        }
+      }
+    }
+  }
+}
+
+resource "oci_apigateway_gateway" "demo" {
+  compartment_id = var.compartment_ocid
+  display_name   = "${local.name_prefix}-gateway"
+  endpoint_type  = "PUBLIC"
+  subnet_id      = oci_core_subnet.public.id
+}
+
+resource "oci_apigateway_deployment" "demo" {
+  compartment_id = var.compartment_ocid
+  display_name   = "${local.name_prefix}-api"
+  gateway_id     = oci_apigateway_gateway.demo.id
+  path_prefix    = "/"
+
+  specification {
+    request_policies {
+      cors {
+        allowed_headers    = ["Content-Type", "Authorization"]
+        allowed_methods    = ["GET", "POST", "OPTIONS"]
+        allowed_origins    = ["*"]
+        exposed_headers    = ["opc-request-id"]
+        max_age_in_seconds = 600
+      }
+    }
+
+    routes {
+      path    = "/api/status"
+      methods = ["GET"]
+      backend {
+        type = "HTTP_BACKEND"
+        url  = "http://${local.api_lb_ip}:3000/api/status"
+      }
+    }
+
+    routes {
+      path    = "/api/events"
+      methods = ["POST", "OPTIONS"]
+      backend {
+        type = "HTTP_BACKEND"
+        url  = "http://${local.api_lb_ip}:3000/api/events"
+      }
+    }
+
+    routes {
+      path    = "/api/leaderboard"
+      methods = ["GET"]
+      backend {
+        type = "HTTP_BACKEND"
+        url  = "http://${local.api_lb_ip}:3000/api/leaderboard"
+      }
+    }
+
+    routes {
+      path    = "/api/analytics/live"
+      methods = ["GET"]
+      backend {
+        type = "HTTP_BACKEND"
+        url  = "http://${local.api_lb_ip}:3000/api/analytics/live"
+      }
+    }
+
+    routes {
+      path    = "/api/copilot"
+      methods = ["POST", "OPTIONS"]
+      backend {
+        type = "HTTP_BACKEND"
+        url  = "http://${local.api_lb_ip}:3000/api/copilot"
+      }
+    }
+  }
+}
+
+resource "oci_streaming_stream_pool" "demo" {
+  compartment_id = var.compartment_ocid
+  name           = "${local.name_prefix}-stream-pool"
+}
+
+resource "oci_streaming_stream" "events" {
+  compartment_id     = var.compartment_ocid
+  name               = "${local.name_prefix}-events"
+  partitions         = 1
+  retention_in_hours = 24
+  stream_pool_id     = oci_streaming_stream_pool.demo.id
+}
+
+resource "oci_objectstorage_bucket" "raw_events" {
+  compartment_id = var.compartment_ocid
+  name           = "${local.name_prefix}-raw-events"
+  namespace      = data.oci_objectstorage_namespace.namespace.namespace
+  access_type    = "NoPublicAccess"
+}
+
+resource "oci_database_autonomous_database" "demo" {
+  admin_password           = var.adb_admin_password
+  compartment_id           = var.compartment_ocid
+  cpu_core_count           = 1
+  data_storage_size_in_tbs = 1
+  db_name                  = replace(substr(local.name_prefix, 0, 14), "-", "")
+  db_workload              = "AJD"
+  display_name             = "${local.name_prefix}-adb"
+  is_free_tier             = var.adb_is_free_tier
+}
+
+resource "oci_functions_application" "demo" {
+  compartment_id = var.compartment_ocid
+  display_name   = "${local.name_prefix}-fn-app"
+  subnet_ids     = [oci_core_subnet.private.id]
+}
+
+resource "oci_functions_function" "optional_ingest" {
+  count          = var.function_image == "" ? 0 : 1
+  application_id = oci_functions_application.demo.id
+  display_name   = "${local.name_prefix}-event-ingest"
+  image          = var.function_image
+  memory_in_mbs  = 256
+}
+
+resource "oci_analytics_analytics_instance" "demo" {
+  count             = var.create_analytics_instance ? 1 : 0
+  compartment_id    = var.compartment_ocid
+  description       = "OCI Defense Grid demo analytics workspace."
+  feature_set       = "ENTERPRISE_ANALYTICS"
+  idcs_access_token = var.analytics_idcs_access_token
+  license_type      = "LICENSE_INCLUDED"
+  name              = replace(local.name_prefix, "-", "")
+
+  capacity {
+    capacity_type  = "OLPU_COUNT"
+    capacity_value = 1
+  }
+}
+
+resource "oci_identity_dynamic_group" "app_instances" {
+  count          = var.create_instance_principal_policy ? 1 : 0
+  compartment_id = var.tenancy_ocid
+  description    = "OCI Defense Grid app VMs."
+  matching_rule  = "All {instance.compartment.id = '${var.compartment_ocid}'}"
+  name           = replace("${local.name_prefix}-instances", "-", "_")
+}
+
+resource "oci_identity_policy" "app_instances" {
+  count          = var.create_instance_principal_policy ? 1 : 0
+  compartment_id = var.tenancy_ocid
+  description    = "Allow OCI Defense Grid app instances to publish telemetry."
+  name           = replace("${local.name_prefix}-policy", "-", "_")
+  statements = [
+    "Allow dynamic-group ${oci_identity_dynamic_group.app_instances[0].name} to use stream-push in compartment id ${var.compartment_ocid}",
+    "Allow dynamic-group ${oci_identity_dynamic_group.app_instances[0].name} to manage objects in compartment id ${var.compartment_ocid} where target.bucket.name='${oci_objectstorage_bucket.raw_events.name}'"
+  ]
+}

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OCI Defense Grid</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell" id="appShell">
+      <section class="game-stage" aria-label="OCI Defense Grid game">
+        <div class="top-strip">
+          <div>
+            <span class="eyebrow">Oracle Cloud live demo</span>
+            <h1>OCI Defense Grid</h1>
+          </div>
+          <div class="status-pill" id="connectionStatus">Initializing</div>
+        </div>
+        <div class="pilot-bar" aria-label="Pilot setup">
+          <label for="pilotCallsign">Pilot callsign</label>
+          <input
+            id="pilotCallsign"
+            maxlength="14"
+            autocomplete="nickname"
+            placeholder="ENTER NAME"
+            type="text"
+          />
+          <button type="button" id="startMission">Start</button>
+        </div>
+        <div id="gameRoot" class="game-root"></div>
+      </section>
+
+      <aside class="ops-panel" id="opsPanel" aria-label="Cloud operations dashboard" hidden>
+        <header class="panel-header">
+          <span class="eyebrow">Cloud Ops HUD</span>
+          <h2>Region Defense</h2>
+        </header>
+
+        <section class="metric-grid">
+          <article class="metric">
+            <span>Score</span>
+            <strong id="hudScore">0</strong>
+          </article>
+          <article class="metric">
+            <span>Level</span>
+            <strong id="hudLevel">1</strong>
+          </article>
+          <article class="metric">
+            <span>Latency</span>
+            <strong id="hudLatency">-- ms</strong>
+          </article>
+          <article class="metric">
+            <span>Events/sec</span>
+            <strong id="hudEvents">0.0</strong>
+          </article>
+        </section>
+
+        <section class="cloud-map">
+          <div class="cloud-node active">
+            <span>API Gateway</span>
+            <strong id="hudGateway">public</strong>
+          </div>
+          <div class="cloud-link"></div>
+          <div class="cloud-node">
+            <span>Load Balancer</span>
+            <strong id="hudLoadBalancer">healthy</strong>
+          </div>
+          <div class="cloud-link"></div>
+          <div class="cloud-node vm-node">
+            <div class="vm-heading">
+              <span>Active VM</span>
+              <strong id="hudVm">local-demo</strong>
+            </div>
+            <div class="vm-metrics" aria-label="Active VM metrics">
+              <div><span>Cores</span><strong id="hudCores">--</strong></div>
+              <div><span>CPU</span><strong id="hudCpu">--%</strong></div>
+              <div><span>RAM</span><strong id="hudRam">--%</strong></div>
+              <div><span id="hudDiskLabel">Disk</span><strong id="hudDisk">--</strong></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="insight-box">
+          <div class="section-title">
+            <span>OCI Generative AI</span>
+            <button type="button" id="askCopilot" title="Ask copilot">Ask</button>
+          </div>
+          <p id="hudInsight">Waiting for live telemetry.</p>
+        </section>
+
+        <section class="leaderboard">
+          <div class="section-title">
+            <span>Leaderboard</span>
+            <button type="button" id="refreshLeaderboard" title="Refresh leaderboard">Refresh</button>
+          </div>
+          <ol id="leaderboardList"></ol>
+        </section>
+      </aside>
+    </main>
+
+    <script type="module" src="/config.js"></script>
+    <script>
+      window.OCI_DEFENSE_CONFIG = {
+        ...(window.OCI_DEFENSE_CONFIG ?? {}),
+        apiBase: "/api",
+        telemetryIntervalMs: 1400,
+        copilotIntervalMs: 12000,
+        ...(window.OCI_DEFENSE_CONFIG ?? {})
+      };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,37 @@
+{
+  "name": "oci-defense-grid-demo",
+  "version": "1.0.0",
+  "description": "OCI Defense Grid: a Phaser space-shooter demo for Oracle Cloud Infrastructure services.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "dev:api": "node server/index.js",
+    "build": "vite build",
+    "start": "node server/index.js",
+    "test": "node --test",
+    "lint": "eslint .",
+    "terraform:fmt": "terraform -chdir=infra/terraform fmt",
+    "terraform:validate": "terraform -chdir=infra/terraform validate"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "morgan": "^1.10.0",
+    "oci-common": "^2.131.1",
+    "oci-objectstorage": "^2.131.1",
+    "oci-streaming": "^2.131.1",
+    "oracledb": "^6.7.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "vite": "^6.0.5"
+  },
+  "overrides": {
+    "oci-common": {
+      "uuid": "11.1.1"
+    }
+  }
+}

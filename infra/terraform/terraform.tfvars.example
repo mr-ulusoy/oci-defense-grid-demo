@@ -1,0 +1,22 @@
+tenancy_ocid     = "ocid1.tenancy.oc1..replace"
+compartment_ocid = "ocid1.compartment.oc1..replace"
+region           = "eu-stockholm-1"
+
+ssh_public_key      = "ssh-rsa AAAA..."
+instance_image_ocid = "ocid1.image.oc1.eu-stockholm-1.replace"
+
+app_repo_url = "https://github.com/your-org/oci-defense-grid-demo.git"
+app_git_ref  = "main"
+
+instance_pool_min_size     = 2
+instance_pool_initial_size = 2
+instance_pool_max_size     = 4
+enable_autoscaling         = true
+
+adb_admin_password = "ReplaceWith_StrongPassword_123"
+adb_is_free_tier   = true
+
+create_analytics_instance        = false
+analytics_idcs_access_token      = null
+create_instance_principal_policy = false
+function_image                   = ""

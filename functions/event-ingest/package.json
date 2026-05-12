@@ -1,0 +1,8 @@
+{
+  "name": "oci-defense-grid-event-ingest",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@fnproject/fdk": "^0.0.22"
+  }
+}

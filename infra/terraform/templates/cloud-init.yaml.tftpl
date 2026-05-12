@@ -1,0 +1,73 @@
+#cloud-config
+package_update: true
+packages:
+  - git
+  - nginx
+  - nodejs
+  - npm
+
+write_files:
+  - path: /tmp/oci-defense-config.js
+    permissions: "0644"
+    content: |
+      window.OCI_DEFENSE_CONFIG = {
+        apiBase: "${api_base_url}",
+        telemetryIntervalMs: 1400,
+        copilotIntervalMs: 12000
+      };
+  - path: /etc/systemd/system/oci-defense-api.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=OCI Defense Grid API
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=simple
+      WorkingDirectory=/opt/oci-defense-grid
+      ExecStart=/usr/bin/node server/index.js
+      Restart=always
+      RestartSec=5
+      Environment=NODE_ENV=production
+      Environment=PORT=3000
+      Environment=API_GATEWAY_NAME=${api_gateway_name}
+      Environment=LOAD_BALANCER_NAME=${load_balancer_name}
+      Environment=OCI_STREAM_OCID=${stream_ocid}
+      Environment=OCI_STREAM_MESSAGE_ENDPOINT=${stream_endpoint}
+      Environment=OCI_BUCKET_NAME=${bucket_name}
+      Environment=OCI_NAMESPACE=${namespace}
+      Environment=OCI_REGION=${region}
+
+      [Install]
+      WantedBy=multi-user.target
+  - path: /etc/nginx/conf.d/oci-defense-grid.conf
+    permissions: "0644"
+    content: |
+      server {
+        listen 80;
+        server_name _;
+        root /opt/oci-defense-grid;
+        index index.html;
+
+        location / {
+          try_files $uri $uri/ /index.html;
+        }
+
+        location /api/ {
+          proxy_pass http://127.0.0.1:3000;
+          proxy_http_version 1.1;
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+        }
+      }
+
+runcmd:
+  - rm -rf /opt/oci-defense-grid
+  - git clone --depth 1 --branch ${app_git_ref} ${app_repo_url} /opt/oci-defense-grid
+  - cp /tmp/oci-defense-config.js /opt/oci-defense-grid/config.js
+  - cd /opt/oci-defense-grid && npm install --omit=dev
+  - systemctl daemon-reload
+  - systemctl enable --now oci-defense-api
+  - systemctl enable --now nginx
