@@ -2,9 +2,16 @@
 
 # OCI Defense Grid Demo
 
-OCI Defense Grid is a V1 customer-demo remix of a Phaser space shooter. The player defends an Oracle Cloud region while the app shows live cloud telemetry: Compute VMs, Load Balancer, API Gateway, Streaming, Autonomous Database, Object Storage, Analytics and an AI copilot.
+OCI Defense Grid is a V1 customer-demo remix of a Phaser space shooter. The player defends an Oracle Cloud region while the demo shows live cloud telemetry: Compute VMs, Load Balancer, API Gateway, Streaming, Autonomous Database, Object Storage, Oracle Analytics Cloud and an OCI Generative AI copilot.
 
 The game can run locally with offline fallbacks, then be deployed to OCI with Terraform.
+
+## Demo Views
+
+- Player view: `http://localhost:5173/` locally, or `http://<web-lb-ip>/` on OCI.
+- Presenter/ops view: add `?ops=1`, for example `http://<web-lb-ip>/?ops=1`.
+
+The player view keeps the game clean for public visitors. The ops view adds the Cloud Ops HUD with active VM, CPU, RAM, cores, disk throughput, LB/API status, latency, events/sec and AI insight.
 
 ## Local Run
 
@@ -38,13 +45,32 @@ Game API calls
            -> OCI Streaming
            -> Autonomous Database
            -> Object Storage raw event archive
-           -> OCI Generative AI hook or deterministic fallback
+           -> OCI Generative AI Gemini copilot or deterministic fallback
 ```
 
 Redis/OCI Cache is intentionally outside V1.
 
 The Compute layer uses an OCI instance pool with autoscaling. Defaults are two always-on
 instances for HA, with CPU-based scale-out up to four instances for the live demo.
+
+See the full wireframe in [docs/oci-defense-grid-wireframe.md](docs/oci-defense-grid-wireframe.md).
+
+## OCI Services
+
+| OCI service | How it is used |
+| --- | --- |
+| Compute Instance Pool | Runs the Phaser static game through Nginx and the Node/Express API on each VM. |
+| Public Load Balancer | Public entrypoint for the game and health-checked VM failover. |
+| API Gateway | Fronts all `/api/*` calls for routing, CORS and enterprise API control. |
+| Private Load Balancer | Routes API Gateway traffic to the VM-backed Express API. |
+| Autoscaling | Scales the instance pool from 2 to 4 VMs based on CPU. |
+| Streaming | Receives gameplay telemetry events. |
+| Object Storage | Archives raw events as NDJSON for replay, audit and later pipelines. |
+| Autonomous Database | Stores curated `game_events` rows for SQL analytics and dashboards. |
+| Oracle Analytics Cloud | Optional dashboard layer on top of ADB. |
+| OCI Generative AI | Gemini copilot insight in the ops HUD via the OCI SDK. |
+| IAM Dynamic Group and Policies | Lets app VMs call Streaming, Object Storage and GenAI through instance principals. |
+| OCI Functions | V1 stub for future event ingest or stream processing off the VMs. |
 
 ## Runtime API
 
@@ -77,7 +103,7 @@ Telemetry events use this envelope:
 
 1. Push this repo to a Git remote that the OCI VMs can clone.
 2. Copy `infra/terraform/terraform.tfvars.example` to a real `.tfvars` file.
-3. Fill in tenancy, compartment, region, SSH key, Oracle Linux image OCID and `app_repo_url`.
+3. Fill in tenancy, compartment, region, SSH key, Ubuntu image OCID and `app_repo_url`.
 4. Keep `instance_pool_min_size = 2`, `instance_pool_initial_size = 2`, `instance_pool_max_size = 4` for the default autoscaling demo.
 5. Run:
 
@@ -91,13 +117,65 @@ terraform -chdir=infra/terraform apply -var-file=demo.tfvars
 
 Terraform outputs `game_url` and `api_gateway_endpoint`. The VM cloud-init writes `config.js` so the browser calls API Gateway rather than bypassing it.
 
-For instance-principal access to Streaming/Object Storage, set:
+The default app VM shape is:
+
+```hcl
+instance_shape      = "VM.Standard.E4.Flex"
+instance_ocpus      = 1
+instance_memory_gbs = 8
+```
+
+Autonomous Database is configured as the smallest paid ECPU setup for this demo:
+
+```hcl
+adb_compute_model        = "ECPU"
+adb_compute_count        = 2
+adb_data_storage_size_gb = 20
+adb_is_free_tier         = false
+```
+
+For instance-principal access to Streaming, Object Storage and GenAI, set:
 
 ```hcl
 create_instance_principal_policy = true
 ```
 
-This creates a dynamic group for instances in the compartment and grants publish/archive permissions.
+This creates a dynamic group for instances in the compartment and grants publish/archive/GenAI permissions. If your tenancy only allows IAM changes in the home region, set `home_region` correctly. If your user cannot create IAM policies, have an administrator create the equivalent dynamic group and policy.
+
+## OCI Generative AI
+
+The copilot supports two modes:
+
+- Native OCI SDK mode for Gemini and OCI model OCIDs.
+- OpenAI-compatible bearer-token mode when `oci_genai_endpoint` points to `/chat/completions` or `/responses`.
+
+The current Gemini path uses native SDK mode:
+
+```hcl
+oci_genai_endpoint = "https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com"
+oci_genai_model    = "ocid1.generativeaimodel.oc1.eu-frankfurt-1.amaaaaaask7dceyan6gecfjovk7wtgl3r65b5tmpuegfxojbp2mebjgtvhra"
+```
+
+Local tests use an OCI security-token profile:
+
+```bash
+oci session authenticate --region eu-stockholm-1
+```
+
+Then set the profile in your tfvars, for example:
+
+```hcl
+oci_auth                = "SecurityToken"
+oci_config_file_profile = "demo"
+```
+
+On deployed VMs, the API should use instance principal auth through the dynamic group. The required policy is equivalent to:
+
+```text
+Allow dynamic-group <dynamic-group-name> to use generative-ai-family in compartment id <compartment_ocid>
+```
+
+If GenAI is unavailable or misconfigured, `/api/copilot` falls back to deterministic demo insights so the game still runs.
 
 ## Autonomous Database
 
@@ -160,5 +238,6 @@ The customer-facing demo checks are:
 - Compute uses an instance pool with autoscaling enabled.
 - Gameplay events appear in Streaming and Object Storage.
 - Autonomous Database receives `game_events`.
-- HUD updates score, latency, events/sec and copilot insight.
+- Ops HUD updates score, active VM, CPU, RAM, cores, disk throughput, latency, events/sec and copilot insight.
+- `/api/copilot` returns a Gemini insight when GenAI auth/policy is configured, otherwise a deterministic fallback.
 - The game remains playable when one instance is removed from the pool or fails health checks.

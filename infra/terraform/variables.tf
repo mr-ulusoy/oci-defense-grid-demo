@@ -13,6 +13,24 @@ variable "region" {
   type        = string
 }
 
+variable "home_region" {
+  description = "OCI tenancy home region identifier, required for IAM dynamic groups and policies."
+  type        = string
+  default     = "eu-frankfurt-1"
+}
+
+variable "oci_auth" {
+  description = "OCI Terraform provider authentication mode. Use SecurityToken with oci session authenticate, or APIKey with a long-lived ~/.oci/config API key profile."
+  type        = string
+  default     = "SecurityToken"
+}
+
+variable "oci_config_file_profile" {
+  description = "Profile name in ~/.oci/config used by the OCI Terraform provider."
+  type        = string
+  default     = "DEFAULT"
+}
+
 variable "project_name" {
   description = "Human-readable project name used in resource display names."
   type        = string
@@ -25,7 +43,7 @@ variable "ssh_public_key" {
 }
 
 variable "instance_image_ocid" {
-  description = "Oracle Linux image OCID for the selected region."
+  description = "Compute image OCID for the selected region. The demo cloud-init has been tested with Ubuntu."
   type        = string
 }
 
@@ -65,6 +83,36 @@ variable "instance_pool_max_size" {
   default     = 4
 }
 
+variable "create_debug_bastion" {
+  description = "Create a temporary public SSH bastion for debugging private app instances."
+  type        = bool
+  default     = false
+}
+
+variable "debug_ssh_source_cidr" {
+  description = "CIDR allowed to SSH into the temporary debug bastion."
+  type        = string
+  default     = "0.0.0.0/32"
+}
+
+variable "debug_bastion_shape" {
+  description = "Compute shape for the temporary debug bastion."
+  type        = string
+  default     = "VM.Standard.E4.Flex"
+}
+
+variable "debug_bastion_ocpus" {
+  description = "OCPUs for the temporary debug bastion."
+  type        = number
+  default     = 1
+}
+
+variable "debug_bastion_memory_gbs" {
+  description = "Memory in GB for the temporary debug bastion."
+  type        = number
+  default     = 4
+}
+
 variable "enable_autoscaling" {
   description = "Enable OCI autoscaling for the app instance pool."
   type        = bool
@@ -100,6 +148,31 @@ variable "app_git_ref" {
   default     = "main"
 }
 
+variable "oci_genai_endpoint" {
+  description = "Optional OCI Generative AI endpoint used by the demo copilot. Use the base inference endpoint for native SDK calls, or an OpenAI-compatible path for bearer-token calls."
+  type        = string
+  default     = "https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com"
+}
+
+variable "oci_genai_bearer_token" {
+  description = "Optional bearer token for an OpenAI-compatible demo copilot endpoint. Native OCI SDK mode does not use this value."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "oci_genai_model" {
+  description = "OCI Generative AI model ID used by the demo copilot."
+  type        = string
+  default     = "ocid1.generativeaimodel.oc1.eu-frankfurt-1.amaaaaaask7dceyan6gecfjovk7wtgl3r65b5tmpuegfxojbp2mebjgtvhra"
+}
+
+variable "oci_genai_compartment_ocid" {
+  description = "Compartment OCID used for OCI Generative AI inference. Defaults to the demo compartment when null."
+  type        = string
+  default     = null
+}
+
 variable "public_api_base_url" {
   description = "Override browser API base URL. Leave empty to use the Terraform-created API Gateway endpoint."
   type        = string
@@ -112,8 +185,32 @@ variable "adb_admin_password" {
   sensitive   = true
 }
 
+variable "adb_compute_model" {
+  description = "Autonomous Database compute model."
+  type        = string
+  default     = "ECPU"
+}
+
+variable "adb_compute_count" {
+  description = "Autonomous Database compute count. For ECPU serverless, 2 is the smallest standalone paid database size."
+  type        = number
+  default     = 2
+}
+
+variable "adb_data_storage_size_gb" {
+  description = "Autonomous Database storage in GB. For paid ECPU Autonomous JSON Database, 20 GB is the smallest storage size."
+  type        = number
+  default     = 20
+}
+
 variable "adb_is_free_tier" {
   description = "Create Autonomous Database as Always Free where supported."
+  type        = bool
+  default     = true
+}
+
+variable "create_autonomous_database" {
+  description = "Create an Autonomous JSON Database for analytics. Disable when the tenancy has no ADB free-tier quota."
   type        = bool
   default     = true
 }
@@ -138,7 +235,13 @@ variable "function_image" {
 }
 
 variable "create_instance_principal_policy" {
-  description = "Create a tenancy-level dynamic group and policy so VMs can write to Streaming and Object Storage."
+  description = "Create a tenancy-level IAM policy so app instances can write to Streaming and Object Storage."
+  type        = bool
+  default     = false
+}
+
+variable "create_instance_principal_dynamic_group" {
+  description = "Create a tenancy-level dynamic group for app instances. This can be useful even when an admin must create the matching policy separately."
   type        = bool
   default     = false
 }

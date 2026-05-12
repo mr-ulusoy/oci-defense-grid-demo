@@ -18,6 +18,11 @@ output "app_instance_pool_id" {
   value       = oci_core_instance_pool.app.id
 }
 
+output "debug_bastion_public_ip" {
+  description = "Public IP for the temporary SSH debug bastion, when enabled."
+  value       = var.create_debug_bastion ? oci_core_instance.debug_bastion[0].public_ip : null
+}
+
 output "autoscaling_configuration_id" {
   description = "Autoscaling configuration attached to the app instance pool."
   value       = oci_autoscaling_auto_scaling_configuration.app.id
@@ -35,7 +40,7 @@ output "raw_events_bucket" {
 
 output "autonomous_database_name" {
   description = "Autonomous Database display name for analytics tables."
-  value       = oci_database_autonomous_database.demo.display_name
+  value       = var.create_autonomous_database ? oci_database_autonomous_database.demo[0].display_name : null
 }
 
 output "analytics_instance_url" {

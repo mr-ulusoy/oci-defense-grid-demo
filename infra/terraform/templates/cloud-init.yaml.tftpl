@@ -15,6 +15,27 @@ write_files:
         telemetryIntervalMs: 1400,
         copilotIntervalMs: 12000
       };
+  - path: /usr/local/sbin/oci-defense-firewall.sh
+    permissions: "0755"
+    content: |
+      #!/bin/sh
+      set -eu
+      iptables -C INPUT -p tcp -m tcp --dport 80 -j ACCEPT 2>/dev/null || iptables -I INPUT 5 -p tcp -m tcp --dport 80 -j ACCEPT
+      iptables -C INPUT -p tcp -m tcp --dport 3000 -j ACCEPT 2>/dev/null || iptables -I INPUT 5 -p tcp -m tcp --dport 3000 -j ACCEPT
+  - path: /etc/systemd/system/oci-defense-firewall.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Open OCI Defense Grid backend ports
+      Before=nginx.service oci-defense-api.service
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/sbin/oci-defense-firewall.sh
+      RemainAfterExit=yes
+
+      [Install]
+      WantedBy=multi-user.target
   - path: /etc/systemd/system/oci-defense-api.service
     permissions: "0644"
     content: |
@@ -31,6 +52,7 @@ write_files:
       RestartSec=5
       Environment=NODE_ENV=production
       Environment=PORT=3000
+      EnvironmentFile=-/etc/oci-defense-instance.env
       Environment=API_GATEWAY_NAME=${api_gateway_name}
       Environment=LOAD_BALANCER_NAME=${load_balancer_name}
       Environment=OCI_STREAM_OCID=${stream_ocid}
@@ -38,6 +60,10 @@ write_files:
       Environment=OCI_BUCKET_NAME=${bucket_name}
       Environment=OCI_NAMESPACE=${namespace}
       Environment=OCI_REGION=${region}
+      Environment=OCI_GENAI_ENDPOINT=${genai_endpoint}
+      Environment=OCI_GENAI_BEARER_TOKEN=${genai_bearer_token}
+      Environment=OCI_GENAI_MODEL=${genai_model}
+      Environment=OCI_GENAI_COMPARTMENT_OCID=${genai_compartment}
 
       [Install]
       WantedBy=multi-user.target
@@ -68,6 +94,9 @@ runcmd:
   - git clone --depth 1 --branch ${app_git_ref} ${app_repo_url} /opt/oci-defense-grid
   - cp /tmp/oci-defense-config.js /opt/oci-defense-grid/config.js
   - cd /opt/oci-defense-grid && npm install --omit=dev
+  - printf 'INSTANCE_NAME=%s\n' "$(hostname)" > /etc/oci-defense-instance.env
+  - rm -f /etc/nginx/sites-enabled/default
   - systemctl daemon-reload
+  - systemctl enable --now oci-defense-firewall
   - systemctl enable --now oci-defense-api
   - systemctl enable --now nginx

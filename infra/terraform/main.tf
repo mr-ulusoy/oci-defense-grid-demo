@@ -27,6 +27,10 @@ locals {
     stream_endpoint    = oci_streaming_stream.events.messages_endpoint
     bucket_name        = oci_objectstorage_bucket.raw_events.name
     namespace          = data.oci_objectstorage_namespace.namespace.namespace
+    genai_endpoint     = var.oci_genai_endpoint
+    genai_bearer_token = var.oci_genai_bearer_token
+    genai_model        = var.oci_genai_model
+    genai_compartment  = coalesce(var.oci_genai_compartment_ocid, var.compartment_ocid)
     region             = var.region
   }))
 }
@@ -95,6 +99,19 @@ resource "oci_core_security_list" "public_lb" {
     }
   }
 
+  dynamic "ingress_security_rules" {
+    for_each = var.create_debug_bastion ? [1] : []
+
+    content {
+      protocol = "6"
+      source   = var.debug_ssh_source_cidr
+      tcp_options {
+        min = 22
+        max = 22
+      }
+    }
+  }
+
   egress_security_rules {
     protocol    = "all"
     destination = "0.0.0.0/0"
@@ -130,6 +147,19 @@ resource "oci_core_security_list" "private_app" {
     tcp_options {
       min = 3000
       max = 3000
+    }
+  }
+
+  dynamic "ingress_security_rules" {
+    for_each = var.create_debug_bastion ? [1] : []
+
+    content {
+      protocol = "6"
+      source   = local.public_cidr
+      tcp_options {
+        min = 22
+        max = 22
+      }
     }
   }
 
@@ -186,9 +216,41 @@ resource "oci_load_balancer_load_balancer" "api" {
   }
 }
 
+resource "oci_core_instance" "debug_bastion" {
+  count               = var.create_debug_bastion ? 1 : 0
+  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
+  compartment_id      = var.compartment_ocid
+  display_name        = "${local.name_prefix}-debug-bastion"
+  shape               = var.debug_bastion_shape
+
+  shape_config {
+    memory_in_gbs = var.debug_bastion_memory_gbs
+    ocpus         = var.debug_bastion_ocpus
+  }
+
+  create_vnic_details {
+    assign_public_ip = true
+    display_name     = "${local.name_prefix}-debug-bastion-vnic"
+    subnet_id        = oci_core_subnet.public.id
+  }
+
+  metadata = {
+    ssh_authorized_keys = var.ssh_public_key
+  }
+
+  source_details {
+    source_id   = var.instance_image_ocid
+    source_type = "image"
+  }
+}
+
 resource "oci_core_instance_configuration" "app" {
   compartment_id = var.compartment_ocid
   display_name   = "${local.name_prefix}-app-config"
+
+  lifecycle {
+    create_before_destroy = true
+  }
 
   instance_details {
     instance_type = "compute"
@@ -433,7 +495,6 @@ resource "oci_streaming_stream_pool" "demo" {
 }
 
 resource "oci_streaming_stream" "events" {
-  compartment_id     = var.compartment_ocid
   name               = "${local.name_prefix}-events"
   partitions         = 1
   retention_in_hours = 24
@@ -448,14 +509,17 @@ resource "oci_objectstorage_bucket" "raw_events" {
 }
 
 resource "oci_database_autonomous_database" "demo" {
-  admin_password           = var.adb_admin_password
-  compartment_id           = var.compartment_ocid
-  cpu_core_count           = 1
-  data_storage_size_in_tbs = 1
-  db_name                  = replace(substr(local.name_prefix, 0, 14), "-", "")
-  db_workload              = "AJD"
-  display_name             = "${local.name_prefix}-adb"
-  is_free_tier             = var.adb_is_free_tier
+  count                   = var.create_autonomous_database ? 1 : 0
+  admin_password          = var.adb_admin_password
+  compartment_id          = var.compartment_ocid
+  compute_count           = var.adb_compute_count
+  compute_model           = var.adb_compute_model
+  data_storage_size_in_gb = var.adb_data_storage_size_gb
+  db_name                 = replace(substr(local.name_prefix, 0, 14), "-", "")
+  db_workload             = "AJD"
+  display_name            = "${local.name_prefix}-adb"
+  is_free_tier            = var.adb_is_free_tier
+  license_model           = "LICENSE_INCLUDED"
 }
 
 resource "oci_functions_application" "demo" {
@@ -488,7 +552,8 @@ resource "oci_analytics_analytics_instance" "demo" {
 }
 
 resource "oci_identity_dynamic_group" "app_instances" {
-  count          = var.create_instance_principal_policy ? 1 : 0
+  provider       = oci.home
+  count          = var.create_instance_principal_dynamic_group ? 1 : 0
   compartment_id = var.tenancy_ocid
   description    = "OCI Defense Grid app VMs."
   matching_rule  = "All {instance.compartment.id = '${var.compartment_ocid}'}"
@@ -496,12 +561,14 @@ resource "oci_identity_dynamic_group" "app_instances" {
 }
 
 resource "oci_identity_policy" "app_instances" {
-  count          = var.create_instance_principal_policy ? 1 : 0
+  provider       = oci.home
+  count          = var.create_instance_principal_dynamic_group && var.create_instance_principal_policy ? 1 : 0
   compartment_id = var.tenancy_ocid
   description    = "Allow OCI Defense Grid app instances to publish telemetry."
   name           = replace("${local.name_prefix}-policy", "-", "_")
   statements = [
     "Allow dynamic-group ${oci_identity_dynamic_group.app_instances[0].name} to use stream-push in compartment id ${var.compartment_ocid}",
-    "Allow dynamic-group ${oci_identity_dynamic_group.app_instances[0].name} to manage objects in compartment id ${var.compartment_ocid} where target.bucket.name='${oci_objectstorage_bucket.raw_events.name}'"
+    "Allow dynamic-group ${oci_identity_dynamic_group.app_instances[0].name} to manage objects in compartment id ${var.compartment_ocid} where target.bucket.name='${oci_objectstorage_bucket.raw_events.name}'",
+    "Allow dynamic-group ${oci_identity_dynamic_group.app_instances[0].name} to use generative-ai-family in compartment id ${coalesce(var.oci_genai_compartment_ocid, var.compartment_ocid)}"
   ]
 }

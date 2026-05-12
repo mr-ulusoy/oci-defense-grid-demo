@@ -1,6 +1,10 @@
 tenancy_ocid     = "ocid1.tenancy.oc1..replace"
 compartment_ocid = "ocid1.compartment.oc1..replace"
 region           = "eu-stockholm-1"
+home_region      = "eu-frankfurt-1"
+
+oci_auth                = "SecurityToken"
+oci_config_file_profile = "DEFAULT"
 
 ssh_public_key      = "ssh-rsa AAAA..."
 instance_image_ocid = "ocid1.image.oc1.eu-stockholm-1.replace"
@@ -8,15 +12,32 @@ instance_image_ocid = "ocid1.image.oc1.eu-stockholm-1.replace"
 app_repo_url = "https://github.com/your-org/oci-defense-grid-demo.git"
 app_git_ref  = "main"
 
+oci_genai_endpoint     = "https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com"
+oci_genai_bearer_token = ""
+oci_genai_model        = "ocid1.generativeaimodel.oc1.eu-frankfurt-1.amaaaaaask7dceyan6gecfjovk7wtgl3r65b5tmpuegfxojbp2mebjgtvhra"
+oci_genai_compartment_ocid = null
+
+instance_shape      = "VM.Standard.E4.Flex"
+instance_ocpus      = 1
+instance_memory_gbs = 8
+
 instance_pool_min_size     = 2
 instance_pool_initial_size = 2
 instance_pool_max_size     = 4
 enable_autoscaling         = true
 
-adb_admin_password = "ReplaceWith_StrongPassword_123"
-adb_is_free_tier   = true
+create_debug_bastion  = false
+debug_ssh_source_cidr = "203.0.113.10/32"
 
-create_analytics_instance        = false
-analytics_idcs_access_token      = null
-create_instance_principal_policy = false
-function_image                   = ""
+adb_admin_password         = "ReplaceWith_StrongPassword_123"
+create_autonomous_database = true
+adb_compute_model          = "ECPU"
+adb_compute_count          = 2
+adb_data_storage_size_gb   = 20
+adb_is_free_tier           = false
+
+create_analytics_instance               = false
+analytics_idcs_access_token             = null
+create_instance_principal_dynamic_group = false
+create_instance_principal_policy        = false
+function_image                          = ""

@@ -20,6 +20,7 @@
     "helmet": "^8.0.0",
     "morgan": "^1.10.0",
     "oci-common": "^2.131.1",
+    "oci-generativeaiinference": "^2.131.1",
     "oci-objectstorage": "^2.131.1",
     "oci-streaming": "^2.131.1",
     "oracledb": "^6.7.1"

@@ -1,0 +1,110 @@
+# OCI Defense Grid Wireframe
+
+This wireframe shows how the live demo is connected across the player view, ops view, VM runtime, API layer and OCI services.
+
+## Runtime Flow
+
+```mermaid
+flowchart LR
+  player["Player browser<br/>Game view"]
+  ops["Presenter browser<br/>Ops HUD (?ops=1)"]
+
+  webLb["OCI Load Balancer<br/>Public web entrypoint"]
+  apiGw["OCI API Gateway<br/>/api/* routing, CORS, throttling"]
+  apiLb["OCI Load Balancer<br/>Private API backend set"]
+
+  subgraph compute["OCI Compute"]
+    pool["Instance Pool<br/>2 initial VMs, autoscale to 4"]
+    vm1["VM-1<br/>Nginx static game<br/>Node/Express API"]
+    vm2["VM-2<br/>Nginx static game<br/>Node/Express API"]
+    autoscale["Autoscaling<br/>CPU policy"]
+  end
+
+  subgraph telemetry["Telemetry and Analytics"]
+    stream["OCI Streaming<br/>Gameplay events"]
+    bucket["Object Storage<br/>Raw NDJSON events"]
+    adb["Autonomous Database<br/>game_events table"]
+    oac["Oracle Analytics Cloud<br/>Demo dashboard dataset"]
+  end
+
+  subgraph ai["OCI Generative AI"]
+    genai["Gemini via OCI GenAI SDK<br/>eu-frankfurt-1 inference endpoint"]
+  end
+
+  subgraph iam["Identity and Access"]
+    dg["Dynamic Group<br/>App instances"]
+    policy["IAM Policies<br/>Streaming, Object Storage, GenAI"]
+  end
+
+  player --> webLb --> pool
+  ops --> webLb
+  pool --> vm1
+  pool --> vm2
+  autoscale --> pool
+
+  player -- "POST/GET /api/*" --> apiGw
+  ops -- "status, analytics, copilot" --> apiGw
+  apiGw --> apiLb --> vm1
+  apiLb --> vm2
+
+  vm1 --> stream
+  vm2 --> stream
+  vm1 --> bucket
+  vm2 --> bucket
+  vm1 -. "optional direct persistence" .-> adb
+  vm2 -. "optional direct persistence" .-> adb
+  adb --> oac
+  stream -. "analytics pipeline / future function" .-> adb
+  stream -. "raw archive pipeline" .-> bucket
+
+  vm1 --> genai
+  vm2 --> genai
+  dg --> policy
+  policy --> stream
+  policy --> bucket
+  policy --> genai
+```
+
+## Demo Views
+
+```mermaid
+flowchart TB
+  publicUrl["Public game URL<br/>http://&lt;web-lb-ip&gt;/"]
+  playerView["Player view<br/>Original shooter, callsign, leaderboard"]
+  opsUrl["Presenter URL<br/>http://&lt;web-lb-ip&gt;/?ops=1"]
+  opsHud["Ops HUD<br/>Active VM, CPU, RAM, cores, disk throughput,<br/>LB/API status, latency, events/sec, AI insight"]
+
+  publicUrl --> playerView
+  opsUrl --> playerView
+  opsUrl --> opsHud
+```
+
+## Service Roles
+
+| OCI service | Role in the demo |
+| --- | --- |
+| Compute Instance Pool | Runs the static Phaser game and the Node/Express API on multiple VMs. |
+| Public Load Balancer | Front door for the game; demonstrates backend health and failover. |
+| API Gateway | Enterprise API entrypoint for all `/api/*` browser calls. |
+| Private Load Balancer | Routes API Gateway traffic to the VM-backed Express API. |
+| Autoscaling | Shows how the VM pool can scale from 2 to 4 instances under CPU pressure. |
+| Streaming | Receives gameplay telemetry events for downstream processing. |
+| Object Storage | Stores raw event archives as NDJSON for replay, audit and later analytics. |
+| Autonomous Database | Stores curated `game_events` rows for dashboarding and SQL analytics. |
+| Oracle Analytics Cloud | Optional dashboard layer on top of ADB. |
+| Generative AI | Gemini copilot insight in the ops HUD via OCI GenAI SDK. |
+| IAM Dynamic Group and Policies | Grants app VMs permission to publish telemetry, archive objects and call GenAI. |
+| OCI Functions | V1 stub for moving event ingestion or stream processing off the VMs later. |
+
+## Current GenAI Path
+
+The current Gemini integration uses the native OCI SDK, not the OpenAI-compatible REST path:
+
+```text
+Node/Express /api/copilot
+  -> oci-generativeaiinference SDK
+  -> https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com
+  -> Gemini on-demand model OCID
+```
+
+Local development uses an OCI security-token profile. Deployed VMs should use instance principal auth through the dynamic group and IAM policy.
