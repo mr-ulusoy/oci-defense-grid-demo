@@ -47,7 +47,7 @@ const elements = {
 const SCORE_EVENT_TYPES = [
   { key: "enemy_killed", label: "Kills" },
   { key: "player_hit", label: "Hits" },
-  { key: "powerup", label: "Power" },
+  { key: "powerup", label: "Power up" },
   { key: "boss_phase", label: "Boss" }
 ];
 
