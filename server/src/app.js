@@ -117,6 +117,10 @@ export function createApp({ store = createStore(), createInsight = createCopilot
     res.json(await store.liveAnalytics(req.query.runId));
   });
 
+  app.get("/api/analytics/events", async (req, res) => {
+    res.json(await store.eventAnalytics());
+  });
+
   app.post("/api/copilot", async (req, res) => {
     if (req.body?.ops !== true) {
       res.status(403).json({ error: "Copilot is available in ops view only." });

@@ -170,6 +170,25 @@ export class OciTelemetry {
     }
   }
 
+  async eventAnalytics() {
+    try {
+      return await fetch(`${this.apiBase}/analytics/events`).then(readJson);
+    } catch {
+      const eventsPerSecond = this.eventRate();
+      return {
+        source: "browser",
+        generatedAt: new Date().toISOString(),
+        windows: {
+          last1m: eventsPerSecond * 60,
+          last5m: eventsPerSecond * 300,
+          last15m: eventsPerSecond * 900
+        },
+        eventTypes: [],
+        runs: []
+      };
+    }
+  }
+
   async askCopilot(snapshot) {
     if (!this.config.copilotEnabled) {
       return "Copilot is available in ops view only.";

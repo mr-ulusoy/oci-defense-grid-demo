@@ -547,6 +547,15 @@ resource "oci_apigateway_deployment" "demo" {
     }
 
     routes {
+      path    = "/api/analytics/events"
+      methods = ["GET"]
+      backend {
+        type = "HTTP_BACKEND"
+        url  = "http://${local.api_lb_ip}:3000/api/analytics/events"
+      }
+    }
+
+    routes {
       path    = "/api/copilot"
       methods = ["POST", "OPTIONS"]
       backend {
@@ -620,62 +629,4 @@ resource "oci_functions_function" "optional_ingest" {
     REDIS_PORT                  = local.redis_port
     REDIS_TLS                   = local.redis_tls
   }
-}
-
-resource "oci_analytics_analytics_instance" "demo" {
-  count             = var.create_analytics_instance ? 1 : 0
-  compartment_id    = var.compartment_ocid
-  description       = "OCI Defense Grid demo analytics workspace."
-  feature_set       = "ENTERPRISE_ANALYTICS"
-  idcs_access_token = var.analytics_idcs_access_token
-  license_type      = "LICENSE_INCLUDED"
-  name              = replace(local.name_prefix, "-", "")
-
-  capacity {
-    capacity_type  = "OLPU_COUNT"
-    capacity_value = 1
-  }
-}
-
-resource "oci_identity_dynamic_group" "app_instances" {
-  provider       = oci.home
-  count          = var.create_instance_principal_dynamic_group ? 1 : 0
-  compartment_id = var.tenancy_ocid
-  description    = "OCI Defense Grid app VMs."
-  matching_rule  = "All {instance.compartment.id = '${var.compartment_ocid}'}"
-  name           = replace("${local.name_prefix}-instances", "-", "_")
-}
-
-resource "oci_identity_dynamic_group" "functions" {
-  provider       = oci.home
-  count          = var.create_function_resource_principal_dynamic_group ? 1 : 0
-  compartment_id = var.tenancy_ocid
-  description    = "OCI Defense Grid Functions."
-  matching_rule  = "All {resource.type = 'fnfunc', resource.compartment.id = '${var.compartment_ocid}'}"
-  name           = replace("${local.name_prefix}-functions", "-", "_")
-}
-
-resource "oci_identity_policy" "app_instances" {
-  provider       = oci.home
-  count          = var.create_instance_principal_dynamic_group && var.create_instance_principal_policy ? 1 : 0
-  compartment_id = var.tenancy_ocid
-  description    = "Allow OCI Defense Grid app instances to publish telemetry."
-  name           = replace("${local.name_prefix}-policy", "-", "_")
-  statements = [
-    "Allow dynamic-group ${oci_identity_dynamic_group.app_instances[0].name} to use stream-push in compartment id ${var.compartment_ocid}",
-    "Allow dynamic-group ${oci_identity_dynamic_group.app_instances[0].name} to manage objects in compartment id ${var.compartment_ocid} where target.bucket.name='${oci_objectstorage_bucket.raw_events.name}'",
-    "Allow dynamic-group ${oci_identity_dynamic_group.app_instances[0].name} to use generative-ai-family in compartment id ${coalesce(var.oci_genai_compartment_ocid, var.compartment_ocid)}"
-  ]
-}
-
-resource "oci_identity_policy" "functions" {
-  provider       = oci.home
-  count          = var.create_function_resource_principal_dynamic_group && var.create_function_resource_principal_policy ? 1 : 0
-  compartment_id = var.tenancy_ocid
-  description    = "Allow OCI Defense Grid Functions to ingest telemetry."
-  name           = replace("${local.name_prefix}-functions-policy", "-", "_")
-  statements = [
-    "Allow dynamic-group ${oci_identity_dynamic_group.functions[0].name} to use stream-push in compartment id ${var.compartment_ocid}",
-    "Allow dynamic-group ${oci_identity_dynamic_group.functions[0].name} to manage objects in compartment id ${var.compartment_ocid} where target.bucket.name='${oci_objectstorage_bucket.raw_events.name}'"
-  ]
 }

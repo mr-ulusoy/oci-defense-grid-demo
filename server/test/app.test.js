@@ -138,6 +138,61 @@ test("live players lists latest player snapshots", async () => {
   assert.equal(body.players[1].callsign, "SARA");
 });
 
+test("event analytics summarizes live game events", async () => {
+  const app = createApp();
+  const events = [
+    {
+      runId: "run-analytics-a",
+      sessionId: "session-analytics-a",
+      type: "enemy_killed",
+      level: 4,
+      score: 3200,
+      callsign: "Analytics One",
+      cloudAction: "rebalance_lb",
+      metrics: { fps: 60, latencyMs: 34 },
+      clientTs: new Date().toISOString()
+    },
+    {
+      runId: "run-analytics-a",
+      sessionId: "session-analytics-a",
+      type: "player_hit",
+      level: 4,
+      score: 3400,
+      callsign: "Analytics One",
+      cloudAction: "shield",
+      metrics: { fps: 58, latencyMs: 39 },
+      clientTs: new Date().toISOString()
+    },
+    {
+      runId: "run-analytics-b",
+      sessionId: "session-analytics-b",
+      type: "powerup",
+      level: 2,
+      score: 1800,
+      callsign: "Analytics Two",
+      cloudAction: "ai_scan",
+      metrics: { fps: 59, latencyMs: 29 },
+      clientTs: new Date().toISOString()
+    }
+  ];
+
+  await request(app, "/api/events", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ events })
+  });
+
+  const { response, body } = await request(app, "/api/analytics/events");
+
+  assert.equal(response.status, 200);
+  assert.equal(body.source, "memory");
+  assert.equal(body.windows.last15m, 3);
+  assert.equal(body.eventTypes.find((eventType) => eventType.type === "enemy_killed").count, 1);
+  assert.equal(body.eventTypes.find((eventType) => eventType.type === "player_hit").count, 1);
+  assert.equal(body.runs.find((run) => run.runId === "run-analytics-a").eventCount, 2);
+  assert.equal(body.runs.find((run) => run.runId === "run-analytics-a").maxLevel, 4);
+});
+
 test("copilot endpoint rejects non-ops callers", async () => {
   const app = createApp();
   const { response, body } = await request(app, "/api/copilot", {

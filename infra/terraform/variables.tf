@@ -287,45 +287,8 @@ variable "create_autonomous_database" {
   default     = true
 }
 
-variable "create_analytics_instance" {
-  description = "Create an Oracle Analytics Cloud instance for the dashboard story."
-  type        = bool
-  default     = false
-}
-
-variable "analytics_idcs_access_token" {
-  description = "IDCS access token required when create_analytics_instance is true."
-  type        = string
-  default     = null
-  sensitive   = true
-}
-
 variable "function_image" {
   description = "Optional OCIR image for the OCI Functions event-ingest function. Leave empty to keep POST /api/events on the VM-backed API."
   type        = string
   default     = ""
-}
-
-variable "create_function_resource_principal_dynamic_group" {
-  description = "Create a tenancy-level dynamic group for OCI Functions resource principal access."
-  type        = bool
-  default     = false
-}
-
-variable "create_function_resource_principal_policy" {
-  description = "Create a tenancy-level IAM policy so the event-ingest Function can publish to Streaming and Object Storage."
-  type        = bool
-  default     = false
-}
-
-variable "create_instance_principal_policy" {
-  description = "Create a tenancy-level IAM policy so app instances can write to Streaming and Object Storage."
-  type        = bool
-  default     = false
-}
-
-variable "create_instance_principal_dynamic_group" {
-  description = "Create a tenancy-level dynamic group for app instances. This can be useful even when an admin must create the matching policy separately."
-  type        = bool
-  default     = false
 }

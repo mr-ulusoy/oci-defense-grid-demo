@@ -53,11 +53,6 @@ output "adb_app_connect_string" {
   value       = local.adb_app_connect_string
 }
 
-output "analytics_instance_url" {
-  description = "Optional Oracle Analytics Cloud URL if create_analytics_instance is true."
-  value       = var.create_analytics_instance ? oci_analytics_analytics_instance.demo[0].service_url : null
-}
-
 output "event_ingest_route_mode" {
   description = "Shows whether POST /api/events is routed to OCI Functions or the VM-backed API."
   value       = local.function_ingest_enabled ? "oci-functions" : "vm-api"

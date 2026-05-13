@@ -7,6 +7,7 @@ const SEED_LEADERBOARD = [
   { callsign: "ORACLE-1", score: 9800, runId: "seed-2", vm: "seed", createdAt: new Date().toISOString() },
   { callsign: "PHOENIX", score: 7600, runId: "seed-3", vm: "seed", createdAt: new Date().toISOString() }
 ];
+const EVENT_TYPES = ["enemy_killed", "player_hit", "powerup", "boss_phase", "run_end", "heartbeat"];
 
 let schemaReady = false;
 
@@ -95,6 +96,78 @@ async function ensureAutonomousSchema(connection) {
   );
 
   schemaReady = true;
+}
+
+async function oracleObjectOptions() {
+  return { outFormat: (await import("oracledb")).default.OUT_FORMAT_OBJECT };
+}
+
+function toNumber(value) {
+  return Number(value ?? 0);
+}
+
+function normalizeTypeCounts(rows) {
+  const counts = new Map(EVENT_TYPES.map((type) => [type, 0]));
+  for (const row of rows ?? []) {
+    counts.set(String(row.EVENT_TYPE), toNumber(row.EVENT_COUNT));
+  }
+
+  return [...counts.entries()]
+    .map(([type, count]) => ({ type, count }))
+    .sort((left, right) => Number(right.count) - Number(left.count) || left.type.localeCompare(right.type));
+}
+
+function eventAnalyticsFromMemory(events) {
+  const now = Date.now();
+  const last1m = now - 60_000;
+  const last5m = now - 300_000;
+  const last15m = now - 900_000;
+  const last24h = now - 86_400_000;
+  const recent = events.filter((event) => Date.parse(event.serverTs) >= last15m);
+  const counts = new Map(EVENT_TYPES.map((type) => [type, 0]));
+  const runsById = new Map();
+
+  for (const event of events) {
+    const eventTime = Date.parse(event.serverTs);
+    if (eventTime >= last15m) {
+      counts.set(event.type, (counts.get(event.type) ?? 0) + 1);
+    }
+
+    if (eventTime < last24h) {
+      continue;
+    }
+
+    const existing = runsById.get(event.runId) ?? {
+      runId: event.runId,
+      eventCount: 0,
+      maxLevel: 0,
+      maxScore: 0,
+      lastEventAt: event.serverTs
+    };
+    existing.eventCount += 1;
+    existing.maxLevel = Math.max(existing.maxLevel, toNumber(event.level));
+    existing.maxScore = Math.max(existing.maxScore, toNumber(event.score));
+    if (Date.parse(event.serverTs) > Date.parse(existing.lastEventAt)) {
+      existing.lastEventAt = event.serverTs;
+    }
+    runsById.set(event.runId, existing);
+  }
+
+  return {
+    source: "memory",
+    generatedAt: new Date().toISOString(),
+    windows: {
+      last1m: events.filter((event) => Date.parse(event.serverTs) >= last1m).length,
+      last5m: events.filter((event) => Date.parse(event.serverTs) >= last5m).length,
+      last15m: recent.length
+    },
+    eventTypes: [...counts.entries()]
+      .map(([type, count]) => ({ type, count }))
+      .sort((left, right) => Number(right.count) - Number(left.count) || left.type.localeCompare(right.type)),
+    runs: [...runsById.values()]
+      .sort((left, right) => Date.parse(right.lastEventAt) - Date.parse(left.lastEventAt))
+      .slice(0, 8)
+  };
 }
 
 function mergeLeaderboards(primary, fallback) {
@@ -222,6 +295,72 @@ export function createStore() {
     }
   }
 
+  async function eventAnalyticsFromAutonomousDb() {
+    const connection = await createOracleConnection();
+    if (!connection) {
+      return null;
+    }
+
+    try {
+      await ensureAutonomousSchema(connection);
+      const options = await oracleObjectOptions();
+      const windowResult = await connection.execute(
+        `select
+           sum(case when server_ts >= systimestamp - interval '1' minute then 1 else 0 end) as last_1m,
+           sum(case when server_ts >= systimestamp - interval '5' minute then 1 else 0 end) as last_5m,
+           count(*) as last_15m
+         from game_events
+         where server_ts >= systimestamp - interval '15' minute`,
+        [],
+        options
+      );
+      const typeResult = await connection.execute(
+        `select event_type, count(*) as event_count
+         from game_events
+         where server_ts >= systimestamp - interval '15' minute
+         group by event_type
+         order by count(*) desc, event_type asc`,
+        [],
+        options
+      );
+      const runResult = await connection.execute(
+        `select run_id,
+                count(*) as event_count,
+                max(level_no) as max_level,
+                max(score) as max_score,
+                to_char(max(server_ts) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.FF3"Z"') as last_event_at
+         from game_events
+         where server_ts >= systimestamp - interval '24' hour
+         group by run_id
+         order by max(server_ts) desc
+         fetch first 8 rows only`,
+        [],
+        options
+      );
+
+      const windows = windowResult.rows?.[0] ?? {};
+      return {
+        source: "autonomousDatabase",
+        generatedAt: new Date().toISOString(),
+        windows: {
+          last1m: toNumber(windows.LAST_1M),
+          last5m: toNumber(windows.LAST_5M),
+          last15m: toNumber(windows.LAST_15M)
+        },
+        eventTypes: normalizeTypeCounts(typeResult.rows),
+        runs: (runResult.rows ?? []).map((row) => ({
+          runId: row.RUN_ID,
+          eventCount: toNumber(row.EVENT_COUNT),
+          maxLevel: toNumber(row.MAX_LEVEL),
+          maxScore: toNumber(row.MAX_SCORE),
+          lastEventAt: row.LAST_EVENT_AT
+        }))
+      };
+    } finally {
+      await connection.close();
+    }
+  }
+
   return {
     async status() {
       return {
@@ -296,6 +435,19 @@ export function createStore() {
         actions,
         latestInsight: insights.at(-1)?.insight ?? null
       };
+    },
+
+    async eventAnalytics() {
+      try {
+        const persisted = await eventAnalyticsFromAutonomousDb();
+        if (persisted) {
+          return persisted;
+        }
+      } catch (error) {
+        console.warn("Autonomous Database event analytics read failed, using memory fallback.", error.message);
+      }
+
+      return eventAnalyticsFromMemory(events);
     },
 
     async recordInsight(insight) {

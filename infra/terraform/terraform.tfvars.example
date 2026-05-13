@@ -47,12 +47,6 @@ adb_compute_count          = 2
 adb_data_storage_size_gb   = 20
 adb_is_free_tier           = false
 
-create_analytics_instance               = false
-analytics_idcs_access_token             = null
-create_instance_principal_dynamic_group = false
-create_instance_principal_policy        = false
-create_function_resource_principal_dynamic_group = false
-create_function_resource_principal_policy        = false
 # Optional existing OCIR image for OCI Functions event ingest.
 # Example: "arn.ocir.io/<namespace>/oci-defense-grid/event-ingest:0.1.0"
 function_image = ""

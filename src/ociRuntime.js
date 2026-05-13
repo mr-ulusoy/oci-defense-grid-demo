@@ -35,9 +35,24 @@ const elements = {
   insight: document.getElementById("hudInsight"),
   livePlayers: document.getElementById("livePlayersList"),
   livePlayersStatus: document.getElementById("livePlayersStatus"),
+  eventAnalyticsStatus: document.getElementById("eventAnalyticsStatus"),
+  eventRate1m: document.getElementById("eventRate1m"),
+  eventRate5m: document.getElementById("eventRate5m"),
+  eventRate15m: document.getElementById("eventRate15m"),
+  eventTypeList: document.getElementById("eventTypeList"),
+  runVolumeList: document.getElementById("runVolumeList"),
   leaderboard: document.getElementById("leaderboardList"),
   askCopilot: document.getElementById("askCopilot"),
   refreshLeaderboard: document.getElementById("refreshLeaderboard")
+};
+
+const EVENT_TYPE_LABELS = {
+  enemy_killed: "enemy_killed",
+  player_hit: "player_hit",
+  powerup: "powerup",
+  boss_phase: "boss_phase",
+  run_end: "run_end",
+  heartbeat: "heartbeat"
 };
 
 const observedVms = new Map();
@@ -117,6 +132,66 @@ function renderLivePlayers(players = [], analytics = {}) {
     ].join("");
     elements.livePlayers.appendChild(row);
   }
+}
+
+function renderEventAnalytics(analytics = {}) {
+  if (!isOpsView) return;
+
+  const sourceLabel = {
+    autonomousDatabase: "ADB game_events",
+    memory: "Memory fallback",
+    browser: "Browser fallback"
+  };
+  elements.eventAnalyticsStatus.textContent = sourceLabel[analytics.source] ?? "ADB game_events";
+  elements.eventRate1m.textContent = formatEventsPerMinute(analytics.windows?.last1m, 1);
+  elements.eventRate5m.textContent = formatEventsPerMinute(analytics.windows?.last5m, 5);
+  elements.eventRate15m.textContent = formatEventsPerMinute(analytics.windows?.last15m, 15);
+
+  elements.eventTypeList.innerHTML = "";
+  const eventTypes = analytics.eventTypes?.length
+    ? analytics.eventTypes
+    : Object.keys(EVENT_TYPE_LABELS).map((type) => ({ type, count: 0 }));
+  for (const eventType of eventTypes.slice(0, 6)) {
+    const row = document.createElement("div");
+    row.className = "event-type-row";
+    row.innerHTML = `<span>${escapeHtml(EVENT_TYPE_LABELS[eventType.type] ?? eventType.type)}</span><strong>${Number(eventType.count ?? 0)}</strong>`;
+    elements.eventTypeList.appendChild(row);
+  }
+
+  elements.runVolumeList.innerHTML = "";
+  if (!analytics.runs?.length) {
+    const empty = document.createElement("div");
+    empty.className = "run-volume-empty";
+    empty.textContent = "No run volume in the last 24h.";
+    elements.runVolumeList.appendChild(empty);
+    return;
+  }
+
+  const header = document.createElement("div");
+  header.className = "run-volume-row run-volume-head";
+  header.innerHTML = "<span>Run</span><span>Events</span><span>Lvl</span><span>Score</span>";
+  elements.runVolumeList.appendChild(header);
+
+  for (const run of analytics.runs.slice(0, 6)) {
+    const row = document.createElement("div");
+    row.className = "run-volume-row";
+    row.innerHTML = [
+      `<strong>${escapeHtml(shortRunId(run.runId))}</strong>`,
+      `<span>${Number(run.eventCount ?? 0)}</span>`,
+      `<span>${Number(run.maxLevel ?? 0)}</span>`,
+      `<span>${Number(run.maxScore ?? 0)}</span>`
+    ].join("");
+    elements.runVolumeList.appendChild(row);
+  }
+}
+
+function shortRunId(runId) {
+  return String(runId ?? "unknown").slice(0, 8);
+}
+
+function formatEventsPerMinute(count, minutes) {
+  const rate = Number(count ?? 0) / minutes;
+  return rate >= 10 ? String(Math.round(rate)) : rate.toFixed(1);
 }
 
 function formatPercentlessLatency(value) {
@@ -255,6 +330,7 @@ export async function initOciRuntime() {
   if (isOpsView) {
     renderStatus(telemetry.status);
     renderLivePlayers(await telemetry.refreshLivePlayers());
+    renderEventAnalytics(await telemetry.eventAnalytics());
     renderLeaderboard(await telemetry.refreshLeaderboard());
     setConnection(telemetry.offline);
 
@@ -271,8 +347,13 @@ export async function initOciRuntime() {
     const status = await telemetry.refreshStatus();
     if (isOpsView) {
       renderStatus(status);
-      const analytics = await telemetry.analytics();
-      renderLivePlayers(await telemetry.refreshLivePlayers(), analytics);
+      const [analytics, livePlayers, eventAnalytics] = await Promise.all([
+        telemetry.analytics(),
+        telemetry.refreshLivePlayers(),
+        telemetry.eventAnalytics()
+      ]);
+      renderLivePlayers(livePlayers, analytics);
+      renderEventAnalytics(eventAnalytics);
     }
     setConnection(telemetry.offline);
   }, window.OCI_DEFENSE_CONFIG.telemetryIntervalMs);

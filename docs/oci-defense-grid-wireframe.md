@@ -25,8 +25,7 @@ flowchart LR
     cache["OCI Cache<br/>Live player snapshots"]
     stream["OCI Streaming<br/>Gameplay events"]
     bucket["Object Storage<br/>Raw NDJSON events"]
-    adb["Autonomous Database<br/>game_events table"]
-    oac["Oracle Analytics Cloud<br/>Demo dashboard dataset"]
+    adb["Autonomous Database<br/>game_events table<br/>ops Event Analytics"]
   end
 
   subgraph ai["OCI Generative AI"]
@@ -63,9 +62,7 @@ flowchart LR
   vm2 --> bucket
   vm1 -. "optional direct persistence" .-> adb
   vm2 -. "optional direct persistence" .-> adb
-  adb --> oac
-  stream -. "analytics pipeline / future function" .-> adb
-  stream -. "raw archive pipeline" .-> bucket
+  adb --> ops
 
   vm1 --> genai
   vm2 --> genai
@@ -83,7 +80,7 @@ flowchart TB
   publicUrl["Public game URL<br/>http://&lt;web-lb-ip&gt;/"]
   playerView["Player view<br/>Original shooter, callsign, leaderboard"]
   opsUrl["Presenter URL<br/>http://&lt;web-lb-ip&gt;/?ops=1"]
-  opsHud["Ops HUD<br/>Active VM, CPU, RAM, cores, disk throughput,<br/>LB/API status, latency, events/sec, AI insight"]
+  opsHud["Ops HUD<br/>Active VM, CPU, RAM, cores, disk throughput,<br/>live players, Event Analytics, AI insight"]
 
   publicUrl --> playerView
   opsUrl --> playerView
@@ -101,9 +98,8 @@ flowchart TB
 | Autoscaling | Shows how the VM pool can scale from 2 to 4 instances under CPU pressure. |
 | OCI Cache | Keeps live player snapshots shared across all active VM API backends. |
 | Streaming | Receives gameplay telemetry events for downstream processing. |
-| Object Storage | Stores raw event archives as NDJSON for replay, audit and later analytics. |
-| Autonomous Database | Stores curated `game_events` rows for dashboarding and SQL analytics. |
-| Oracle Analytics Cloud | Optional dashboard layer on top of ADB. |
+| Object Storage | Stores raw event archives as NDJSON for replay and audit. |
+| Autonomous Database | Stores curated `game_events` rows for SQL analytics and the ops Event Analytics panel. |
 | Generative AI | Gemini copilot insight in the ops HUD via OCI GenAI SDK. |
 | IAM Dynamic Group and Policies | Manually managed prerequisites. `dg_cengiz` matches app VMs and Functions; `Game-Demo` grants Streaming/Object Storage/GenAI; `oci-defense-grid-apigw-functions` lets API Gateway invoke Functions. |
 | OCI Functions | Optional event-ingest backend for `POST /api/events`, used when `function_image` points to an OCIR image. |

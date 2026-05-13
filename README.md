@@ -3,7 +3,7 @@
 
 # OCI Defense Grid Demo
 
-OCI Defense Grid is a V1 customer-demo remix of a Phaser space shooter. The player defends an Oracle Cloud region while the demo shows live cloud telemetry: Compute VMs, Load Balancer, API Gateway, OCI Cache, Streaming, Autonomous Database, Object Storage, Oracle Analytics Cloud and an OCI Generative AI copilot.
+OCI Defense Grid is a V1 customer-demo remix of a Phaser space shooter. The player defends an Oracle Cloud region while the demo shows live cloud telemetry: Compute VMs, Load Balancer, API Gateway, OCI Cache, Streaming, Autonomous Database, Object Storage and an OCI Generative AI copilot.
 
 The game can run locally with offline fallbacks, then be deployed to OCI with Terraform.
 
@@ -77,9 +77,8 @@ See the full wireframe in [docs/oci-defense-grid-wireframe.md](docs/oci-defense-
 | Autoscaling | Scales the instance pool from 2 to 4 VMs based on CPU. |
 | OCI Cache | Stores short-lived live player snapshots shared across all app VMs. |
 | Streaming | Receives gameplay telemetry events. |
-| Object Storage | Archives raw events as NDJSON for replay, audit and later pipelines. |
-| Autonomous Database | Stores curated `game_events` rows for SQL analytics and dashboards. |
-| Oracle Analytics Cloud | Optional dashboard layer on top of ADB. |
+| Object Storage | Archives raw events as NDJSON for replay and audit. |
+| Autonomous Database | Stores curated `game_events` rows for SQL analytics and the ops Event Analytics panel. |
 | OCI Generative AI | Gemini copilot insight in the ops HUD via the OCI SDK. |
 | IAM Dynamic Group and Policies | Manually created prerequisites that let app VMs and Functions call Streaming, Object Storage and GenAI, and let API Gateway invoke Functions. |
 | OCI Functions | Optional serverless event-ingest path for `POST /api/events`, writing gameplay telemetry to Streaming, Object Storage, OCI Cache and ADB. |
@@ -94,6 +93,7 @@ GET /api/status
 GET /api/leaderboard
 GET /api/players/live
 GET /api/analytics/live?runId=...
+GET /api/analytics/events
 POST /api/copilot
 ```
 
@@ -148,7 +148,7 @@ Terraform outputs `game_url` and `api_gateway_endpoint`. The VM cloud-init write
 
 ## Manual IAM Prerequisites
 
-This project intentionally treats IAM dynamic groups and policies as manual prerequisites. That keeps Terraform focused on demo infrastructure and avoids accidental changes to shared tenancy-level identity resources.
+This project treats IAM dynamic groups and policies as manual prerequisites. That keeps Terraform focused on demo infrastructure and avoids accidental changes to shared tenancy-level identity resources.
 
 Use these exact names for the current demo:
 
@@ -183,15 +183,6 @@ For this demo, `<genai_compartment_ocid>` is usually the same as `<compartment_o
 Allow any-user to use functions-family in compartment id <compartment_ocid> where ALL {request.principal.type = 'ApiGateway', request.resource.compartment.id = '<compartment_ocid>'}
 ```
 
-Keep these Terraform flags disabled when IAM is managed manually:
-
-```hcl
-create_instance_principal_dynamic_group = false
-create_instance_principal_policy        = false
-create_function_resource_principal_dynamic_group = false
-create_function_resource_principal_policy        = false
-```
-
 If you rebuild in the same tenancy, keep the manual IAM resources above. If you deploy in a new tenancy, create the same dynamic group and policies before switching `/api/events` to OCI Functions.
 
 ## OCI Functions Event Ingest
@@ -218,15 +209,10 @@ function_image = "arn.ocir.io/fr9qm01oq44x/oci-defense-grid/event-ingest:0.1.0"
 
 Use that image for this demo. Build and push a new image only if the Function code changes or you deploy into an environment that cannot pull the shared OCIR image.
 
-Recommended tfvars when IAM is managed manually:
+Recommended tfvars:
 
 ```hcl
 function_image = "arn.ocir.io/fr9qm01oq44x/oci-defense-grid/event-ingest:0.1.0"
-
-create_instance_principal_dynamic_group = false
-create_instance_principal_policy        = false
-create_function_resource_principal_dynamic_group = false
-create_function_resource_principal_policy        = false
 ```
 
 The Function also uses `ADB_USER`, `ADB_PASSWORD`, `ADB_CONNECT_STRING`, `REDIS_HOST`, `REDIS_PORT` and `REDIS_TLS` from Terraform function config. Redis does not need IAM. ADB writes use the configured database credentials and the existing ADB network allow-list.
@@ -306,9 +292,7 @@ adb_data_storage_size_gb = 20
 adb_is_free_tier         = false
 ```
 
-Autonomous Database is the source of truth for permanent highscores. OCI Cache is only used for live player state and fast presenter metrics.
-
-For instance-principal access to Streaming, Object Storage and GenAI, use the manual `dg_cengiz` and `Game-Demo` prerequisites above. Do not enable Terraform-managed IAM in this shared tenancy unless an admin explicitly wants Terraform to own those resources.
+Autonomous Database is the source of truth for permanent highscores and the ops Event Analytics panel. OCI Cache is only used for live player state and fast presenter metrics.
 
 ## OCI Generative AI
 
@@ -367,22 +351,15 @@ ADB_PASSWORD=...
 ADB_CONNECT_STRING=...
 ```
 
-## Oracle Analytics
+## Event Analytics
 
-Use `game_events` as the primary dataset. Suggested dashboard tiles:
+The presenter view reads `/api/analytics/events`, which summarizes the `game_events` table in Autonomous Database:
 
-- Events/sec by run
-- Score by session
-- Cloud action mix
-- Active VM/backend
-- Player hit events versus latency
-- Latest AI insight
+- Events per minute over the last 1, 5 and 15 minutes.
+- Counts for `enemy_killed`, `player_hit`, `powerup`, `boss_phase`, `run_end` and `heartbeat`.
+- Recent event volume by run, including max level and score.
 
-Terraform can optionally create an Analytics instance with:
-
-```hcl
-create_analytics_instance = true
-```
+When ADB is not configured locally, the same endpoint falls back to the in-memory event buffer so the UI remains testable.
 
 ## OCI Functions
 
@@ -405,6 +382,7 @@ The customer-facing demo checks are:
 - Ops HUD lists active players from OCI Cache across both VM backends.
 - Gameplay events appear in Streaming and Object Storage.
 - Autonomous Database receives `game_events`.
+- Ops HUD Event Analytics reads from Autonomous Database and falls back to memory locally.
 - Ops HUD updates score, active VM, CPU, RAM, cores, disk throughput, latency, events/sec and copilot insight.
 - `/api/copilot` returns `403` without the ops flag and `200` for ops callers.
 - Ops copilot returns a Gemini insight when GenAI auth/policy is configured, otherwise a deterministic fallback.
