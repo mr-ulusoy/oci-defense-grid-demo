@@ -8,10 +8,11 @@ export default class GameScene extends Phaser.Scene {
     init(data) {
         // Level system
         this.level = data.level || 1;
+        this.maxLevel = 6;
         this.callsign = data.callsign || localStorage.getItem('playerCallsign') || 'UNKNOWN';
         this.wave = 1;
-        // Fewer waves = boss appears faster! Level 1 is quick intro
-        this.wavesPerLevel = this.level === 1 ? 2 : 3;
+        // Level 4+ enters overdrive with longer stages.
+        this.wavesPerLevel = Math.min(5, (this.level === 1 ? 2 : 3) + Math.max(0, this.level - 3));
         this.waveInProgress = false;
 
         // Player stats
@@ -95,7 +96,7 @@ export default class GameScene extends Phaser.Scene {
         };
 
         // Start level music
-        const musicKey = `music-level${this.level}`;
+        const musicKey = `music-level${Math.min(this.level, 3)}`;
         this.music = this.sound.add(musicKey, { loop: true, volume: 0.4 });
         this.music.play();
 
@@ -134,8 +135,8 @@ export default class GameScene extends Phaser.Scene {
             this.bgLayers = [
                 { sprite: this.clouds, speed: 0.3, isTileSprite: true }
             ];
-        } else if (this.level === 3) {
-            // Level 3: Lava/Hell
+        } else {
+            // Level 3+: Lava/Hell. Later levels reuse the final biome in overdrive.
             this.bg = this.add.image(240, 320, 'lava-bg')
                 .setDisplaySize(480, 640);
 
@@ -154,7 +155,7 @@ export default class GameScene extends Phaser.Scene {
             }
 
             this.bgLayers = [
-                { sprite: this.embers, speed: -0.3, isTileSprite: true } // Negative = scroll up
+                { sprite: this.embers, speed: -0.3 - Math.max(0, this.level - 3) * 0.08, isTileSprite: true }
             ];
         }
     }
@@ -209,7 +210,7 @@ export default class GameScene extends Phaser.Scene {
                 this.bossActive = false;
                 this.waveInProgress = false;
 
-                if (this.level >= 3) {
+                if (this.level >= this.maxLevel) {
                     // Victory!
                     this.scene.start('VictoryScene', { score: this.score });
                 } else {
@@ -428,7 +429,7 @@ export default class GameScene extends Phaser.Scene {
     // ============== WAVE SYSTEM ==============
 
     showLevelIntro() {
-        this.announceText.setText(`LEVEL ${this.level}`);
+        this.announceText.setText(this.level >= 4 ? `LEVEL ${this.level}\nOVERDRIVE` : `LEVEL ${this.level}`);
         this.announceText.setAlpha(1);
         this.oracleLogo.setAlpha(0.95);
 
@@ -468,20 +469,19 @@ export default class GameScene extends Phaser.Scene {
             ease: 'Power2'
         });
 
-        // Spawn enemies - MORE enemies for frantic gameplay!
-        // Stage 2 and 3 get extra enemies for chaos
+        const overdrive = Math.max(0, this.level - 3);
         const baseCount = 8 + (this.level * 4) + (this.wave * 4);
-        let enemyCount = baseCount;
-        if (this.level === 2) enemyCount = baseCount + 4;
-        if (this.level === 3) enemyCount = baseCount + 6;
+        let enemyCount = baseCount + overdrive * 6 + Math.max(0, this.wave - 2) * overdrive * 2;
+        if (this.level === 2) enemyCount += 4;
+        if (this.level >= 3) enemyCount += 6;
         this.spawnWaveEnemies(enemyCount);
     }
 
     spawnWaveEnemies(count) {
         let spawned = 0;
-        // Much faster spawn rate for frantic action! Stage 3 is even faster
-        let spawnDelay = Math.max(250, 800 - (this.level * 80) - (this.wave * 40));
-        if (this.level === 3) spawnDelay = Math.max(180, spawnDelay - 50);
+        const overdrive = Math.max(0, this.level - 3);
+        let spawnDelay = Math.max(150, 800 - (this.level * 80) - (this.wave * 40) - overdrive * 35);
+        if (this.level >= 3) spawnDelay = Math.max(140, spawnDelay - 50);
 
         this.enemySpawnTimer = this.time.addEvent({
             delay: spawnDelay,
@@ -499,16 +499,17 @@ export default class GameScene extends Phaser.Scene {
         const x = Phaser.Math.Between(50, 430);
         const rand = Math.random();
         // Higher chances for tougher enemies = more chaos!
-        const bigChance = Math.min(0.08 + (this.level * 0.06) + (this.wave * 0.03), 0.30);
-        const mediumChance = Math.min(0.25 + (this.level * 0.08) + (this.wave * 0.04), 0.50);
+        const overdrive = Math.max(0, this.level - 3);
+        const bigChance = Math.min(0.08 + (this.level * 0.06) + (this.wave * 0.03) + overdrive * 0.03, 0.42);
+        const mediumChance = Math.min(0.25 + (this.level * 0.08) + (this.wave * 0.04) + overdrive * 0.04, 0.62);
 
         if (rand < bigChance) {
             this.createBigEnemy(x);
         } else if (rand < bigChance + mediumChance) {
             this.createMediumEnemy(x);
         } else {
-            // Stage 2+: 25% chance to spawn a conga line of small enemies
-            if (this.level >= 2 && Math.random() < 0.25) {
+            const congaChance = Math.min(0.25 + overdrive * 0.06, 0.45);
+            if (this.level >= 2 && Math.random() < congaChance) {
                 this.spawnCongaLine(x);
             } else {
                 this.createSmallEnemy(x);
@@ -517,9 +518,9 @@ export default class GameScene extends Phaser.Scene {
     }
 
     spawnCongaLine(x) {
-        const count = Phaser.Math.Between(3, 4);
+        const count = Phaser.Math.Between(3, Math.min(7, 4 + Math.max(0, this.level - 3)));
         for (let i = 0; i < count; i++) {
-            this.time.delayedCall(i * 150, () => {
+            this.time.delayedCall(i * Math.max(85, 150 - Math.max(0, this.level - 3) * 15), () => {
                 if (!this.isDead && !this.bossActive) {
                     this.createSmallEnemy(x + Phaser.Math.Between(-20, 20));
                 }
@@ -534,18 +535,17 @@ export default class GameScene extends Phaser.Scene {
             2: { key: 'l2-enemy-small', anim: 'l2-enemy-small-fly', scale: 1.0, size: [40, 40] }, // 48*1=48
             3: { key: 'l3-enemy-small', anim: 'l3-enemy-small-fly', scale: 0.45, size: [45, 50] } // 112*0.45=50
         };
-        const s = sprites[this.level] || sprites[1];
+        const s = sprites[Math.min(this.level, 3)] || sprites[1];
 
         const enemy = this.enemies.create(x, -30, s.key);
         enemy.setScale(s.scale);
         enemy.play(s.anim);
         enemy.setSize(s.size[0], s.size[1]);
         enemy.enemyType = 'small';
-        enemy.health = 1;
-        enemy.points = 100;
-        enemy.setVelocityY(Phaser.Math.Between(120 + this.level * 20, 220 + this.level * 25));
-        // Stage 2 enemies drift more
-        const driftAmount = this.level === 2 ? 100 : 60;
+        enemy.health = this.level >= 5 && Math.random() < 0.25 ? 2 : 1;
+        enemy.points = 100 + Math.max(0, this.level - 3) * 25;
+        enemy.setVelocityY(Phaser.Math.Between(120 + this.level * 20, Math.min(420, 220 + this.level * 25)));
+        const driftAmount = this.level >= 2 ? Math.min(140, 80 + this.level * 10) : 60;
         enemy.setVelocityX(Phaser.Math.Between(-driftAmount, driftAmount));
     }
 
@@ -556,7 +556,7 @@ export default class GameScene extends Phaser.Scene {
             2: { key: 'l2-enemy-medium', anim: 'l2-enemy-medium-fly', scale: 1.8, size: [40, 40], rotate: false }, // 48*1.8=86
             3: { key: 'l3-enemy-medium', anim: 'l3-enemy-medium-fly', scale: 0.85, size: [75, 75], rotate: false } // 101*0.85=86
         };
-        const s = sprites[this.level] || sprites[1];
+        const s = sprites[Math.min(this.level, 3)] || sprites[1];
 
         const enemy = this.enemies.create(x, -30, s.key);
         enemy.setScale(s.scale);
@@ -564,23 +564,23 @@ export default class GameScene extends Phaser.Scene {
         enemy.play(s.anim);
         enemy.setSize(s.size[0], s.size[1]);
         enemy.enemyType = 'medium';
-        enemy.health = 2;
-        enemy.points = 200;
+        const overdrive = Math.max(0, this.level - 3);
+        enemy.health = 2 + Math.floor(overdrive / 2);
+        enemy.points = 200 + overdrive * 50;
         enemy.canShoot = true;
         enemy.lastShot = 0;
-        // Stage 3 has slower fire rate to balance difficulty
-        const minDelay = this.level === 3 ? 700 : 800 - this.level * 100;
-        const maxDelay = this.level === 3 ? 1400 : 1500 - this.level * 150;
+        const minDelay = Math.max(420, (this.level >= 3 ? 700 : 800 - this.level * 100) - overdrive * 60);
+        const maxDelay = Math.max(minDelay + 220, (this.level >= 3 ? 1400 : 1500 - this.level * 150) - overdrive * 90);
         enemy.shootDelay = Phaser.Math.Between(minDelay, maxDelay);
-        enemy.setVelocityY(Phaser.Math.Between(80, 140));
-        enemy.setVelocityX(Phaser.Math.Between(-40, 40));
+        enemy.setVelocityY(Phaser.Math.Between(80 + overdrive * 8, 140 + overdrive * 14));
+        enemy.setVelocityX(Phaser.Math.Between(-40 - overdrive * 10, 40 + overdrive * 10));
 
         // Wobble movement for stage 2+
         if (this.level >= 2) {
             enemy.wobble = true;
             enemy.wobblePhase = Math.random() * Math.PI * 2;
-            enemy.wobbleSpeed = Phaser.Math.Between(3, 5);
-            enemy.wobbleAmount = Phaser.Math.Between(40, 70);
+            enemy.wobbleSpeed = Phaser.Math.Between(3 + overdrive, 5 + overdrive);
+            enemy.wobbleAmount = Phaser.Math.Between(40, 70 + overdrive * 12);
         }
     }
 
@@ -591,7 +591,7 @@ export default class GameScene extends Phaser.Scene {
             2: { key: 'l2-enemy-big', anim: 'l2-enemy-big-fly', scale: 1.7, size: [40, 40] }, // 48*1.7=82
             3: { key: 'l3-enemy-big', anim: 'l3-enemy-big-fly', scale: 1.7, size: [40, 40], rotate: false } // 48*1.7=82
         };
-        const s = sprites[this.level] || sprites[1];
+        const s = sprites[Math.min(this.level, 3)] || sprites[1];
 
         const enemy = this.enemies.create(x, -50, s.key);
         enemy.setScale(s.scale);
@@ -599,17 +599,18 @@ export default class GameScene extends Phaser.Scene {
         enemy.play(s.anim);
         enemy.setSize(s.size[0], s.size[1]);
         enemy.enemyType = 'big';
-        enemy.health = 3 + this.level;
-        enemy.points = 500;
+        const overdrive = Math.max(0, this.level - 3);
+        enemy.health = 3 + this.level + overdrive;
+        enemy.points = 500 + overdrive * 150;
         enemy.canShoot = true;
         enemy.lastShot = 0;
-        // Stage 3 has slower fire rate to balance difficulty
-        enemy.shootDelay = this.level === 3 ? Phaser.Math.Between(700, 1200) : Phaser.Math.Between(500, 1000);
-        enemy.setVelocityY(Phaser.Math.Between(50, 90));
+        enemy.shootDelay = this.level >= 3
+            ? Phaser.Math.Between(Math.max(420, 700 - overdrive * 80), Math.max(760, 1200 - overdrive * 100))
+            : Phaser.Math.Between(500, 1000);
+        enemy.setVelocityY(Phaser.Math.Between(50 + overdrive * 8, 90 + overdrive * 12));
         enemy.trackPlayer = true;
 
-        // Erratic speed bursts for stage 3
-        if (this.level === 3) {
+        if (this.level >= 3) {
             enemy.erraticSpeed = true;
             enemy.nextSpeedChange = 0;
         }
@@ -645,8 +646,13 @@ export default class GameScene extends Phaser.Scene {
             // Erratic speed bursts for big enemies (stage 3)
             if (enemy.erraticSpeed && time > enemy.nextSpeedChange) {
                 const burst = Phaser.Math.Between(0, 1) === 0;
-                enemy.setVelocityY(burst ? Phaser.Math.Between(120, 180) : Phaser.Math.Between(40, 70));
-                enemy.nextSpeedChange = time + Phaser.Math.Between(400, 1000);
+                const overdrive = Math.max(0, this.level - 3);
+                enemy.setVelocityY(
+                    burst
+                        ? Phaser.Math.Between(120 + overdrive * 20, 180 + overdrive * 24)
+                        : Phaser.Math.Between(40 + overdrive * 8, 70 + overdrive * 10)
+                );
+                enemy.nextSpeedChange = time + Phaser.Math.Between(Math.max(240, 400 - overdrive * 40), 1000);
             }
         });
     }
@@ -659,7 +665,8 @@ export default class GameScene extends Phaser.Scene {
         bullet.setScale(2);
         bullet.setTint(0xff0000);
         const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, this.player.x, this.player.y);
-        bullet.setVelocity(Math.cos(angle) * 200, Math.sin(angle) * 200);
+        const bulletSpeed = Math.min(330, 200 + Math.max(0, this.level - 1) * 18);
+        bullet.setVelocity(Math.cos(angle) * bulletSpeed, Math.sin(angle) * bulletSpeed);
     }
 
     checkWaveComplete() {
@@ -733,7 +740,7 @@ export default class GameScene extends Phaser.Scene {
                 hitbox: { w: 200, h: 180, ox: -20, oy: -18 }
             }
         };
-        const config = bossConfigs[this.level] || bossConfigs[1];
+        const config = bossConfigs[Math.min(this.level, 3)] || bossConfigs[1];
 
         // Create boss and add to dedicated boss group
         this.boss = this.bossGroup.create(240, -100, config.key);
@@ -742,11 +749,11 @@ export default class GameScene extends Phaser.Scene {
         this.boss.setDepth(5);
 
         // Store boss type for later reference
-        this.boss.bossType = this.level;
+        this.boss.bossType = Math.min(this.level, 3);
+        this.boss.bossTier = this.level;
 
-        // Boss stats scale with level - ULTRA TANKY BOSS!
-        // Store HP at SCENE level, not on sprite, to avoid any Phaser conflicts
-        this.bossMaxHP = 1000; // Simple: 1000 HP, 10 damage per bullet = 100 hits to kill
+        const overdrive = Math.max(0, this.level - 3);
+        this.bossMaxHP = 1000 + (this.level - 1) * 220 + overdrive * 280;
         this.bossHP = this.bossMaxHP;
         this.boss.points = 5000 * this.level;
         this.boss.lastShot = 0; // Will be set properly when active
@@ -797,13 +804,15 @@ export default class GameScene extends Phaser.Scene {
 
         // Movement pattern
         this.boss.phaseTime += 16;
-        const moveX = Math.sin(this.boss.phaseTime * 0.002) * 100;
+        const bossTier = this.boss.bossTier || this.boss.bossType || 1;
+        const overdrive = Math.max(0, bossTier - 3);
+        const moveX = Math.sin(this.boss.phaseTime * (0.002 + overdrive * 0.00035)) * (100 + overdrive * 18);
         this.boss.x = 240 + moveX;
 
         // Shooting patterns based on health
         // Use scene-level HP variables
         const healthPercent = this.bossHP / this.bossMaxHP;
-        const bossType = this.boss.bossType || 1;
+        const bossType = Math.min(this.boss.bossType || 1, 3);
         let shootDelay = 600;
 
         if (bossType === 1) {
@@ -813,13 +822,13 @@ export default class GameScene extends Phaser.Scene {
         } else {
             // Boss 2 & 3: Progressive difficulty with phases
             if (healthPercent < 0.3) {
-                shootDelay = 300;
+                shootDelay = Math.max(170, 300 - overdrive * 35);
                 this.boss.shootPattern = 2;
             } else if (healthPercent < 0.6) {
-                shootDelay = 450;
+                shootDelay = Math.max(240, 450 - overdrive * 45);
                 this.boss.shootPattern = 1;
             } else {
-                shootDelay = 600;
+                shootDelay = Math.max(340, 600 - overdrive * 55);
                 this.boss.shootPattern = 0;
             }
         }
@@ -852,7 +861,9 @@ export default class GameScene extends Phaser.Scene {
     }
 
     bossShoot() {
-        const bossType = this.boss.bossType || 1;
+        const bossType = Math.min(this.boss.bossType || 1, 3);
+        const bossTier = this.boss.bossTier || bossType;
+        const overdrive = Math.max(0, bossTier - 3);
 
         if (bossType === 1) {
             // BOSS 1: Original - Simple attacks, no intense phases
@@ -896,29 +907,42 @@ export default class GameScene extends Phaser.Scene {
             // BOSS 3: Demon - Blue fire breath and dark magic attacks
             if (this.boss.shootPattern === 0) {
                 // Blue fire breath - wide spreading flames
-                for (let i = -3; i <= 3; i++) {
+                for (let i = -3 - overdrive; i <= 3 + overdrive; i++) {
                     const bullet = this.enemyBullets.create(this.boss.x + i * 25, this.boss.y + 80, 'laser', 2);
                     bullet.setScale(2);
                     bullet.setTint(0x00ccff); // Blue fire
-                    bullet.setVelocity(i * 60, 200);
+                    bullet.setVelocity(i * 60, 200 + overdrive * 20);
                 }
             } else if (this.boss.shootPattern === 1) {
                 // Dark orbs - homing projectiles from wings
-                for (let i = -1; i <= 1; i++) {
+                for (let i = -1 - Math.min(overdrive, 1); i <= 1 + Math.min(overdrive, 1); i++) {
                     const bullet = this.enemyBullets.create(this.boss.x + i * 80, this.boss.y + 40, 'laser', 2);
                     bullet.setScale(2);
                     bullet.setTint(0x8800ff); // Purple dark magic
                     const angle = Phaser.Math.Angle.Between(bullet.x, bullet.y, this.player.x, this.player.y);
-                    bullet.setVelocity(Math.cos(angle) * 220, Math.sin(angle) * 220);
+                    const speed = 220 + overdrive * 25;
+                    bullet.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
                 }
             } else {
                 // Demon fury - spiral fire + rain of flames
-                for (let i = 0; i < 10; i++) {
-                    const angle = (this.boss.phaseTime * 0.025) + (i * Math.PI / 5);
+                const bulletCount = 10 + overdrive * 3;
+                for (let i = 0; i < bulletCount; i++) {
+                    const angle = (this.boss.phaseTime * (0.025 + overdrive * 0.002)) + (i * Math.PI / 5);
                     const bullet = this.enemyBullets.create(this.boss.x, this.boss.y + 60, 'laser', 2);
                     bullet.setScale(2);
                     bullet.setTint(0x00aaff); // Blue flames
-                    bullet.setVelocity(Math.cos(angle) * 180, Math.sin(angle) * 180 + 100);
+                    bullet.setVelocity(Math.cos(angle) * (180 + overdrive * 18), Math.sin(angle) * (180 + overdrive * 18) + 100);
+                }
+            }
+
+            if (overdrive > 0) {
+                for (let i = 0; i < overdrive; i++) {
+                    const bullet = this.enemyBullets.create(this.boss.x + Phaser.Math.Between(-120, 120), this.boss.y + 60, 'laser', 2);
+                    bullet.setScale(2);
+                    bullet.setTint(0xffdd00);
+                    const angle = Phaser.Math.Angle.Between(bullet.x, bullet.y, this.player.x, this.player.y);
+                    const speed = 230 + overdrive * 20;
+                    bullet.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
                 }
             }
         }
@@ -963,7 +987,7 @@ export default class GameScene extends Phaser.Scene {
         boss.setTint(0xffffff);
         this.time.delayedCall(50, () => {
             const tints = [0xffffff, 0x8888ff, 0xffdd00];
-            if (boss && boss.active) boss.setTint(tints[this.level - 1]);
+            if (boss && boss.active) boss.setTint(tints[Math.min(this.level, 3) - 1]);
         });
 
         // Only defeat boss when health reaches 0 - use SCENE-LEVEL HP
@@ -1040,7 +1064,7 @@ export default class GameScene extends Phaser.Scene {
             localStorage.setItem('bestLevel', this.level);
         }
 
-        if (this.level >= 3) {
+        if (this.level >= this.maxLevel) {
             // Game complete!
             this.music.stop();
             this.sendTelemetry('run_end');

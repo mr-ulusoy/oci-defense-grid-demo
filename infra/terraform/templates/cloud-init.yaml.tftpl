@@ -68,6 +68,9 @@ write_files:
       Environment=REDIS_PORT=${redis_port}
       Environment=REDIS_TLS=${redis_tls}
       Environment=LIVE_PLAYER_TTL_SECONDS=${live_player_ttl}
+      Environment=ADB_USER=${adb_user}
+      Environment=ADB_PASSWORD=${adb_password}
+      Environment=ADB_CONNECT_STRING=${adb_connect_string}
 
       [Install]
       WantedBy=multi-user.target

@@ -48,6 +48,11 @@ output "autonomous_database_name" {
   value       = var.create_autonomous_database ? oci_database_autonomous_database.demo[0].display_name : null
 }
 
+output "adb_app_connect_string" {
+  description = "Autonomous Database LOW service connect descriptor used by app VMs."
+  value       = local.adb_app_connect_string
+}
+
 output "analytics_instance_url" {
   description = "Optional Oracle Analytics Cloud URL if create_analytics_instance is true."
   value       = var.create_analytics_instance ? oci_analytics_analytics_instance.demo[0].service_url : null

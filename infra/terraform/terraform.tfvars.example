@@ -37,6 +37,10 @@ create_debug_bastion  = false
 debug_ssh_source_cidr = "203.0.113.10/32"
 
 adb_admin_password         = "ReplaceWith_StrongPassword_123"
+adb_user                   = "ADMIN"
+adb_connect_string         = ""
+adb_is_mtls_connection_required = false
+adb_whitelisted_ips        = []
 create_autonomous_database = true
 adb_compute_model          = "ECPU"
 adb_compute_count          = 2

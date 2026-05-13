@@ -233,6 +233,30 @@ variable "adb_admin_password" {
   sensitive   = true
 }
 
+variable "adb_user" {
+  description = "Database user used by the app API for Autonomous Database writes."
+  type        = string
+  default     = "ADMIN"
+}
+
+variable "adb_connect_string" {
+  description = "Optional app connect descriptor for Autonomous Database. Leave empty to use the Terraform-created ADB LOW service."
+  type        = string
+  default     = ""
+}
+
+variable "adb_is_mtls_connection_required" {
+  description = "Require mutual TLS wallet authentication for Autonomous Database. The VM demo app uses TLS without wallet, so this defaults to false."
+  type        = bool
+  default     = false
+}
+
+variable "adb_whitelisted_ips" {
+  description = "CIDR allow-list for Autonomous Database public endpoint when mTLS is disabled. Leave empty to allow the demo NAT gateway public IP."
+  type        = list(string)
+  default     = []
+}
+
 variable "adb_compute_model" {
   description = "Autonomous Database compute model."
   type        = string

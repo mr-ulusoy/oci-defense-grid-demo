@@ -17,6 +17,18 @@ create table game_events (
 create index game_events_run_idx on game_events (run_id, server_ts);
 create index game_events_type_idx on game_events (event_type, server_ts);
 
+create table high_scores (
+  run_id varchar2(64) primary key,
+  session_id varchar2(64) not null,
+  callsign varchar2(32) not null,
+  score number not null,
+  level_no number not null,
+  vm_name varchar2(128),
+  created_at timestamp with time zone default systimestamp not null
+);
+
+create index high_scores_rank_idx on high_scores (score desc, created_at asc);
+
 create table ai_insights (
   id generated always as identity primary key,
   run_id varchar2(64) not null,

@@ -2,6 +2,13 @@ import { archiveEventsToObjectStorage, publishEventsToStreaming } from "./ociSin
 import { createRedisLivePlayers } from "./livePlayers.js";
 
 const MAX_EVENTS = 5000;
+const SEED_LEADERBOARD = [
+  { callsign: "VEGA-9", score: 12400, runId: "seed-1", vm: "seed", createdAt: new Date().toISOString() },
+  { callsign: "ORACLE-1", score: 9800, runId: "seed-2", vm: "seed", createdAt: new Date().toISOString() },
+  { callsign: "PHOENIX", score: 7600, runId: "seed-3", vm: "seed", createdAt: new Date().toISOString() }
+];
+
+let schemaReady = false;
 
 function scoreEntry(event) {
   return {
@@ -26,13 +33,88 @@ async function createOracleConnection() {
   });
 }
 
+async function ignoreAlreadyExists(operation) {
+  try {
+    await operation();
+  } catch (error) {
+    if (error.errorNum !== 955) {
+      throw error;
+    }
+  }
+}
+
+async function ensureAutonomousSchema(connection) {
+  if (schemaReady) {
+    return;
+  }
+
+  await ignoreAlreadyExists(() =>
+    connection.execute(`
+      create table game_events (
+        id varchar2(64) primary key,
+        run_id varchar2(64) not null,
+        session_id varchar2(64) not null,
+        event_type varchar2(64) not null,
+        level_no number not null,
+        score number not null,
+        cloud_action varchar2(64) not null,
+        fps number,
+        latency_ms number,
+        client_ts timestamp with time zone,
+        server_ts timestamp with time zone default systimestamp not null,
+        vm_name varchar2(128),
+        payload_json clob check (payload_json is json)
+      )
+    `)
+  );
+  await ignoreAlreadyExists(() => connection.execute("create index game_events_run_idx on game_events (run_id, server_ts)"));
+  await ignoreAlreadyExists(() => connection.execute("create index game_events_type_idx on game_events (event_type, server_ts)"));
+  await ignoreAlreadyExists(() =>
+    connection.execute(`
+      create table high_scores (
+        run_id varchar2(64) primary key,
+        session_id varchar2(64) not null,
+        callsign varchar2(32) not null,
+        score number not null,
+        level_no number not null,
+        vm_name varchar2(128),
+        created_at timestamp with time zone default systimestamp not null
+      )
+    `)
+  );
+  await ignoreAlreadyExists(() => connection.execute("create index high_scores_rank_idx on high_scores (score desc, created_at asc)"));
+  await ignoreAlreadyExists(() =>
+    connection.execute(`
+      create table ai_insights (
+        id generated always as identity primary key,
+        run_id varchar2(64) not null,
+        insight varchar2(500) not null,
+        created_at timestamp with time zone default systimestamp not null
+      )
+    `)
+  );
+
+  schemaReady = true;
+}
+
+function mergeLeaderboards(primary, fallback) {
+  const entriesByRun = new Map();
+  for (const entry of [...primary, ...fallback]) {
+    const key = entry.runId || `${entry.callsign}-${entry.score}`;
+    const existing = entriesByRun.get(key);
+    if (!existing || Number(entry.score) > Number(existing.score)) {
+      entriesByRun.set(key, entry);
+    }
+  }
+
+  return [...entriesByRun.values()]
+    .sort((left, right) => Number(right.score) - Number(left.score) || Date.parse(left.createdAt) - Date.parse(right.createdAt))
+    .slice(0, 10);
+}
+
 export function createStore() {
   const events = [];
-  const leaderboard = [
-    { callsign: "VEGA-9", score: 12400, runId: "seed-1", vm: "seed", createdAt: new Date().toISOString() },
-    { callsign: "ORACLE-1", score: 9800, runId: "seed-2", vm: "seed", createdAt: new Date().toISOString() },
-    { callsign: "PHOENIX", score: 7600, runId: "seed-3", vm: "seed", createdAt: new Date().toISOString() }
-  ];
+  const leaderboard = [...SEED_LEADERBOARD];
   const insights = [];
   const livePlayers = createRedisLivePlayers();
 
@@ -43,6 +125,7 @@ export function createStore() {
     }
 
     try {
+      await ensureAutonomousSchema(connection);
       await connection.executeMany(
         `insert into game_events (
           id, run_id, session_id, event_type, level_no, score, cloud_action,
@@ -67,7 +150,73 @@ export function createStore() {
         })),
         { autoCommit: true }
       );
+
+      const runEnds = batch.filter((event) => event.type === "run_end");
+      if (runEnds.length > 0) {
+        await connection.executeMany(
+          `merge into high_scores target
+           using (
+             select :runId run_id, :sessionId session_id, :callsign callsign,
+                    :score score, :level level_no, :vmName vm_name
+             from dual
+           ) source
+           on (target.run_id = source.run_id)
+           when matched then update set
+             target.session_id = source.session_id,
+             target.callsign = source.callsign,
+             target.score = source.score,
+             target.level_no = source.level_no,
+             target.vm_name = source.vm_name
+             where source.score > target.score
+           when not matched then insert (
+             run_id, session_id, callsign, score, level_no, vm_name
+           ) values (
+             source.run_id, source.session_id, source.callsign, source.score, source.level_no, source.vm_name
+           )`,
+          runEnds.map((event) => ({
+            runId: event.runId,
+            sessionId: event.sessionId,
+            callsign: event.callsign || `GRID-${event.sessionId.slice(0, 4).toUpperCase()}`,
+            score: event.score,
+            level: event.level,
+            vmName: event.vm.name
+          })),
+          { autoCommit: true }
+        );
+      }
+
       return "connected";
+    } finally {
+      await connection.close();
+    }
+  }
+
+  async function leaderboardFromAutonomousDb() {
+    const connection = await createOracleConnection();
+    if (!connection) {
+      return null;
+    }
+
+    try {
+      await ensureAutonomousSchema(connection);
+      const result = await connection.execute(
+        `select callsign, score, run_id, level_no, vm_name,
+                to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.FF3"Z"') created_at
+         from high_scores
+         order by score desc, created_at asc
+         fetch first 10 rows only`,
+        [],
+        { outFormat: (await import("oracledb")).default.OUT_FORMAT_OBJECT }
+      );
+
+      return (result.rows ?? []).map((row) => ({
+        callsign: row.CALLSIGN,
+        score: Number(row.SCORE),
+        runId: row.RUN_ID,
+        level: Number(row.LEVEL_NO),
+        vm: row.VM_NAME,
+        createdAt: row.CREATED_AT
+      }));
     } finally {
       await connection.close();
     }
@@ -111,6 +260,15 @@ export function createStore() {
     },
 
     async leaderboard() {
+      try {
+        const persisted = await leaderboardFromAutonomousDb();
+        if (persisted) {
+          return mergeLeaderboards(persisted, leaderboard);
+        }
+      } catch (error) {
+        console.warn("Autonomous Database leaderboard read failed, using memory fallback.", error.message);
+      }
+
       return leaderboard.slice(0, 10);
     },
 

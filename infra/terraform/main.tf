@@ -20,6 +20,17 @@ locals {
   redis_host   = var.create_redis_cache ? oci_redis_redis_cluster.live_players[0].primary_fqdn : var.redis_host
   redis_port   = tostring(var.redis_port)
   redis_tls    = var.redis_tls ? "true" : "false"
+  adb_low      = var.create_autonomous_database ? oci_database_autonomous_database.demo[0].connection_strings[0].low : ""
+  adb_host     = local.adb_low == "" ? "" : split(":", split("/", local.adb_low)[0])[0]
+  adb_service  = local.adb_low == "" ? "" : split("/", local.adb_low)[1]
+  adb_generated_connect_string = local.adb_low == "" ? "" : join("", [
+    "(description=(retry_count=20)(retry_delay=3)",
+    "(address=(protocol=tcps)(port=1522)(host=${local.adb_host}))",
+    "(connect_data=(service_name=${local.adb_service}))",
+    "(security=(ssl_server_dn_match=yes)))"
+  ])
+  adb_app_connect_string = var.adb_connect_string != "" ? var.adb_connect_string : local.adb_generated_connect_string
+  adb_whitelisted_ips    = length(var.adb_whitelisted_ips) > 0 ? var.adb_whitelisted_ips : (var.adb_is_mtls_connection_required ? [] : ["${oci_core_nat_gateway.demo.nat_ip}/32"])
   app_user_data = base64encode(templatefile("${path.module}/templates/cloud-init.yaml.tftpl", {
     app_repo_url       = var.app_repo_url
     app_git_ref        = var.app_git_ref
@@ -38,6 +49,9 @@ locals {
     redis_port         = local.redis_port
     redis_tls          = local.redis_tls
     live_player_ttl    = tostring(var.live_player_ttl_seconds)
+    adb_user           = var.adb_user
+    adb_password       = var.adb_admin_password
+    adb_connect_string = local.adb_app_connect_string
     region             = var.region
   }))
 }
@@ -545,17 +559,19 @@ resource "oci_objectstorage_bucket" "raw_events" {
 }
 
 resource "oci_database_autonomous_database" "demo" {
-  count                   = var.create_autonomous_database ? 1 : 0
-  admin_password          = var.adb_admin_password
-  compartment_id          = var.compartment_ocid
-  compute_count           = var.adb_compute_count
-  compute_model           = var.adb_compute_model
-  data_storage_size_in_gb = var.adb_data_storage_size_gb
-  db_name                 = replace(substr(local.name_prefix, 0, 14), "-", "")
-  db_workload             = "AJD"
-  display_name            = "${local.name_prefix}-adb"
-  is_free_tier            = var.adb_is_free_tier
-  license_model           = "LICENSE_INCLUDED"
+  count                       = var.create_autonomous_database ? 1 : 0
+  admin_password              = var.adb_admin_password
+  compartment_id              = var.compartment_ocid
+  compute_count               = var.adb_compute_count
+  compute_model               = var.adb_compute_model
+  data_storage_size_in_gb     = var.adb_data_storage_size_gb
+  db_name                     = replace(substr(local.name_prefix, 0, 14), "-", "")
+  db_workload                 = "AJD"
+  display_name                = "${local.name_prefix}-adb"
+  is_free_tier                = var.adb_is_free_tier
+  is_mtls_connection_required = var.adb_is_mtls_connection_required
+  license_model               = "LICENSE_INCLUDED"
+  whitelisted_ips             = local.adb_whitelisted_ips
 }
 
 resource "oci_functions_application" "demo" {

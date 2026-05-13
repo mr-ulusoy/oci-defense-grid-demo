@@ -174,6 +174,8 @@ instance_ocpus      = 1
 instance_memory_gbs = 8
 ```
 
+The game runs through level 6. Levels 4-6 reuse the lava biome as overdrive levels with more waves, denser spawns, tougher enemies and harder boss patterns.
+
 OCI Cache is enabled for the live player list:
 
 ```hcl
@@ -188,11 +190,17 @@ live_player_ttl_seconds  = 60
 Autonomous Database is configured as the smallest paid ECPU setup for this demo:
 
 ```hcl
+adb_user                        = "ADMIN"
+adb_connect_string              = ""
+adb_is_mtls_connection_required = false
+adb_whitelisted_ips             = []
 adb_compute_model        = "ECPU"
 adb_compute_count        = 2
 adb_data_storage_size_gb = 20
 adb_is_free_tier         = false
 ```
+
+Autonomous Database is the source of truth for permanent highscores. OCI Cache is only used for live player state and fast presenter metrics.
 
 For instance-principal access to Streaming, Object Storage and GenAI, set:
 
