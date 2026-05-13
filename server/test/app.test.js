@@ -189,8 +189,8 @@ test("event analytics summarizes live game events", async () => {
   assert.equal(body.windows.last15m, 3);
   assert.equal(body.eventTypes.find((eventType) => eventType.type === "enemy_killed").count, 1);
   assert.equal(body.eventTypes.find((eventType) => eventType.type === "player_hit").count, 1);
-  assert.equal(body.runs.find((run) => run.runId === "run-analytics-a").eventCount, 2);
-  assert.equal(body.runs.find((run) => run.runId === "run-analytics-a").maxLevel, 4);
+  assert.equal(body.eventTypes.find((eventType) => eventType.type === "powerup").count, 1);
+  assert.equal(body.runs, undefined);
 });
 
 test("copilot endpoint rejects non-ops callers", async () => {

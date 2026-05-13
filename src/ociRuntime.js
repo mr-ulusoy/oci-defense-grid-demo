@@ -40,7 +40,6 @@ const elements = {
   eventRate5m: document.getElementById("eventRate5m"),
   eventRate15m: document.getElementById("eventRate15m"),
   eventTypeList: document.getElementById("eventTypeList"),
-  runVolumeList: document.getElementById("runVolumeList"),
   leaderboard: document.getElementById("leaderboardList"),
   askCopilot: document.getElementById("askCopilot"),
   refreshLeaderboard: document.getElementById("refreshLeaderboard")
@@ -157,36 +156,6 @@ function renderEventAnalytics(analytics = {}) {
     row.innerHTML = `<span>${escapeHtml(EVENT_TYPE_LABELS[eventType.type] ?? eventType.type)}</span><strong>${Number(eventType.count ?? 0)}</strong>`;
     elements.eventTypeList.appendChild(row);
   }
-
-  elements.runVolumeList.innerHTML = "";
-  if (!analytics.runs?.length) {
-    const empty = document.createElement("div");
-    empty.className = "run-volume-empty";
-    empty.textContent = "No run volume in the last 24h.";
-    elements.runVolumeList.appendChild(empty);
-    return;
-  }
-
-  const header = document.createElement("div");
-  header.className = "run-volume-row run-volume-head";
-  header.innerHTML = "<span>Run</span><span>Events</span><span>Lvl</span><span>Score</span>";
-  elements.runVolumeList.appendChild(header);
-
-  for (const run of analytics.runs.slice(0, 6)) {
-    const row = document.createElement("div");
-    row.className = "run-volume-row";
-    row.innerHTML = [
-      `<strong>${escapeHtml(shortRunId(run.runId))}</strong>`,
-      `<span>${Number(run.eventCount ?? 0)}</span>`,
-      `<span>${Number(run.maxLevel ?? 0)}</span>`,
-      `<span>${Number(run.maxScore ?? 0)}</span>`
-    ].join("");
-    elements.runVolumeList.appendChild(row);
-  }
-}
-
-function shortRunId(runId) {
-  return String(runId ?? "unknown").slice(0, 8);
 }
 
 function formatEventsPerMinute(count, minutes) {

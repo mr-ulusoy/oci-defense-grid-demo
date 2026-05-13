@@ -183,8 +183,7 @@ export class OciTelemetry {
           last5m: eventsPerSecond * 300,
           last15m: eventsPerSecond * 900
         },
-        eventTypes: [],
-        runs: []
+        eventTypes: []
       };
     }
   }
