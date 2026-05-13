@@ -38,6 +38,7 @@ export default class GameScene extends Phaser.Scene {
         this.bossHP = 0;
         this.bossMaxHP = 0;
         this.lastOciHudUpdate = 0;
+        this.lastTelemetryHeartbeat = 0;
 
         // Timers
         this.shieldActive = false;
@@ -1359,5 +1360,10 @@ export default class GameScene extends Phaser.Scene {
         if (time - this.lastOciHudUpdate < 250) return;
         this.lastOciHudUpdate = time;
         updateHud(this.snapshot());
+
+        if (time - this.lastTelemetryHeartbeat > 5000) {
+            this.lastTelemetryHeartbeat = time;
+            this.sendTelemetry('heartbeat');
+        }
     }
 }

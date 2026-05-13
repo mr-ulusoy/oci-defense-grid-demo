@@ -30,6 +30,8 @@ const elements = {
   disk: document.getElementById("hudDisk"),
   diskLabel: document.getElementById("hudDiskLabel"),
   insight: document.getElementById("hudInsight"),
+  livePlayers: document.getElementById("livePlayersList"),
+  livePlayersStatus: document.getElementById("livePlayersStatus"),
   leaderboard: document.getElementById("leaderboardList"),
   askCopilot: document.getElementById("askCopilot"),
   refreshLeaderboard: document.getElementById("refreshLeaderboard")
@@ -49,6 +51,7 @@ function renderStatus(status) {
 
   elements.gateway.textContent = status.gateway ?? "public";
   elements.loadBalancer.textContent = status.loadBalancer ?? "healthy";
+  elements.livePlayersStatus.textContent = status.sinks?.redisLivePlayers ?? "memory";
   updateObservedVms(status.vm);
   renderVmFleet();
 
@@ -62,6 +65,73 @@ function renderStatus(status) {
   elements.disk.textContent = diskIo
     ? `${formatThroughput(diskIo.readKbps)}/${formatThroughput(diskIo.writeKbps)}`
     : "--";
+}
+
+function renderLivePlayers(players = [], analytics = {}) {
+  if (!isOpsView) return;
+
+  const activePlayers = players.filter((player) => player.callsign !== "UNKNOWN");
+  const topScore = activePlayers.reduce((max, player) => Math.max(max, Number(player.score ?? 0)), 0);
+  const latencySamples = activePlayers
+    .map((player) => Number(player.latencyMs ?? 0))
+    .filter((latency) => latency > 0);
+  const avgLatency = latencySamples.length
+    ? Math.round(latencySamples.reduce((sum, latency) => sum + latency, 0) / latencySamples.length)
+    : null;
+  const eventRate =
+    activePlayers.reduce((sum, player) => sum + Number(player.eventsPerSecond ?? 0), 0) ||
+    analytics.eventsPerSecond ||
+    telemetry.eventRate();
+
+  elements.score.textContent = String(activePlayers.length);
+  elements.level.textContent = String(topScore);
+  elements.latency.textContent = avgLatency == null ? "-- ms" : `${avgLatency} ms`;
+  elements.events.textContent = Number(eventRate).toFixed(1);
+
+  elements.livePlayers.innerHTML = "";
+  if (activePlayers.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "live-player-empty";
+    empty.textContent = "Waiting for player telemetry.";
+    elements.livePlayers.appendChild(empty);
+    return;
+  }
+
+  const header = document.createElement("div");
+  header.className = "live-player-row live-player-head";
+  header.innerHTML = "<span>Callsign</span><span>Score</span><span>Lvl</span><span>Latency</span><span>VM</span>";
+  elements.livePlayers.appendChild(header);
+
+  for (const player of activePlayers.slice(0, 12)) {
+    const row = document.createElement("div");
+    row.className = "live-player-row";
+    row.innerHTML = [
+      `<strong>${escapeHtml(player.callsign)}</strong>`,
+      `<span>${Number(player.score ?? 0)}</span>`,
+      `<span>${Number(player.level ?? 1)}</span>`,
+      `<span>${formatPercentlessLatency(player.latencyMs)}</span>`,
+      `<span>${escapeHtml(player.vm ?? "unknown")}</span>`
+    ].join("");
+    elements.livePlayers.appendChild(row);
+  }
+}
+
+function formatPercentlessLatency(value) {
+  const latency = Number(value ?? 0);
+  return latency > 0 ? `${Math.round(latency)} ms` : "--";
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (char) => {
+    const entities = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    };
+    return entities[char];
+  });
 }
 
 function updateObservedVms(vm) {
@@ -159,13 +229,9 @@ function renderLeaderboard(entries) {
   }
 }
 
-export function updateHud(snapshot = {}) {
+export function updateHud() {
   if (!isOpsView) return;
 
-  elements.score.textContent = String(snapshot.score ?? 0);
-  elements.level.textContent = String(snapshot.level ?? 1);
-  elements.latency.textContent = `${Math.round(telemetry.lastLatencyMs)} ms`;
-  elements.events.textContent = telemetry.eventRate().toFixed(1);
   setConnection(telemetry.offline);
 }
 
@@ -185,6 +251,7 @@ export async function initOciRuntime() {
   await telemetry.init();
   if (isOpsView) {
     renderStatus(telemetry.status);
+    renderLivePlayers(await telemetry.refreshLivePlayers());
     renderLeaderboard(await telemetry.refreshLeaderboard());
     setConnection(telemetry.offline);
 
@@ -202,7 +269,7 @@ export async function initOciRuntime() {
     if (isOpsView) {
       renderStatus(status);
       const analytics = await telemetry.analytics();
-      elements.events.textContent = (analytics.eventsPerSecond ?? telemetry.eventRate()).toFixed(1);
+      renderLivePlayers(await telemetry.refreshLivePlayers(), analytics);
     }
     setConnection(telemetry.offline);
   }, window.OCI_DEFENSE_CONFIG.telemetryIntervalMs);

@@ -39,15 +39,15 @@
 
         <section class="metric-grid">
           <article class="metric">
-            <span>Score</span>
+            <span>Live Players</span>
             <strong id="hudScore">0</strong>
           </article>
           <article class="metric">
-            <span>Level</span>
-            <strong id="hudLevel">1</strong>
+            <span>Top Score</span>
+            <strong id="hudLevel">0</strong>
           </article>
           <article class="metric">
-            <span>Latency</span>
+            <span>Avg Latency</span>
             <strong id="hudLatency">-- ms</strong>
           </article>
           <article class="metric">
@@ -84,6 +84,14 @@
             </div>
             <ol class="vm-list" id="hudVmList" aria-label="Observed VM fleet"></ol>
           </div>
+        </section>
+
+        <section class="live-players">
+          <div class="section-title">
+            <span>Live Players</span>
+            <strong id="livePlayersStatus">Redis live state</strong>
+          </div>
+          <div class="live-player-table" id="livePlayersList" aria-label="Live players"></div>
         </section>
 
         <section class="insight-box">

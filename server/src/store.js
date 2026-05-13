@@ -1,4 +1,5 @@
 import { archiveEventsToObjectStorage, publishEventsToStreaming } from "./ociSinks.js";
+import { createRedisLivePlayers } from "./livePlayers.js";
 
 const MAX_EVENTS = 5000;
 
@@ -33,6 +34,7 @@ export function createStore() {
     { callsign: "PHOENIX", score: 7600, runId: "seed-3", vm: "seed", createdAt: new Date().toISOString() }
   ];
   const insights = [];
+  const livePlayers = createRedisLivePlayers();
 
   async function persistToAutonomousDb(batch) {
     const connection = await createOracleConnection();
@@ -77,7 +79,8 @@ export function createStore() {
         memory: "enabled",
         autonomousDatabase: process.env.ADB_CONNECT_STRING ? "configured" : "disabled",
         streaming: process.env.OCI_STREAM_OCID ? "configured" : "disabled",
-        objectStorage: process.env.OCI_BUCKET_NAME ? "configured" : "disabled"
+        objectStorage: process.env.OCI_BUCKET_NAME ? "configured" : "disabled",
+        redisLivePlayers: await livePlayers.status()
       };
     },
 
@@ -97,6 +100,7 @@ export function createStore() {
 
       try {
         await Promise.all([
+          livePlayers.update(batch),
           persistToAutonomousDb(batch),
           publishEventsToStreaming(batch),
           archiveEventsToObjectStorage(batch)
@@ -108,6 +112,10 @@ export function createStore() {
 
     async leaderboard() {
       return leaderboard.slice(0, 10);
+    },
+
+    async livePlayers() {
+      return livePlayers.list();
     },
 
     async liveAnalytics(runId) {

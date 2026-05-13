@@ -109,6 +109,10 @@ export function createApp({ store = createStore() } = {}) {
     res.json({ entries: await store.leaderboard() });
   });
 
+  app.get("/api/players/live", async (req, res) => {
+    res.json({ players: await store.livePlayers() });
+  });
+
   app.get("/api/analytics/live", async (req, res) => {
     res.json(await store.liveAnalytics(req.query.runId));
   });

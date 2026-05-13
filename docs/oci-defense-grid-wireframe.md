@@ -21,6 +21,7 @@ flowchart LR
   end
 
   subgraph telemetry["Telemetry and Analytics"]
+    cache["OCI Cache<br/>Live player snapshots"]
     stream["OCI Streaming<br/>Gameplay events"]
     bucket["Object Storage<br/>Raw NDJSON events"]
     adb["Autonomous Database<br/>game_events table"]
@@ -49,6 +50,9 @@ flowchart LR
 
   vm1 --> stream
   vm2 --> stream
+  vm1 --> cache
+  vm2 --> cache
+  cache --> ops
   vm1 --> bucket
   vm2 --> bucket
   vm1 -. "optional direct persistence" .-> adb
@@ -88,6 +92,7 @@ flowchart TB
 | API Gateway | Enterprise API entrypoint for all `/api/*` browser calls. |
 | Private Load Balancer | Routes API Gateway traffic to the VM-backed Express API. |
 | Autoscaling | Shows how the VM pool can scale from 2 to 4 instances under CPU pressure. |
+| OCI Cache | Keeps live player snapshots shared across all active VM API backends. |
 | Streaming | Receives gameplay telemetry events for downstream processing. |
 | Object Storage | Stores raw event archives as NDJSON for replay, audit and later analytics. |
 | Autonomous Database | Stores curated `game_events` rows for dashboarding and SQL analytics. |

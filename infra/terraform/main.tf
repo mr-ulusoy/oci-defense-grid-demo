@@ -17,6 +17,9 @@ locals {
   private_cidr = "10.42.20.0/24"
   api_base_url = var.public_api_base_url != "" ? trimsuffix(var.public_api_base_url, "/") : "https://${oci_apigateway_gateway.demo.hostname}/api"
   api_lb_ip    = oci_load_balancer_load_balancer.api.ip_address_details[0].ip_address
+  redis_host   = var.create_redis_cache ? oci_redis_redis_cluster.live_players[0].primary_fqdn : var.redis_host
+  redis_port   = tostring(var.redis_port)
+  redis_tls    = var.redis_tls ? "true" : "false"
   app_user_data = base64encode(templatefile("${path.module}/templates/cloud-init.yaml.tftpl", {
     app_repo_url       = var.app_repo_url
     app_git_ref        = var.app_git_ref
@@ -31,6 +34,10 @@ locals {
     genai_bearer_token = var.oci_genai_bearer_token
     genai_model        = var.oci_genai_model
     genai_compartment  = coalesce(var.oci_genai_compartment_ocid, var.compartment_ocid)
+    redis_host         = local.redis_host
+    redis_port         = local.redis_port
+    redis_tls          = local.redis_tls
+    live_player_ttl    = tostring(var.live_player_ttl_seconds)
     region             = var.region
   }))
 }
@@ -150,6 +157,15 @@ resource "oci_core_security_list" "private_app" {
     }
   }
 
+  ingress_security_rules {
+    protocol = "6"
+    source   = local.private_cidr
+    tcp_options {
+      min = 6379
+      max = 6379
+    }
+  }
+
   dynamic "ingress_security_rules" {
     for_each = var.create_debug_bastion ? [1] : []
 
@@ -189,6 +205,17 @@ resource "oci_core_subnet" "private" {
   route_table_id             = oci_core_route_table.private.id
   security_list_ids          = [oci_core_security_list.private_app.id]
   vcn_id                     = oci_core_vcn.demo.id
+}
+
+resource "oci_redis_redis_cluster" "live_players" {
+  count              = var.create_redis_cache ? 1 : 0
+  cluster_mode       = "NONSHARDED"
+  compartment_id     = var.compartment_ocid
+  display_name       = "${local.name_prefix}-live-players"
+  node_count         = var.redis_node_count
+  node_memory_in_gbs = var.redis_node_memory_in_gbs
+  software_version   = var.redis_software_version
+  subnet_id          = oci_core_subnet.private.id
 }
 
 resource "oci_load_balancer_load_balancer" "web" {
@@ -466,6 +493,15 @@ resource "oci_apigateway_deployment" "demo" {
       backend {
         type = "HTTP_BACKEND"
         url  = "http://${local.api_lb_ip}:3000/api/leaderboard"
+      }
+    }
+
+    routes {
+      path    = "/api/players/live"
+      methods = ["GET"]
+      backend {
+        type = "HTTP_BACKEND"
+        url  = "http://${local.api_lb_ip}:3000/api/players/live"
       }
     }
 

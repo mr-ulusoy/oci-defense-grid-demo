@@ -402,7 +402,8 @@ h2 {
 }
 
 .insight-box,
-.leaderboard {
+.leaderboard,
+.live-players {
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -415,6 +416,57 @@ h2 {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
+}
+
+.section-title strong {
+  color: var(--accent);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.live-player-table {
+  display: grid;
+  gap: 6px;
+}
+
+.live-player-row {
+  align-items: center;
+  background: rgba(7, 16, 23, 0.56);
+  border: 1px solid rgba(145, 168, 166, 0.16);
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(92px, 1.15fr) 0.65fr 0.38fr 0.72fr minmax(112px, 1.1fr);
+  min-height: 34px;
+  padding: 7px 9px;
+}
+
+.live-player-head {
+  background: transparent;
+  border-color: rgba(124, 200, 255, 0.22);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  min-height: 28px;
+  text-transform: uppercase;
+}
+
+.live-player-row strong {
+  color: var(--text);
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
+.live-player-row span {
+  font-size: 0.82rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.live-player-empty {
+  color: var(--muted);
+  padding: 10px 0;
 }
 
 .insight-box p {

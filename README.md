@@ -3,7 +3,7 @@
 
 # OCI Defense Grid Demo
 
-OCI Defense Grid is a V1 customer-demo remix of a Phaser space shooter. The player defends an Oracle Cloud region while the demo shows live cloud telemetry: Compute VMs, Load Balancer, API Gateway, Streaming, Autonomous Database, Object Storage, Oracle Analytics Cloud and an OCI Generative AI copilot.
+OCI Defense Grid is a V1 customer-demo remix of a Phaser space shooter. The player defends an Oracle Cloud region while the demo shows live cloud telemetry: Compute VMs, Load Balancer, API Gateway, OCI Cache, Streaming, Autonomous Database, Object Storage, Oracle Analytics Cloud and an OCI Generative AI copilot.
 
 The game can run locally with offline fallbacks, then be deployed to OCI with Terraform.
 
@@ -48,13 +48,14 @@ Game API calls
   -> OCI API Gateway
      -> private OCI Load Balancer
         -> Compute Instance Pool Node/Express API
+           -> OCI Cache live player state
            -> OCI Streaming
            -> Autonomous Database
            -> Object Storage raw event archive
            -> OCI Generative AI Gemini copilot or deterministic fallback
 ```
 
-Redis/OCI Cache is intentionally outside V1.
+OCI Cache is used for the live player roster in the presenter view. Every VM writes the latest player heartbeat/event into the same managed cache, so the ops HUD can list active players even while API Gateway and the private Load Balancer bounce between backend VMs.
 
 The Compute layer uses an OCI instance pool with autoscaling. Defaults are two always-on
 instances for HA, with CPU-based scale-out up to four instances for the live demo.
@@ -70,6 +71,7 @@ See the full wireframe in [docs/oci-defense-grid-wireframe.md](docs/oci-defense-
 | API Gateway | Fronts all `/api/*` calls for routing, CORS and enterprise API control. |
 | Private Load Balancer | Routes API Gateway traffic to the VM-backed Express API. |
 | Autoscaling | Scales the instance pool from 2 to 4 VMs based on CPU. |
+| OCI Cache | Stores short-lived live player snapshots shared across all app VMs. |
 | Streaming | Receives gameplay telemetry events. |
 | Object Storage | Archives raw events as NDJSON for replay, audit and later pipelines. |
 | Autonomous Database | Stores curated `game_events` rows for SQL analytics and dashboards. |
@@ -86,6 +88,7 @@ The API Gateway exposes these routes:
 POST /api/events
 GET /api/status
 GET /api/leaderboard
+GET /api/players/live
 GET /api/analytics/live?runId=...
 POST /api/copilot
 ```
@@ -152,9 +155,12 @@ VM_HOSTS="10.42.20.153 10.42.20.192"
 SSH_KEY=infra/terraform/.keys/oci-defense-grid-demo
 DEPLOY_PATH=/opt/oci-defense-grid
 DEPLOY_BRANCH=main
+REDIS_HOST=<terraform redis_live_players_endpoint>
+REDIS_PORT=6379
+REDIS_TLS=true
 ```
 
-It SSHes through the bastion to each private VM, pulls the latest `main`, installs production dependencies and restarts `oci-defense-api` and `nginx`. Override any value as an environment variable if the VM list changes after autoscaling, for example:
+It SSHes through the bastion to each private VM, optionally writes the Redis/OCI Cache environment drop-in, pulls the latest `main`, installs production dependencies and restarts `oci-defense-api` and `nginx`. Override any value as an environment variable if the VM list changes after autoscaling, for example:
 
 ```bash
 VM_HOSTS="10.42.20.153 10.42.20.192 10.42.20.210" scripts/deploy-via-bastion.sh
@@ -166,6 +172,17 @@ The default app VM shape is:
 instance_shape      = "VM.Standard.E4.Flex"
 instance_ocpus      = 1
 instance_memory_gbs = 8
+```
+
+OCI Cache is enabled for the live player list:
+
+```hcl
+create_redis_cache       = true
+redis_node_count         = 2
+redis_node_memory_in_gbs = 2
+redis_software_version   = "VALKEY_7_2"
+redis_tls                = true
+live_player_ttl_seconds  = 60
 ```
 
 Autonomous Database is configured as the smallest paid ECPU setup for this demo:
@@ -279,6 +296,7 @@ The customer-facing demo checks are:
 - Game loads through the public Load Balancer.
 - `/api/status` shows the active VM/backend.
 - Compute uses an instance pool with autoscaling enabled.
+- Ops HUD lists active players from OCI Cache across both VM backends.
 - Gameplay events appear in Streaming and Object Storage.
 - Autonomous Database receives `game_events`.
 - Ops HUD updates score, active VM, CPU, RAM, cores, disk throughput, latency, events/sec and copilot insight.

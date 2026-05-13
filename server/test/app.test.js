@@ -95,3 +95,45 @@ test("leaderboard uses submitted player callsign", async () => {
   assert.equal(body.entries[0].callsign, "ADA CLOUD");
   assert.equal(body.entries[0].score, 44000);
 });
+
+test("live players lists latest player snapshots", async () => {
+  const app = createApp();
+  const events = [
+    {
+      runId: "run-live-a",
+      sessionId: "session-live-a",
+      type: "heartbeat",
+      level: 2,
+      score: 2100,
+      callsign: "Sara",
+      cloudAction: "none",
+      metrics: { fps: 59, latencyMs: 32 },
+      clientTs: new Date().toISOString()
+    },
+    {
+      runId: "run-live-b",
+      sessionId: "session-live-b",
+      type: "enemy_killed",
+      level: 3,
+      score: 7200,
+      callsign: "Ali",
+      cloudAction: "rebalance_lb",
+      metrics: { fps: 60, latencyMs: 44 },
+      clientTs: new Date().toISOString()
+    }
+  ];
+
+  await request(app, "/api/events", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ events })
+  });
+
+  const { response, body } = await request(app, "/api/players/live");
+
+  assert.equal(response.status, 200);
+  assert.equal(body.players.length, 2);
+  assert.equal(body.players[0].callsign, "ALI");
+  assert.equal(body.players[0].score, 7200);
+  assert.equal(body.players[1].callsign, "SARA");
+});

@@ -119,6 +119,54 @@ variable "enable_autoscaling" {
   default     = true
 }
 
+variable "create_redis_cache" {
+  description = "Create an OCI Cache cluster for live player state shared across app VMs."
+  type        = bool
+  default     = false
+}
+
+variable "redis_host" {
+  description = "Existing OCI Cache primary FQDN or Redis-compatible endpoint. Used when create_redis_cache is false."
+  type        = string
+  default     = ""
+}
+
+variable "redis_port" {
+  description = "Redis/OCI Cache TLS port."
+  type        = number
+  default     = 6379
+}
+
+variable "redis_tls" {
+  description = "Use TLS when connecting to Redis/OCI Cache."
+  type        = bool
+  default     = true
+}
+
+variable "redis_node_count" {
+  description = "OCI Cache node count for the non-sharded live player cluster."
+  type        = number
+  default     = 2
+}
+
+variable "redis_node_memory_in_gbs" {
+  description = "Memory in GB per OCI Cache node."
+  type        = number
+  default     = 2
+}
+
+variable "redis_software_version" {
+  description = "OCI Cache engine version."
+  type        = string
+  default     = "VALKEY_7_2"
+}
+
+variable "live_player_ttl_seconds" {
+  description = "How long live player snapshots stay active without new heartbeat/events."
+  type        = number
+  default     = 60
+}
+
 variable "autoscaling_cpu_scale_out_threshold" {
   description = "CPU utilization percent that triggers scale-out."
   type        = number

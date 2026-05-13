@@ -38,6 +38,11 @@ output "raw_events_bucket" {
   value       = oci_objectstorage_bucket.raw_events.name
 }
 
+output "redis_live_players_endpoint" {
+  description = "OCI Cache primary FQDN used for live player state, when enabled."
+  value       = var.create_redis_cache ? oci_redis_redis_cluster.live_players[0].primary_fqdn : var.redis_host
+}
+
 output "autonomous_database_name" {
   description = "Autonomous Database display name for analytics tables."
   value       = var.create_autonomous_database ? oci_database_autonomous_database.demo[0].display_name : null

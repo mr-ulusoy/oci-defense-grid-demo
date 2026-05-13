@@ -145,6 +145,17 @@ export class OciTelemetry {
     }
   }
 
+  async refreshLivePlayers() {
+    try {
+      const result = await fetch(`${this.apiBase}/players/live`).then(readJson);
+      this.offline = false;
+      return result.players ?? [];
+    } catch {
+      this.offline = true;
+      return [];
+    }
+  }
+
   async analytics() {
     try {
       return await fetch(`${this.apiBase}/analytics/live?runId=${this.runId}`).then(readJson);
