@@ -87,8 +87,12 @@
               <div>
                 <span>Autoscaling demo</span>
                 <strong id="stressStatus">Idle</strong>
+                <small id="scaleState">Stable</small>
               </div>
-              <button type="button" id="startStress" title="Start controlled CPU stress">Stress VMs</button>
+              <div class="stress-actions">
+                <button type="button" id="startStress" title="Start controlled CPU stress">Stress VMs</button>
+                <button type="button" id="stopStress" title="Release CPU stress and wait for scale-in">Scale Down</button>
+              </div>
             </div>
           </div>
         </section>
@@ -147,10 +151,64 @@
         apiBase: "/api",
         telemetryIntervalMs: 1400,
         copilotIntervalMs: 12000,
+        minAppNodes: 2,
         ...(window.OCI_DEFENSE_CONFIG ?? {})
       };
     </script>
+    <script>
+      window.OCI_DEFENSE_POST_STRESS = async function postStressFromOpsButton(button, action) {
+        const status = document.getElementById("stressStatus");
+        const scaleState = document.getElementById("scaleState");
+        const apiBase = (window.OCI_DEFENSE_CONFIG?.apiBase ?? "/api").replace(/\/$/, "");
+        const isStop = action === "stop";
+        const payload = isStop ? { ops: true, action: "stop" } : { ops: true, durationSeconds: 360, workers: 2 };
+        const fanout = isStop ? 12 : 8;
+        const originalText = button.textContent;
+
+        button.disabled = true;
+        button.textContent = isStop ? "Releasing..." : "Starting...";
+        if (status) status.textContent = isStop ? "Releasing load..." : "Starting stress...";
+        if (scaleState) scaleState.textContent = isStop ? "Scaling down requested" : "Scaling up signal";
+
+        try {
+          const results = await Promise.allSettled(
+            Array.from({ length: fanout }, () =>
+              fetch(`${apiBase}/stress`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+              }).then((response) => {
+                if (!response.ok) throw new Error(`Stress failed: ${response.status}`);
+                return response.json();
+              })
+            )
+          );
+          const accepted = results.filter((result) => result.status === "fulfilled").length;
+          if (status) {
+            status.textContent = accepted > 0
+              ? `${isStop ? "Released" : "Started"} ${accepted}/${fanout} routes`
+              : `${isStop ? "Scale-down" : "Stress"} request failed`;
+          }
+        } catch {
+          if (status) status.textContent = `${isStop ? "Scale-down" : "Stress"} request failed`;
+        } finally {
+          button.textContent = originalText;
+          setTimeout(() => {
+            button.disabled = false;
+          }, 5000);
+        }
+      };
+
+      document.getElementById("startStress")?.addEventListener("click", (event) => {
+        event.currentTarget.dataset.stressBound = "true";
+        window.OCI_DEFENSE_POST_STRESS(event.currentTarget, "start");
+      });
+      document.getElementById("stopStress")?.addEventListener("click", (event) => {
+        event.currentTarget.dataset.stressBound = "true";
+        window.OCI_DEFENSE_POST_STRESS(event.currentTarget, "stop");
+      });
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <script type="module" src="/src/main.js"></script>
+    <script type="module" src="/src/main.js?v=20260513-scale"></script>
   </body>
 </html>

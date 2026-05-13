@@ -20,6 +20,8 @@ export default [
         crypto: "readonly",
         performance: "readonly",
         setInterval: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
         Buffer: "readonly",
         console: "readonly",
         process: "readonly"

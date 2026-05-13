@@ -34,6 +34,7 @@ const elements = {
   diskLabel: document.getElementById("hudDiskLabel"),
   insight: document.getElementById("hudInsight"),
   stressStatus: document.getElementById("stressStatus"),
+  scaleState: document.getElementById("scaleState"),
   livePlayers: document.getElementById("livePlayersList"),
   livePlayersStatus: document.getElementById("livePlayersStatus"),
   eventAnalyticsStatus: document.getElementById("eventAnalyticsStatus"),
@@ -43,6 +44,7 @@ const elements = {
   leaderboard: document.getElementById("leaderboardList"),
   askCopilot: document.getElementById("askCopilot"),
   startStress: document.getElementById("startStress"),
+  stopStress: document.getElementById("stopStress"),
   refreshLeaderboard: document.getElementById("refreshLeaderboard")
 };
 
@@ -55,6 +57,10 @@ const SCORE_EVENT_TYPES = [
 
 const observedVms = new Map();
 let activeVmKey = null;
+let scaleIntent = null;
+
+const VM_RECENT_MS = 30000;
+const minAppNodes = Number(window.OCI_DEFENSE_CONFIG?.minAppNodes ?? 2);
 
 function setConnection(offline) {
   if (!elements.connectionStatus) return;
@@ -71,6 +77,7 @@ function renderStatus(status) {
   renderStress(status.stress);
   updateObservedVms(status.vm);
   renderVmFleet();
+  renderScaleState(status.stress);
 
   const metrics = status.vm?.metrics;
   elements.cores.textContent = metrics?.cpuCores == null ? "--" : String(metrics.cpuCores);
@@ -92,7 +99,29 @@ function renderStress(stress = {}) {
     return;
   }
 
-  elements.stressStatus.textContent = "Idle";
+  elements.stressStatus.textContent = scaleIntent === "down" ? "Load released" : "Idle";
+}
+
+function renderScaleState(stress = {}) {
+  if (!elements.scaleState) return;
+
+  const recentNodes = recentVmCount();
+  if (stress.active) {
+    scaleIntent = "up";
+    elements.scaleState.textContent =
+      recentNodes > minAppNodes ? `Scaling up: ${recentNodes} nodes observed` : "Scaling up signal";
+    return;
+  }
+
+  if (scaleIntent === "down" || recentNodes > minAppNodes) {
+    if (recentNodes > minAppNodes) {
+      elements.scaleState.textContent = `Scaling down: waiting for ${minAppNodes} nodes`;
+      return;
+    }
+    scaleIntent = null;
+  }
+
+  elements.scaleState.textContent = "Stable";
 }
 
 function renderLivePlayers(players = [], analytics = {}) {
@@ -215,12 +244,14 @@ function renderVmFleet() {
 
   const activeVm = vms.find((vm) => vm.id === activeVmKey);
   elements.vm.textContent = activeVm ? `Active: ${activeVm.name}` : "Active: unknown";
-  elements.vmCount.textContent = String(vms.length);
+  elements.vmCount.textContent = String(recentVmCount());
   elements.vmList.innerHTML = "";
 
   for (const vm of vms) {
+    const stale = Date.now() - vm.lastSeen > VM_RECENT_MS;
     const item = document.createElement("li");
     item.className = vm.id === activeVmKey ? "is-active" : "";
+    item.classList.toggle("is-stale", stale);
 
     const header = document.createElement("div");
     header.className = "vm-list-header";
@@ -245,6 +276,11 @@ function renderVmFleet() {
     item.append(header, metrics);
     elements.vmList.appendChild(item);
   }
+}
+
+function recentVmCount() {
+  const cutoff = Date.now() - VM_RECENT_MS;
+  return [...observedVms.values()].filter((vm) => vm.lastSeen >= cutoff).length;
 }
 
 function secondsSince(timestamp) {
@@ -304,8 +340,12 @@ export async function askCopilot(snapshot = {}) {
 export async function startStress() {
   if (!isOpsView) return;
 
+  scaleIntent = "up";
   elements.startStress.disabled = true;
   elements.stressStatus.textContent = "Starting stress...";
+  if (elements.scaleState) {
+    elements.scaleState.textContent = "Scaling up signal";
+  }
   try {
     const result = await telemetry.startStress();
     elements.stressStatus.textContent = `Started ${result.accepted}/${result.requested} routes`;
@@ -314,6 +354,27 @@ export async function startStress() {
   } finally {
     setTimeout(() => {
       elements.startStress.disabled = false;
+    }, 5000);
+  }
+}
+
+export async function stopStress() {
+  if (!isOpsView) return;
+
+  scaleIntent = "down";
+  elements.stopStress.disabled = true;
+  elements.stressStatus.textContent = "Releasing load...";
+  if (elements.scaleState) {
+    elements.scaleState.textContent = "Scaling down requested";
+  }
+  try {
+    const result = await telemetry.stopStress();
+    elements.stressStatus.textContent = `Released ${result.accepted}/${result.requested} routes`;
+  } catch {
+    elements.stressStatus.textContent = "Scale-down request failed";
+  } finally {
+    setTimeout(() => {
+      elements.stopStress.disabled = false;
     }, 5000);
   }
 }
@@ -333,7 +394,14 @@ export async function initOciRuntime() {
     setConnection(telemetry.offline);
 
     elements.askCopilot.addEventListener("click", () => askCopilot({ score: 0, level: 1 }));
-    elements.startStress.addEventListener("click", () => startStress());
+    if (elements.startStress && elements.startStress.dataset.stressBound !== "true") {
+      elements.startStress.dataset.stressBound = "true";
+      elements.startStress.addEventListener("click", () => startStress());
+    }
+    if (elements.stopStress && elements.stopStress.dataset.stressBound !== "true") {
+      elements.stopStress.dataset.stressBound = "true";
+      elements.stopStress.addEventListener("click", () => stopStress());
+    }
     elements.refreshLeaderboard.addEventListener("click", async () => {
       renderLeaderboard(await telemetry.refreshLeaderboard());
     });

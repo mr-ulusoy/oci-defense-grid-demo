@@ -218,6 +218,35 @@ export class OciTelemetry {
     };
   }
 
+  async stopStress({ fanout = 12 } = {}) {
+    const payload = {
+      ops: true,
+      action: "stop"
+    };
+    const requests = Array.from({ length: fanout }, () =>
+      fetch(`${this.apiBase}/stress`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }).then(readJson)
+    );
+    const results = await Promise.allSettled(requests);
+    const stopped = results
+      .filter((result) => result.status === "fulfilled")
+      .map((result) => result.value);
+
+    if (stopped.length === 0) {
+      throw new Error("Scale-down request failed.");
+    }
+
+    this.offline = false;
+    return {
+      requested: fanout,
+      accepted: stopped.length,
+      jobs: stopped
+    };
+  }
+
   async askCopilot(snapshot) {
     if (!this.config.copilotEnabled) {
       return "Copilot is available in ops view only.";

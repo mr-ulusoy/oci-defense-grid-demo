@@ -4,7 +4,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import { randomUUID } from "node:crypto";
 import { createCopilotInsight } from "./copilot.js";
-import { startStress, stressStatus } from "./demoStress.js";
+import { startStress, stopStress, stressStatus } from "./demoStress.js";
 import { createStore } from "./store.js";
 import { systemMetrics } from "./systemMetrics.js";
 
@@ -74,7 +74,7 @@ function normalizeCallsign(value) {
 export function createApp({
   store = createStore(),
   createInsight = createCopilotInsight,
-  stressController = { start: startStress, status: stressStatus }
+  stressController = { start: startStress, stop: stopStress, status: stressStatus }
 } = {}) {
   const app = express();
 
@@ -134,6 +134,11 @@ export function createApp({
   app.post("/api/stress", (req, res) => {
     if (req.body?.ops !== true) {
       res.status(403).json({ error: "Stress is available in ops view only." });
+      return;
+    }
+
+    if (req.body?.action === "stop") {
+      res.status(202).json(stressController.stop());
       return;
     }
 

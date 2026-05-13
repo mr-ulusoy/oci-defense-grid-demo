@@ -38,6 +38,7 @@ locals {
     api_base_url       = local.api_base_url
     api_gateway_name   = oci_apigateway_gateway.demo.display_name
     load_balancer_name = oci_load_balancer_load_balancer.web.display_name
+    min_app_nodes      = var.instance_pool_min_size
     stream_ocid        = oci_streaming_stream.events.id
     stream_endpoint    = oci_streaming_stream.events.messages_endpoint
     bucket_name        = oci_objectstorage_bucket.raw_events.name

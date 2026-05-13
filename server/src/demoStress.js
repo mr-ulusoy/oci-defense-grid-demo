@@ -88,6 +88,31 @@ export function stressStatus() {
   return statusFromJob();
 }
 
+export function stopStress() {
+  cleanupFinishedJob();
+  if (!activeJob) {
+    return {
+      active: false,
+      status: "idle",
+      stopped: false,
+      stoppedWorkers: 0
+    };
+  }
+
+  const workers = [...activeJob.workers];
+  activeJob = null;
+  for (const worker of workers) {
+    worker.terminate();
+  }
+
+  return {
+    active: false,
+    status: "stopped",
+    stopped: true,
+    stoppedWorkers: workers.length
+  };
+}
+
 export function startStress({ durationSeconds, workers } = {}) {
   cleanupFinishedJob();
   if (activeJob) {

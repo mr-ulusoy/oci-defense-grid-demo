@@ -238,6 +238,7 @@ test("stress endpoint starts bounded ops stress", async () => {
   const app = createApp({
     stressController: {
       status: () => ({ active: false, status: "idle" }),
+      stop: () => ({ active: false, status: "stopped", stopped: true, stoppedWorkers: 2 }),
       start: ({ durationSeconds, workers }) => ({
         active: true,
         status: "running",
@@ -258,6 +259,26 @@ test("stress endpoint starts bounded ops stress", async () => {
   assert.equal(body.active, true);
   assert.equal(body.durationSeconds, 30);
   assert.equal(body.workers, 2);
+});
+
+test("stress endpoint stops bounded ops stress", async () => {
+  const app = createApp({
+    stressController: {
+      status: () => ({ active: true, status: "running" }),
+      start: () => ({ active: true, status: "running" }),
+      stop: () => ({ active: false, status: "stopped", stopped: true, stoppedWorkers: 2 })
+    }
+  });
+  const { response, body } = await request(app, "/api/stress", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ops: true, action: "stop" })
+  });
+
+  assert.equal(response.status, 202);
+  assert.equal(body.active, false);
+  assert.equal(body.status, "stopped");
+  assert.equal(body.stoppedWorkers, 2);
 });
 
 test("copilot endpoint accepts ops callers", async () => {
