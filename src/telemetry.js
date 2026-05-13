@@ -1,7 +1,8 @@
 const DEFAULT_CONFIG = {
   apiBase: "/api",
   telemetryIntervalMs: 1400,
-  copilotIntervalMs: 12000
+  copilotIntervalMs: 12000,
+  copilotEnabled: false
 };
 
 const EVENT_TYPES = new Set([
@@ -170,9 +171,14 @@ export class OciTelemetry {
   }
 
   async askCopilot(snapshot) {
+    if (!this.config.copilotEnabled) {
+      return "Copilot is available in ops view only.";
+    }
+
     const payload = {
       runId: this.runId,
       sessionId: this.sessionId,
+      ops: true,
       snapshot
     };
 

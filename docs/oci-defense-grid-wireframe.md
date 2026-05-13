@@ -34,8 +34,8 @@ flowchart LR
   end
 
   subgraph iam["Identity and Access"]
-    dg["Dynamic Groups<br/>App instances and Functions"]
-    policy["IAM Policies<br/>Streaming, Object Storage, GenAI"]
+    dg["Manual dynamic group<br/>dg_cengiz: app VMs and Functions"]
+    policy["Manual IAM policies<br/>Game-Demo and API Gateway invoke"]
   end
 
   player --> webLb --> pool
@@ -105,7 +105,7 @@ flowchart TB
 | Autonomous Database | Stores curated `game_events` rows for dashboarding and SQL analytics. |
 | Oracle Analytics Cloud | Optional dashboard layer on top of ADB. |
 | Generative AI | Gemini copilot insight in the ops HUD via OCI GenAI SDK. |
-| IAM Dynamic Group and Policies | Grants app VMs permission to publish telemetry, archive objects and call GenAI. |
+| IAM Dynamic Group and Policies | Manually managed prerequisites. `dg_cengiz` matches app VMs and Functions; `Game-Demo` grants Streaming/Object Storage/GenAI; `oci-defense-grid-apigw-functions` lets API Gateway invoke Functions. |
 | OCI Functions | Optional event-ingest backend for `POST /api/events`, used when `function_image` points to an OCIR image. |
 
 ## Current GenAI Path
@@ -113,10 +113,12 @@ flowchart TB
 The current Gemini integration uses the native OCI SDK, not the OpenAI-compatible REST path:
 
 ```text
-Node/Express /api/copilot
+Ops browser (?ops=1)
+  -> API Gateway /api/copilot
+  -> Node/Express
   -> oci-generativeaiinference SDK
   -> https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com
   -> Gemini on-demand model OCID
 ```
 
-Local development uses an OCI security-token profile. Deployed VMs should use instance principal auth through the dynamic group and IAM policy.
+The public player view does not call GenAI. Local development uses an OCI security-token profile. Deployed VMs should use instance principal auth through `dg_cengiz` and `Game-Demo`.

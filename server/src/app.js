@@ -70,7 +70,7 @@ function normalizeCallsign(value) {
   return normalized || "UNKNOWN";
 }
 
-export function createApp({ store = createStore() } = {}) {
+export function createApp({ store = createStore(), createInsight = createCopilotInsight } = {}) {
   const app = express();
 
   app.use(helmet({ crossOriginEmbedderPolicy: false }));
@@ -118,7 +118,12 @@ export function createApp({ store = createStore() } = {}) {
   });
 
   app.post("/api/copilot", async (req, res) => {
-    const insight = await createCopilotInsight({
+    if (req.body?.ops !== true) {
+      res.status(403).json({ error: "Copilot is available in ops view only." });
+      return;
+    }
+
+    const insight = await createInsight({
       snapshot: req.body?.snapshot ?? {},
       analytics: await store.liveAnalytics(req.body?.runId),
       vm: vmIdentity()

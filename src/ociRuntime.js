@@ -3,7 +3,10 @@ import { OciTelemetry } from "./telemetry.js";
 const params = new URLSearchParams(window.location.search);
 export const isOpsView = params.get("ops") === "1";
 
-export const telemetry = new OciTelemetry(window.OCI_DEFENSE_CONFIG ?? {});
+export const telemetry = new OciTelemetry({
+  ...(window.OCI_DEFENSE_CONFIG ?? {}),
+  copilotEnabled: isOpsView
+});
 
 const appShell = document.getElementById("appShell");
 const opsPanel = document.getElementById("opsPanel");

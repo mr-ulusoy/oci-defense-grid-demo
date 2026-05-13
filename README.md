@@ -35,7 +35,7 @@ npm run dev
 
 Open `http://localhost:5173`.
 
-The Vite dev server proxies `/api/*` to the local Express API. Without OCI environment variables, telemetry stays in memory and the copilot uses deterministic demo insights.
+The Vite dev server proxies `/api/*` to the local Express API. Without OCI environment variables, telemetry stays in memory. The AI copilot is only enabled in the ops view (`?ops=1`) and falls back to deterministic demo insights when GenAI is unavailable.
 
 ## Architecture
 
@@ -81,7 +81,7 @@ See the full wireframe in [docs/oci-defense-grid-wireframe.md](docs/oci-defense-
 | Autonomous Database | Stores curated `game_events` rows for SQL analytics and dashboards. |
 | Oracle Analytics Cloud | Optional dashboard layer on top of ADB. |
 | OCI Generative AI | Gemini copilot insight in the ops HUD via the OCI SDK. |
-| IAM Dynamic Group and Policies | Lets app VMs call Streaming, Object Storage and GenAI through instance principals. |
+| IAM Dynamic Group and Policies | Manually created prerequisites that let app VMs and Functions call Streaming, Object Storage and GenAI, and let API Gateway invoke Functions. |
 | OCI Functions | Optional serverless event-ingest path for `POST /api/events`, writing gameplay telemetry to Streaming, Object Storage, OCI Cache and ADB. |
 
 ## Runtime API
@@ -96,6 +96,8 @@ GET /api/players/live
 GET /api/analytics/live?runId=...
 POST /api/copilot
 ```
+
+`POST /api/copilot` is for the presenter/ops view only. The browser sends it only when `?ops=1` is active, and the API requires `"ops": true` in the JSON body.
 
 Telemetry events use this envelope:
 
@@ -118,7 +120,8 @@ Telemetry events use this envelope:
 2. Create `infra/terraform/demo.tfvars` from the sanitized example.
 3. Fill in tenancy, compartment, region, SSH key, Ubuntu image OCID and `app_repo_url`.
 4. Keep `instance_pool_min_size = 2`, `instance_pool_initial_size = 2`, `instance_pool_max_size = 4` for the default autoscaling demo.
-5. Run:
+5. Confirm the manual IAM prerequisites below exist before enabling `function_image`.
+6. Run:
 
 ```bash
 cp infra/terraform/terraform.tfvars.example infra/terraform/demo.tfvars
@@ -143,6 +146,54 @@ terraform -chdir=infra/terraform apply -var-file=demo.tfvars
 
 Terraform outputs `game_url` and `api_gateway_endpoint`. The VM cloud-init writes `config.js` so the browser calls API Gateway rather than bypassing it.
 
+## Manual IAM Prerequisites
+
+This project intentionally treats IAM dynamic groups and policies as manual prerequisites. That keeps Terraform focused on demo infrastructure and avoids accidental changes to shared tenancy-level identity resources.
+
+Use these exact names for the current demo:
+
+| Resource | Name | Where |
+| --- | --- | --- |
+| Dynamic group | `dg_cengiz` | Identity domain `OracleIdentityCloudService` |
+| Telemetry/GenAI policy | `Game-Demo` | Demo compartment |
+| API Gateway invoke policy | `oci-defense-grid-apigw-functions` | Demo compartment |
+
+`dg_cengiz` must match both app VMs and OCI Functions in the demo compartment:
+
+```text
+Any {
+  All {instance.compartment.id = '<compartment_ocid>'},
+  All {resource.type = 'fnfunc', resource.compartment.id = '<compartment_ocid>'}
+}
+```
+
+`Game-Demo` must contain these statements. Use the identity-domain-qualified dynamic group name:
+
+```text
+Allow dynamic-group OracleIdentityCloudService/dg_cengiz to use stream-push in compartment id <compartment_ocid>
+Allow dynamic-group OracleIdentityCloudService/dg_cengiz to manage objects in compartment id <compartment_ocid> where target.bucket.name='<raw-events-bucket>'
+Allow dynamic-group OracleIdentityCloudService/dg_cengiz to use generative-ai-family in compartment id <genai_compartment_ocid>
+```
+
+For this demo, `<genai_compartment_ocid>` is usually the same as `<compartment_ocid>`. The Object Storage bucket name is available after Terraform creates the bucket, for example `oci-defense-grid-9591c7-raw-events`.
+
+`oci-defense-grid-apigw-functions` allows API Gateway to invoke OCI Functions backends:
+
+```text
+Allow any-user to use functions-family in compartment id <compartment_ocid> where ALL {request.principal.type = 'ApiGateway', request.resource.compartment.id = '<compartment_ocid>'}
+```
+
+Keep these Terraform flags disabled when IAM is managed manually:
+
+```hcl
+create_instance_principal_dynamic_group = false
+create_instance_principal_policy        = false
+create_function_resource_principal_dynamic_group = false
+create_function_resource_principal_policy        = false
+```
+
+If you rebuild in the same tenancy, keep the manual IAM resources above. If you deploy in a new tenancy, create the same dynamic group and policies before switching `/api/events` to OCI Functions.
+
 ## OCI Functions Event Ingest
 
 `functions/event-ingest` is the serverless telemetry ingest function. It is designed to take load off the VMs during demo spikes:
@@ -157,36 +208,30 @@ Browser POST /api/events
         -> Autonomous Database game_events/high_scores
 ```
 
-By default `function_image = ""`, so Terraform keeps `/api/events` routed to the VM-backed API. To switch the route to OCI Functions:
+By default `function_image = ""`, so Terraform keeps `/api/events` routed to the VM-backed API. To switch the route to OCI Functions, point Terraform at an existing OCIR image and make sure the manual IAM prerequisites above are in place.
 
-1. Build and push the function image to OCIR.
-2. Set `function_image` in `demo.tfvars` to the OCIR image path.
-3. Enable the Function resource-principal dynamic group and policy, or have an admin create equivalent IAM.
-4. Run `terraform plan` and `terraform apply`.
-
-Example tfvars:
+Current shared image:
 
 ```hcl
-function_image = "arn.ocir.io/<namespace>/oci-defense-grid/event-ingest:0.1.0"
-
-create_function_resource_principal_dynamic_group = true
-create_function_resource_principal_policy        = true
+function_image = "arn.ocir.io/fr9qm01oq44x/oci-defense-grid/event-ingest:0.1.0"
 ```
 
-If your user cannot create IAM policies, leave the two Function IAM booleans as `false` and ask an admin to create:
+Use that image for this demo. Build and push a new image only if the Function code changes or you deploy into an environment that cannot pull the shared OCIR image.
 
-```text
-Dynamic group:
-All {resource.type = 'fnfunc', resource.compartment.id = '<compartment_ocid>'}
+Recommended tfvars when IAM is managed manually:
 
-Policies:
-Allow dynamic-group <function-dynamic-group> to use stream-push in compartment id <compartment_ocid>
-Allow dynamic-group <function-dynamic-group> to manage objects in compartment id <compartment_ocid> where target.bucket.name='<raw-events-bucket>'
+```hcl
+function_image = "arn.ocir.io/fr9qm01oq44x/oci-defense-grid/event-ingest:0.1.0"
+
+create_instance_principal_dynamic_group = false
+create_instance_principal_policy        = false
+create_function_resource_principal_dynamic_group = false
+create_function_resource_principal_policy        = false
 ```
 
 The Function also uses `ADB_USER`, `ADB_PASSWORD`, `ADB_CONNECT_STRING`, `REDIS_HOST`, `REDIS_PORT` and `REDIS_TLS` from Terraform function config. Redis does not need IAM. ADB writes use the configured database credentials and the existing ADB network allow-list.
 
-Build example:
+Build example for a new image:
 
 ```bash
 cd functions/event-ingest
@@ -263,13 +308,7 @@ adb_is_free_tier         = false
 
 Autonomous Database is the source of truth for permanent highscores. OCI Cache is only used for live player state and fast presenter metrics.
 
-For instance-principal access to Streaming, Object Storage and GenAI, set:
-
-```hcl
-create_instance_principal_policy = true
-```
-
-This creates a dynamic group for instances in the compartment and grants publish/archive/GenAI permissions. If your tenancy only allows IAM changes in the home region, set `home_region` correctly. If your user cannot create IAM policies, have an administrator create the equivalent dynamic group and policy.
+For instance-principal access to Streaming, Object Storage and GenAI, use the manual `dg_cengiz` and `Game-Demo` prerequisites above. Do not enable Terraform-managed IAM in this shared tenancy unless an admin explicitly wants Terraform to own those resources.
 
 ## OCI Generative AI
 
@@ -298,13 +337,13 @@ oci_auth                = "SecurityToken"
 oci_config_file_profile = "demo"
 ```
 
-On deployed VMs, the API should use instance principal auth through the dynamic group. The required policy is equivalent to:
+On deployed VMs, the API uses instance principal auth through `dg_cengiz`. The required GenAI policy is:
 
 ```text
-Allow dynamic-group <dynamic-group-name> to use generative-ai-family in compartment id <compartment_ocid>
+Allow dynamic-group OracleIdentityCloudService/dg_cengiz to use generative-ai-family in compartment id <genai_compartment_ocid>
 ```
 
-If GenAI is unavailable or misconfigured, `/api/copilot` falls back to deterministic demo insights so the game still runs.
+`/api/copilot` is intentionally ops-only. The public player view does not call GenAI. If GenAI is unavailable, slow, or misconfigured, `/api/copilot` falls back to deterministic demo insights so the ops HUD still works.
 
 ## Autonomous Database
 
@@ -347,9 +386,7 @@ create_analytics_instance = true
 
 ## OCI Functions
 
-`functions/event-ingest` is a V1 function stub for moving event ingestion from VM-backed Express to OCI Functions later. In this V1 implementation, API Gateway routes `/api/events` to the VM API so the demo is deployable without first building and pushing a function image.
-
-Set `function_image` in Terraform when you have an OCIR image ready.
+`functions/event-ingest` is the deployed serverless ingest path when `function_image` points at an OCIR image. If `function_image = ""`, API Gateway keeps `/api/events` on the VM API fallback.
 
 ## Verification
 
@@ -369,5 +406,6 @@ The customer-facing demo checks are:
 - Gameplay events appear in Streaming and Object Storage.
 - Autonomous Database receives `game_events`.
 - Ops HUD updates score, active VM, CPU, RAM, cores, disk throughput, latency, events/sec and copilot insight.
-- `/api/copilot` returns a Gemini insight when GenAI auth/policy is configured, otherwise a deterministic fallback.
+- `/api/copilot` returns `403` without the ops flag and `200` for ops callers.
+- Ops copilot returns a Gemini insight when GenAI auth/policy is configured, otherwise a deterministic fallback.
 - The game remains playable when one instance is removed from the pool or fails health checks.

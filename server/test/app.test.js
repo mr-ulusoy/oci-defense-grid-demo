@@ -137,3 +137,29 @@ test("live players lists latest player snapshots", async () => {
   assert.equal(body.players[0].score, 7200);
   assert.equal(body.players[1].callsign, "SARA");
 });
+
+test("copilot endpoint rejects non-ops callers", async () => {
+  const app = createApp();
+  const { response, body } = await request(app, "/api/copilot", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ snapshot: { score: 1000 } })
+  });
+
+  assert.equal(response.status, 403);
+  assert.equal(body.error, "Copilot is available in ops view only.");
+});
+
+test("copilot endpoint accepts ops callers", async () => {
+  const app = createApp({
+    createInsight: async () => "Ops insight"
+  });
+  const { response, body } = await request(app, "/api/copilot", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ops: true, snapshot: { score: 1000 } })
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(body.insight, "Ops insight");
+});

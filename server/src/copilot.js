@@ -10,6 +10,7 @@ const FALLBACK_INSIGHTS = [
 const DEFAULT_GENAI_ENDPOINT = "https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com";
 const DEFAULT_GENAI_MODEL =
   "ocid1.generativeaimodel.oc1.eu-frankfurt-1.amaaaaaask7dceyan6gecfjovk7wtgl3r65b5tmpuegfxojbp2mebjgtvhra";
+const DEFAULT_GENAI_TIMEOUT_MS = 8500;
 
 let sdkClientPromise;
 let sdkProviderPromise;
@@ -99,10 +100,12 @@ function buildSdkChatRequest(prompt) {
           }
         ],
         apiFormat: "GENERIC",
-        maxCompletionTokens: 80,
+        maxTokens: 1200,
         temperature: 0.2,
         frequencyPenalty: 0,
-        presencePenalty: 0
+        presencePenalty: 0,
+        topK: 1,
+        topP: 0.95
       }
     }
   };
@@ -141,7 +144,7 @@ async function getSdkAuthProvider() {
       }
 
       if (process.env.OCI_INSTANCE_ID || process.env.OCI_REGION) {
-        return common.InstancePrincipalsAuthenticationDetailsProvider.builder().build();
+        return new common.InstancePrincipalsAuthenticationDetailsProviderBuilder().build();
       }
 
       const configLocation = expandHomePath(process.env.OCI_CONFIG_FILE ?? "~/.oci/config");
@@ -178,7 +181,11 @@ async function callSdkCopilot(prompt) {
   }
 
   const client = await getSdkClient();
-  const response = await client.chat(buildSdkChatRequest(prompt));
+  const common = await import("oci-common");
+  const response = await client.chat({
+    ...buildSdkChatRequest(prompt),
+    retryConfiguration: common.NoRetryConfigurationDetails
+  });
   return extractCopilotText(response);
 }
 
@@ -215,15 +222,27 @@ async function callExternalCopilot(prompt) {
   return callSdkCopilot(prompt);
 }
 
+function withTimeout(promise, timeoutMs) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`OCI GenAI timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
 export async function createCopilotInsight(context) {
   const prompt = [
     "You are the OCI Defense Grid live demo copilot.",
-    "Write one concise customer-facing insight based on the current game and cloud telemetry.",
+    "Return one complete customer-facing sentence under 22 words. No markdown.",
     `Context: ${JSON.stringify(context)}`
   ].join("\n");
 
   try {
-    const externalInsight = await callExternalCopilot(prompt);
+    const timeoutMs = Number(process.env.OCI_GENAI_TIMEOUT_MS ?? DEFAULT_GENAI_TIMEOUT_MS);
+    const externalInsight = await withTimeout(callExternalCopilot(prompt), timeoutMs);
     if (externalInsight) {
       return externalInsight.trim().slice(0, 280);
     }
