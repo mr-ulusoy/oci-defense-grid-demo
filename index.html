@@ -83,6 +83,13 @@
               <div><span id="hudDiskLabel">Disk</span><strong id="hudDisk">--</strong></div>
             </div>
             <ol class="vm-list" id="hudVmList" aria-label="Observed VM fleet"></ol>
+            <div class="stress-control" aria-label="Autoscaling stress control">
+              <div>
+                <span>Autoscaling demo</span>
+                <strong id="stressStatus">Idle</strong>
+              </div>
+              <button type="button" id="startStress" title="Start controlled CPU stress">Stress VMs</button>
+            </div>
           </div>
         </section>
 

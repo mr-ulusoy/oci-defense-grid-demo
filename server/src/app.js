@@ -4,6 +4,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import { randomUUID } from "node:crypto";
 import { createCopilotInsight } from "./copilot.js";
+import { startStress, stressStatus } from "./demoStress.js";
 import { createStore } from "./store.js";
 import { systemMetrics } from "./systemMetrics.js";
 
@@ -70,7 +71,11 @@ function normalizeCallsign(value) {
   return normalized || "UNKNOWN";
 }
 
-export function createApp({ store = createStore(), createInsight = createCopilotInsight } = {}) {
+export function createApp({
+  store = createStore(),
+  createInsight = createCopilotInsight,
+  stressController = { start: startStress, status: stressStatus }
+} = {}) {
   const app = express();
 
   app.use(helmet({ crossOriginEmbedderPolicy: false }));
@@ -88,6 +93,7 @@ export function createApp({ store = createStore(), createInsight = createCopilot
       loadBalancer: process.env.LOAD_BALANCER_NAME ?? "healthy",
       vm: await vmStatus(),
       sinks: await store.status(),
+      stress: stressController.status(),
       serverTime: new Date().toISOString()
     });
   });
@@ -119,6 +125,24 @@ export function createApp({ store = createStore(), createInsight = createCopilot
 
   app.get("/api/analytics/events", async (req, res) => {
     res.json(await store.eventAnalytics());
+  });
+
+  app.get("/api/stress", (req, res) => {
+    res.json(stressController.status());
+  });
+
+  app.post("/api/stress", (req, res) => {
+    if (req.body?.ops !== true) {
+      res.status(403).json({ error: "Stress is available in ops view only." });
+      return;
+    }
+
+    res.status(202).json(
+      stressController.start({
+        durationSeconds: req.body?.durationSeconds,
+        workers: req.body?.workers
+      })
+    );
   });
 
   app.post("/api/copilot", async (req, res) => {

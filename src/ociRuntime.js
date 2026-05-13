@@ -33,6 +33,7 @@ const elements = {
   disk: document.getElementById("hudDisk"),
   diskLabel: document.getElementById("hudDiskLabel"),
   insight: document.getElementById("hudInsight"),
+  stressStatus: document.getElementById("stressStatus"),
   livePlayers: document.getElementById("livePlayersList"),
   livePlayersStatus: document.getElementById("livePlayersStatus"),
   eventAnalyticsStatus: document.getElementById("eventAnalyticsStatus"),
@@ -41,6 +42,7 @@ const elements = {
   eventRate15m: document.getElementById("eventRate15m"),
   leaderboard: document.getElementById("leaderboardList"),
   askCopilot: document.getElementById("askCopilot"),
+  startStress: document.getElementById("startStress"),
   refreshLeaderboard: document.getElementById("refreshLeaderboard")
 };
 
@@ -66,6 +68,7 @@ function renderStatus(status) {
   elements.gateway.textContent = status.gateway ?? "public";
   elements.loadBalancer.textContent = status.loadBalancer ?? "healthy";
   elements.livePlayersStatus.textContent = status.sinks?.redisLivePlayers ?? "memory";
+  renderStress(status.stress);
   updateObservedVms(status.vm);
   renderVmFleet();
 
@@ -79,6 +82,17 @@ function renderStatus(status) {
   elements.disk.textContent = diskIo
     ? `${formatThroughput(diskIo.readKbps)}/${formatThroughput(diskIo.writeKbps)}`
     : "--";
+}
+
+function renderStress(stress = {}) {
+  if (!elements.stressStatus) return;
+
+  if (stress.active) {
+    elements.stressStatus.textContent = `${stress.workers ?? "--"} workers, ${stress.remainingSeconds ?? "--"}s left`;
+    return;
+  }
+
+  elements.stressStatus.textContent = "Idle";
 }
 
 function renderLivePlayers(players = [], analytics = {}) {
@@ -287,6 +301,23 @@ export async function askCopilot(snapshot = {}) {
   elements.insight.textContent = await telemetry.askCopilot(snapshot);
 }
 
+export async function startStress() {
+  if (!isOpsView) return;
+
+  elements.startStress.disabled = true;
+  elements.stressStatus.textContent = "Starting stress...";
+  try {
+    const result = await telemetry.startStress();
+    elements.stressStatus.textContent = `Started ${result.accepted}/${result.requested} routes`;
+  } catch {
+    elements.stressStatus.textContent = "Stress request failed";
+  } finally {
+    setTimeout(() => {
+      elements.startStress.disabled = false;
+    }, 5000);
+  }
+}
+
 export async function emitGameEvent(type, snapshot = {}) {
   await telemetry.emit(type, snapshot);
   updateHud(snapshot);
@@ -302,6 +333,7 @@ export async function initOciRuntime() {
     setConnection(telemetry.offline);
 
     elements.askCopilot.addEventListener("click", () => askCopilot({ score: 0, level: 1 }));
+    elements.startStress.addEventListener("click", () => startStress());
     elements.refreshLeaderboard.addEventListener("click", async () => {
       renderLeaderboard(await telemetry.refreshLeaderboard());
     });

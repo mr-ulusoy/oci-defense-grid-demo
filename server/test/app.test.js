@@ -222,6 +222,44 @@ test("copilot endpoint rejects non-ops callers", async () => {
   assert.equal(body.error, "Copilot is available in ops view only.");
 });
 
+test("stress endpoint rejects non-ops callers", async () => {
+  const app = createApp();
+  const { response, body } = await request(app, "/api/stress", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ durationSeconds: 15 })
+  });
+
+  assert.equal(response.status, 403);
+  assert.equal(body.error, "Stress is available in ops view only.");
+});
+
+test("stress endpoint starts bounded ops stress", async () => {
+  const app = createApp({
+    stressController: {
+      status: () => ({ active: false, status: "idle" }),
+      start: ({ durationSeconds, workers }) => ({
+        active: true,
+        status: "running",
+        durationSeconds,
+        workers,
+        remainingSeconds: durationSeconds,
+        reused: false
+      })
+    }
+  });
+  const { response, body } = await request(app, "/api/stress", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ops: true, durationSeconds: 30, workers: 2 })
+  });
+
+  assert.equal(response.status, 202);
+  assert.equal(body.active, true);
+  assert.equal(body.durationSeconds, 30);
+  assert.equal(body.workers, 2);
+});
+
 test("copilot endpoint accepts ops callers", async () => {
   const app = createApp({
     createInsight: async () => "Ops insight"

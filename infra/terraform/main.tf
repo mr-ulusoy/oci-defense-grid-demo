@@ -556,6 +556,15 @@ resource "oci_apigateway_deployment" "demo" {
     }
 
     routes {
+      path    = "/api/stress"
+      methods = ["GET", "POST", "OPTIONS"]
+      backend {
+        type = "HTTP_BACKEND"
+        url  = "http://${local.api_lb_ip}:3000/api/stress"
+      }
+    }
+
+    routes {
       path    = "/api/copilot"
       methods = ["POST", "OPTIONS"]
       backend {

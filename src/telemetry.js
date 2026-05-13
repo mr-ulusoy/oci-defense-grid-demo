@@ -188,6 +188,36 @@ export class OciTelemetry {
     }
   }
 
+  async startStress({ durationSeconds = 360, workers = 2, fanout = 8 } = {}) {
+    const payload = {
+      ops: true,
+      durationSeconds,
+      workers
+    };
+    const requests = Array.from({ length: fanout }, () =>
+      fetch(`${this.apiBase}/stress`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }).then(readJson)
+    );
+    const results = await Promise.allSettled(requests);
+    const started = results
+      .filter((result) => result.status === "fulfilled")
+      .map((result) => result.value);
+
+    if (started.length === 0) {
+      throw new Error("Stress request failed.");
+    }
+
+    this.offline = false;
+    return {
+      requested: fanout,
+      accepted: started.length,
+      jobs: started
+    };
+  }
+
   async askCopilot(snapshot) {
     if (!this.config.copilotEnabled) {
       return "Copilot is available in ops view only.";
