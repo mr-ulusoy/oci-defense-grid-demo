@@ -247,15 +247,17 @@ export function createStore() {
       leaderboard.sort((a, b) => b.score - a.score);
       leaderboard.splice(20);
 
-      try {
-        await Promise.all([
-          livePlayers.update(batch),
-          persistToAutonomousDb(batch),
-          publishEventsToStreaming(batch),
-          archiveEventsToObjectStorage(batch)
-        ]);
-      } catch (error) {
-        console.warn("One or more OCI sinks failed.", error.message);
+      const sinkResults = await Promise.allSettled([
+        livePlayers.update(batch),
+        persistToAutonomousDb(batch),
+        publishEventsToStreaming(batch),
+        archiveEventsToObjectStorage(batch)
+      ]);
+      const sinkNames = ["Redis live players", "Autonomous Database", "Streaming", "Object Storage"];
+      for (const [index, result] of sinkResults.entries()) {
+        if (result.status === "rejected") {
+          console.warn(`${sinkNames[index]} sink failed.`, result.reason.message);
+        }
       }
     },
 

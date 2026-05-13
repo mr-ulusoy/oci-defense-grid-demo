@@ -13,7 +13,7 @@ async function getAuthProvider() {
         return common.ResourcePrincipalAuthenticationDetailsProvider.builder();
       }
 
-      return common.InstancePrincipalsAuthenticationDetailsProvider.builder().build();
+      return new common.InstancePrincipalsAuthenticationDetailsProviderBuilder().build();
     })();
   }
 
