@@ -136,6 +136,30 @@ terraform -chdir=infra/terraform apply -var-file=demo.tfvars
 
 Terraform outputs `game_url` and `api_gateway_endpoint`. The VM cloud-init writes `config.js` so the browser calls API Gateway rather than bypassing it.
 
+## Updating Running VMs
+
+This demo intentionally uses bastion-based updates instead of a GitHub workflow. After pushing changes to the repo, update the running app VMs through the bastion:
+
+```bash
+scripts/deploy-via-bastion.sh
+```
+
+The script defaults to the current demo hosts:
+
+```bash
+BASTION_HOST=82.70.59.158
+VM_HOSTS="10.42.20.153 10.42.20.192"
+SSH_KEY=infra/terraform/.keys/oci-defense-grid-demo
+DEPLOY_PATH=/opt/oci-defense-grid
+DEPLOY_BRANCH=main
+```
+
+It SSHes through the bastion to each private VM, pulls the latest `main`, installs production dependencies and restarts `oci-defense-api` and `nginx`. Override any value as an environment variable if the VM list changes after autoscaling, for example:
+
+```bash
+VM_HOSTS="10.42.20.153 10.42.20.192 10.42.20.210" scripts/deploy-via-bastion.sh
+```
+
 The default app VM shape is:
 
 ```hcl
