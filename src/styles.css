@@ -48,7 +48,7 @@ button:hover {
 }
 
 .app-shell.ops-visible {
-  grid-template-columns: minmax(420px, 1fr) 440px;
+  grid-template-columns: minmax(300px, 390px) minmax(620px, 1fr);
 }
 
 .game-stage {
@@ -62,8 +62,39 @@ button:hover {
 }
 
 .app-shell.ops-visible .game-stage {
-  justify-self: stretch;
-  max-width: none;
+  justify-self: center;
+  max-width: 390px;
+  padding: 14px;
+}
+
+.app-shell.ops-visible .top-strip {
+  gap: 10px;
+  min-height: 58px;
+}
+
+.app-shell.ops-visible h1 {
+  font-size: 1.35rem;
+}
+
+.app-shell.ops-visible .eyebrow {
+  font-size: 0.68rem;
+}
+
+.app-shell.ops-visible .status-pill {
+  font-size: 0.78rem;
+  min-width: 106px;
+  padding: 0.45rem 0.6rem;
+}
+
+.app-shell.ops-visible .pilot-bar {
+  gap: 8px;
+  grid-template-columns: 1fr;
+  padding: 9px;
+}
+
+.app-shell.ops-visible .game-root {
+  flex: 0 1 auto;
+  min-height: min(520px, calc(100vh - 168px));
 }
 
 .top-strip {
@@ -174,6 +205,10 @@ h2 {
   padding: 26px;
 }
 
+.app-shell.ops-visible .ops-panel {
+  padding: 30px;
+}
+
 .ops-panel[hidden] {
   display: none;
 }
@@ -185,14 +220,14 @@ h2 {
 }
 
 .panel-header h2 {
-  font-size: 1.8rem;
+  font-size: 2.2rem;
   line-height: 1.15;
   margin-top: 4px;
 }
 
 .panel-header p {
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 1rem;
   margin: 10px 0 0;
 }
 
@@ -200,6 +235,10 @@ h2 {
   display: grid;
   gap: 10px;
   grid-template-columns: 1fr 1fr;
+}
+
+.app-shell.ops-visible .metric-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .metric {
