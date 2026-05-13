@@ -1,7 +1,7 @@
 import os from "node:os";
 import { Worker } from "node:worker_threads";
 
-const DEFAULT_DURATION_SECONDS = 360;
+const DEFAULT_DURATION_SECONDS = 260;
 const MIN_DURATION_SECONDS = 15;
 const MAX_DURATION_SECONDS = 600;
 const MAX_WORKERS = 8;

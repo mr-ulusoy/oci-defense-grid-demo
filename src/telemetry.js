@@ -188,7 +188,7 @@ export class OciTelemetry {
     }
   }
 
-  async startStress({ durationSeconds = 360, workers = 2, fanout = 8 } = {}) {
+  async startStress({ durationSeconds = 260, workers = 2, fanout = 8 } = {}) {
     const payload = {
       ops: true,
       durationSeconds,

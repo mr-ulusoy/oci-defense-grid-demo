@@ -161,7 +161,7 @@
         const scaleState = document.getElementById("scaleState");
         const apiBase = (window.OCI_DEFENSE_CONFIG?.apiBase ?? "/api").replace(/\/$/, "");
         const isStop = action === "stop";
-        const payload = isStop ? { ops: true, action: "stop" } : { ops: true, durationSeconds: 360, workers: 2 };
+        const payload = isStop ? { ops: true, action: "stop" } : { ops: true, durationSeconds: 260, workers: 2 };
         const fanout = isStop ? 12 : 8;
         const originalText = button.textContent;
 
