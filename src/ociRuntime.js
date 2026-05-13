@@ -39,20 +39,17 @@ const elements = {
   eventRate1m: document.getElementById("eventRate1m"),
   eventRate5m: document.getElementById("eventRate5m"),
   eventRate15m: document.getElementById("eventRate15m"),
-  eventTypeList: document.getElementById("eventTypeList"),
   leaderboard: document.getElementById("leaderboardList"),
   askCopilot: document.getElementById("askCopilot"),
   refreshLeaderboard: document.getElementById("refreshLeaderboard")
 };
 
-const EVENT_TYPE_LABELS = {
-  enemy_killed: "enemy_killed",
-  player_hit: "player_hit",
-  powerup: "powerup",
-  boss_phase: "boss_phase",
-  run_end: "run_end",
-  heartbeat: "heartbeat"
-};
+const SCORE_EVENT_TYPES = [
+  { key: "enemy_killed", label: "Kills" },
+  { key: "player_hit", label: "Hits" },
+  { key: "powerup", label: "Power" },
+  { key: "boss_phase", label: "Boss" }
+];
 
 const observedVms = new Map();
 let activeVmKey = null;
@@ -116,7 +113,7 @@ function renderLivePlayers(players = [], analytics = {}) {
 
   const header = document.createElement("div");
   header.className = "live-player-row live-player-head";
-  header.innerHTML = "<span>Callsign</span><span>Score</span><span>Lvl</span><span>Latency</span><span>VM</span>";
+  header.innerHTML = "<span>Callsign</span><span>Score</span><span>Lvl</span><span>Latency</span><span>Events</span><span>VM</span>";
   elements.livePlayers.appendChild(header);
 
   for (const player of activePlayers.slice(0, 12)) {
@@ -127,6 +124,7 @@ function renderLivePlayers(players = [], analytics = {}) {
       `<span>${Number(player.score ?? 0)}</span>`,
       `<span>${Number(player.level ?? 1)}</span>`,
       `<span>${formatPercentlessLatency(player.latencyMs)}</span>`,
+      `<span class="event-chip-set">${eventChipsHtml(player.eventCounts)}</span>`,
       `<span>${escapeHtml(player.vm ?? "unknown")}</span>`
     ].join("");
     elements.livePlayers.appendChild(row);
@@ -145,17 +143,13 @@ function renderEventAnalytics(analytics = {}) {
   elements.eventRate1m.textContent = formatEventsPerMinute(analytics.windows?.last1m, 1);
   elements.eventRate5m.textContent = formatEventsPerMinute(analytics.windows?.last5m, 5);
   elements.eventRate15m.textContent = formatEventsPerMinute(analytics.windows?.last15m, 15);
+}
 
-  elements.eventTypeList.innerHTML = "";
-  const eventTypes = analytics.eventTypes?.length
-    ? analytics.eventTypes
-    : Object.keys(EVENT_TYPE_LABELS).map((type) => ({ type, count: 0 }));
-  for (const eventType of eventTypes.slice(0, 6)) {
-    const row = document.createElement("div");
-    row.className = "event-type-row";
-    row.innerHTML = `<span>${escapeHtml(EVENT_TYPE_LABELS[eventType.type] ?? eventType.type)}</span><strong>${Number(eventType.count ?? 0)}</strong>`;
-    elements.eventTypeList.appendChild(row);
-  }
+function eventChipsHtml(eventCounts = {}) {
+  return SCORE_EVENT_TYPES.map(
+    (eventType) =>
+      `<span class="event-chip"><span>${eventType.label}</span><strong>${Number(eventCounts[eventType.key] ?? 0)}</strong></span>`
+  ).join("");
 }
 
 function formatEventsPerMinute(count, minutes) {
@@ -271,7 +265,11 @@ function renderLeaderboard(entries) {
   elements.leaderboard.innerHTML = "";
   for (const entry of entries.slice(0, 5)) {
     const item = document.createElement("li");
-    item.innerHTML = `<span>${entry.callsign}</span><strong>${entry.score}</strong>`;
+    item.innerHTML = [
+      `<span class="leaderboard-name">${escapeHtml(entry.callsign)}</span>`,
+      `<span class="event-chip-set">${eventChipsHtml(entry.eventCounts)}</span>`,
+      `<strong>${Number(entry.score ?? 0)}</strong>`
+    ].join("");
     elements.leaderboard.appendChild(item);
   }
 }

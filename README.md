@@ -357,6 +357,7 @@ The presenter view reads `/api/analytics/events`, which summarizes the `game_eve
 
 - Events per minute over the last 1, 5 and 15 minutes.
 - Counts for `enemy_killed`, `player_hit`, `powerup`, `boss_phase`, `run_end` and `heartbeat`.
+- Live Players and Leaderboard include per-run event chips for kills, hits, powerups and boss phases.
 
 When ADB is not configured locally, the same endpoint falls back to the in-memory event buffer so the UI remains testable.
 

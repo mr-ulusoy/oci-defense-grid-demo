@@ -106,6 +106,10 @@ function toNumber(value) {
   return Number(value ?? 0);
 }
 
+function emptyEventCounts() {
+  return Object.fromEntries(EVENT_TYPES.map((type) => [type, 0]));
+}
+
 function normalizeTypeCounts(rows) {
   const counts = new Map(EVENT_TYPES.map((type) => [type, 0]));
   for (const row of rows ?? []) {
@@ -115,6 +119,22 @@ function normalizeTypeCounts(rows) {
   return [...counts.entries()]
     .map(([type, count]) => ({ type, count }))
     .sort((left, right) => Number(right.count) - Number(left.count) || left.type.localeCompare(right.type));
+}
+
+function eventCountsByRunFromMemory(events, runIds) {
+  const wanted = new Set(runIds);
+  const counts = new Map(runIds.map((runId) => [runId, emptyEventCounts()]));
+
+  for (const event of events) {
+    if (!wanted.has(event.runId)) {
+      continue;
+    }
+    const runCounts = counts.get(event.runId) ?? emptyEventCounts();
+    runCounts[event.type] = toNumber(runCounts[event.type]) + 1;
+    counts.set(event.runId, runCounts);
+  }
+
+  return counts;
 }
 
 function eventAnalyticsFromMemory(events) {
@@ -315,6 +335,66 @@ export function createStore() {
     }
   }
 
+  async function eventCountsByRunFromAutonomousDb(runIds) {
+    const uniqueRunIds = [...new Set(runIds.filter(Boolean))].slice(0, 20);
+    if (uniqueRunIds.length === 0) {
+      return new Map();
+    }
+
+    const connection = await createOracleConnection();
+    if (!connection) {
+      return null;
+    }
+
+    try {
+      await ensureAutonomousSchema(connection);
+      const options = await oracleObjectOptions();
+      const binds = Object.fromEntries(uniqueRunIds.map((runId, index) => [`run${index}`, runId]));
+      const placeholders = uniqueRunIds.map((_, index) => `:run${index}`).join(", ");
+      const result = await connection.execute(
+        `select run_id, event_type, count(*) as event_count
+         from game_events
+         where run_id in (${placeholders})
+         group by run_id, event_type`,
+        binds,
+        options
+      );
+      const counts = new Map(uniqueRunIds.map((runId) => [runId, emptyEventCounts()]));
+
+      for (const row of result.rows ?? []) {
+        const runCounts = counts.get(row.RUN_ID) ?? emptyEventCounts();
+        runCounts[row.EVENT_TYPE] = toNumber(row.EVENT_COUNT);
+        counts.set(row.RUN_ID, runCounts);
+      }
+
+      return counts;
+    } finally {
+      await connection.close();
+    }
+  }
+
+  async function addEventCountsByRun(items) {
+    const runIds = items.map((item) => item.runId).filter(Boolean);
+    if (runIds.length === 0) {
+      return items;
+    }
+
+    let countsByRun;
+    try {
+      countsByRun = await eventCountsByRunFromAutonomousDb(runIds);
+    } catch (error) {
+      console.warn("Autonomous Database event count read failed, using memory fallback.", error.message);
+    }
+    if (!countsByRun) {
+      countsByRun = eventCountsByRunFromMemory(events, runIds);
+    }
+
+    return items.map((item) => ({
+      ...item,
+      eventCounts: countsByRun.get(item.runId) ?? emptyEventCounts()
+    }));
+  }
+
   return {
     async status() {
       return {
@@ -355,20 +435,21 @@ export function createStore() {
     },
 
     async leaderboard() {
+      let entries;
       try {
         const persisted = await leaderboardFromAutonomousDb();
         if (persisted) {
-          return mergeLeaderboards(persisted, leaderboard);
+          entries = mergeLeaderboards(persisted, leaderboard);
         }
       } catch (error) {
         console.warn("Autonomous Database leaderboard read failed, using memory fallback.", error.message);
       }
 
-      return leaderboard.slice(0, 10);
+      return addEventCountsByRun(entries ?? leaderboard.slice(0, 10));
     },
 
     async livePlayers() {
-      return livePlayers.list();
+      return addEventCountsByRun(await livePlayers.list());
     },
 
     async liveAnalytics(runId) {

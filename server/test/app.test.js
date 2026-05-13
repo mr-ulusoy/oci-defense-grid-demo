@@ -72,28 +72,43 @@ test("events endpoint rejects invalid payloads", async () => {
 
 test("leaderboard uses submitted player callsign", async () => {
   const app = createApp();
-  const event = {
-    runId: "run-leaderboard",
-    sessionId: "session-leaderboard",
-    type: "run_end",
-    level: 2,
-    score: 44000,
-    callsign: "Ada Cloud",
-    cloudAction: "none",
-    metrics: { fps: 60, latencyMs: 10 },
-    clientTs: new Date().toISOString()
-  };
+  const events = [
+    {
+      runId: "run-leaderboard",
+      sessionId: "session-leaderboard",
+      type: "enemy_killed",
+      level: 2,
+      score: 42000,
+      callsign: "Ada Cloud",
+      cloudAction: "ai_scan",
+      metrics: { fps: 60, latencyMs: 12 },
+      clientTs: new Date().toISOString()
+    },
+    {
+      runId: "run-leaderboard",
+      sessionId: "session-leaderboard",
+      type: "run_end",
+      level: 2,
+      score: 44000,
+      callsign: "Ada Cloud",
+      cloudAction: "none",
+      metrics: { fps: 60, latencyMs: 10 },
+      clientTs: new Date().toISOString()
+    }
+  ];
 
   await request(app, "/api/events", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ events: [event] })
+    body: JSON.stringify({ events })
   });
 
   const { body } = await request(app, "/api/leaderboard");
 
   assert.equal(body.entries[0].callsign, "ADA CLOUD");
   assert.equal(body.entries[0].score, 44000);
+  assert.equal(body.entries[0].eventCounts.enemy_killed, 1);
+  assert.equal(body.entries[0].eventCounts.run_end, 1);
 });
 
 test("live players lists latest player snapshots", async () => {
@@ -135,7 +150,9 @@ test("live players lists latest player snapshots", async () => {
   assert.equal(body.players.length, 2);
   assert.equal(body.players[0].callsign, "ALI");
   assert.equal(body.players[0].score, 7200);
+  assert.equal(body.players[0].eventCounts.enemy_killed, 1);
   assert.equal(body.players[1].callsign, "SARA");
+  assert.equal(body.players[1].eventCounts.heartbeat, 1);
 });
 
 test("event analytics summarizes live game events", async () => {
