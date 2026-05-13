@@ -86,7 +86,7 @@ async function ensureAutonomousSchema(connection) {
   await ignoreAlreadyExists(() =>
     connection.execute(`
       create table ai_insights (
-        id generated always as identity primary key,
+        id number generated always as identity primary key,
         run_id varchar2(64) not null,
         insight varchar2(500) not null,
         created_at timestamp with time zone default systimestamp not null

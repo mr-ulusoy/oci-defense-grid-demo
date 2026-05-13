@@ -30,7 +30,7 @@ create table high_scores (
 create index high_scores_rank_idx on high_scores (score desc, created_at asc);
 
 create table ai_insights (
-  id generated always as identity primary key,
+  id number generated always as identity primary key,
   run_id varchar2(64) not null,
   insight varchar2(500) not null,
   created_at timestamp with time zone default systimestamp not null
