@@ -57,3 +57,13 @@ output "analytics_instance_url" {
   description = "Optional Oracle Analytics Cloud URL if create_analytics_instance is true."
   value       = var.create_analytics_instance ? oci_analytics_analytics_instance.demo[0].service_url : null
 }
+
+output "event_ingest_route_mode" {
+  description = "Shows whether POST /api/events is routed to OCI Functions or the VM-backed API."
+  value       = local.function_ingest_enabled ? "oci-functions" : "vm-api"
+}
+
+output "event_ingest_function_id" {
+  description = "OCI Functions function OCID for event ingest when function_image is set."
+  value       = try(oci_functions_function.optional_ingest[0].id, null)
+}

@@ -51,4 +51,6 @@ create_analytics_instance               = false
 analytics_idcs_access_token             = null
 create_instance_principal_dynamic_group = false
 create_instance_principal_policy        = false
-function_image                          = ""
+create_function_resource_principal_dynamic_group = false
+create_function_resource_principal_policy        = false
+function_image = ""

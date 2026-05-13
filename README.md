@@ -46,13 +46,17 @@ Player browser
 
 Game API calls
   -> OCI API Gateway
-     -> private OCI Load Balancer
-        -> Compute Instance Pool Node/Express API
-           -> OCI Cache live player state
-           -> OCI Streaming
-           -> Autonomous Database
-           -> Object Storage raw event archive
-           -> OCI Generative AI Gemini copilot or deterministic fallback
+     -> POST /api/events
+        -> OCI Functions event ingest, when function_image is configured
+        -> VM-backed Node API fallback, when function_image is empty
+     -> other /api routes
+        -> private OCI Load Balancer
+           -> Compute Instance Pool Node/Express API
+              -> OCI Cache live player state
+              -> OCI Streaming
+              -> Autonomous Database
+              -> Object Storage raw event archive
+              -> OCI Generative AI Gemini copilot or deterministic fallback
 ```
 
 OCI Cache is used for the live player roster in the presenter view. Every VM writes the latest player heartbeat/event into the same managed cache, so the ops HUD can list active players even while API Gateway and the private Load Balancer bounce between backend VMs.
@@ -78,7 +82,7 @@ See the full wireframe in [docs/oci-defense-grid-wireframe.md](docs/oci-defense-
 | Oracle Analytics Cloud | Optional dashboard layer on top of ADB. |
 | OCI Generative AI | Gemini copilot insight in the ops HUD via the OCI SDK. |
 | IAM Dynamic Group and Policies | Lets app VMs call Streaming, Object Storage and GenAI through instance principals. |
-| OCI Functions | V1 stub for future event ingest or stream processing off the VMs. |
+| OCI Functions | Optional serverless event-ingest path for `POST /api/events`, writing gameplay telemetry to Streaming, Object Storage, OCI Cache and ADB. |
 
 ## Runtime API
 
@@ -138,6 +142,63 @@ terraform -chdir=infra/terraform apply -var-file=demo.tfvars
 ```
 
 Terraform outputs `game_url` and `api_gateway_endpoint`. The VM cloud-init writes `config.js` so the browser calls API Gateway rather than bypassing it.
+
+## OCI Functions Event Ingest
+
+`functions/event-ingest` is the serverless telemetry ingest function. It is designed to take load off the VMs during demo spikes:
+
+```text
+Browser POST /api/events
+  -> API Gateway
+     -> OCI Function event-ingest
+        -> OCI Cache live player state
+        -> OCI Streaming
+        -> Object Storage raw NDJSON archive
+        -> Autonomous Database game_events/high_scores
+```
+
+By default `function_image = ""`, so Terraform keeps `/api/events` routed to the VM-backed API. To switch the route to OCI Functions:
+
+1. Build and push the function image to OCIR.
+2. Set `function_image` in `demo.tfvars` to the OCIR image path.
+3. Enable the Function resource-principal dynamic group and policy, or have an admin create equivalent IAM.
+4. Run `terraform plan` and `terraform apply`.
+
+Example tfvars:
+
+```hcl
+function_image = "arn.ocir.io/<namespace>/oci-defense-grid/event-ingest:0.1.0"
+
+create_function_resource_principal_dynamic_group = true
+create_function_resource_principal_policy        = true
+```
+
+If your user cannot create IAM policies, leave the two Function IAM booleans as `false` and ask an admin to create:
+
+```text
+Dynamic group:
+All {resource.type = 'fnfunc', resource.compartment.id = '<compartment_ocid>'}
+
+Policies:
+Allow dynamic-group <function-dynamic-group> to use stream-push in compartment id <compartment_ocid>
+Allow dynamic-group <function-dynamic-group> to manage objects in compartment id <compartment_ocid> where target.bucket.name='<raw-events-bucket>'
+```
+
+The Function also uses `ADB_USER`, `ADB_PASSWORD`, `ADB_CONNECT_STRING`, `REDIS_HOST`, `REDIS_PORT` and `REDIS_TLS` from Terraform function config. Redis does not need IAM. ADB writes use the configured database credentials and the existing ADB network allow-list.
+
+Build example:
+
+```bash
+cd functions/event-ingest
+docker build -t <region-key>.ocir.io/<namespace>/oci-defense-grid/event-ingest:0.1.0 .
+docker push <region-key>.ocir.io/<namespace>/oci-defense-grid/event-ingest:0.1.0
+```
+
+For Stockholm, the OCIR region key is typically `arn`, so the image becomes:
+
+```text
+arn.ocir.io/<namespace>/oci-defense-grid/event-ingest:0.1.0
+```
 
 ## Updating Running VMs
 

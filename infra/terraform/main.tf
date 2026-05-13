@@ -11,18 +11,19 @@ resource "random_id" "suffix" {
 }
 
 locals {
-  name_prefix  = "${var.project_name}-${random_id.suffix.hex}"
-  vcn_cidr     = "10.42.0.0/16"
-  public_cidr  = "10.42.10.0/24"
-  private_cidr = "10.42.20.0/24"
-  api_base_url = var.public_api_base_url != "" ? trimsuffix(var.public_api_base_url, "/") : "https://${oci_apigateway_gateway.demo.hostname}/api"
-  api_lb_ip    = oci_load_balancer_load_balancer.api.ip_address_details[0].ip_address
-  redis_host   = var.create_redis_cache ? oci_redis_redis_cluster.live_players[0].primary_fqdn : var.redis_host
-  redis_port   = tostring(var.redis_port)
-  redis_tls    = var.redis_tls ? "true" : "false"
-  adb_low      = var.create_autonomous_database ? oci_database_autonomous_database.demo[0].connection_strings[0].low : ""
-  adb_host     = local.adb_low == "" ? "" : split(":", split("/", local.adb_low)[0])[0]
-  adb_service  = local.adb_low == "" ? "" : split("/", local.adb_low)[1]
+  name_prefix             = "${var.project_name}-${random_id.suffix.hex}"
+  vcn_cidr                = "10.42.0.0/16"
+  public_cidr             = "10.42.10.0/24"
+  private_cidr            = "10.42.20.0/24"
+  api_base_url            = var.public_api_base_url != "" ? trimsuffix(var.public_api_base_url, "/") : "https://${oci_apigateway_gateway.demo.hostname}/api"
+  api_lb_ip               = oci_load_balancer_load_balancer.api.ip_address_details[0].ip_address
+  function_ingest_enabled = var.function_image != ""
+  redis_host              = var.create_redis_cache ? oci_redis_redis_cluster.live_players[0].primary_fqdn : var.redis_host
+  redis_port              = tostring(var.redis_port)
+  redis_tls               = var.redis_tls ? "true" : "false"
+  adb_low                 = var.create_autonomous_database ? oci_database_autonomous_database.demo[0].connection_strings[0].low : ""
+  adb_host                = local.adb_low == "" ? "" : split(":", split("/", local.adb_low)[0])[0]
+  adb_service             = local.adb_low == "" ? "" : split("/", local.adb_low)[1]
   adb_generated_connect_string = local.adb_low == "" ? "" : join("", [
     "(description=(retry_count=20)(retry_delay=3)",
     "(address=(protocol=tcps)(port=1522)(host=${local.adb_host}))",
@@ -492,12 +493,29 @@ resource "oci_apigateway_deployment" "demo" {
       }
     }
 
-    routes {
-      path    = "/api/events"
-      methods = ["POST", "OPTIONS"]
-      backend {
-        type = "HTTP_BACKEND"
-        url  = "http://${local.api_lb_ip}:3000/api/events"
+    dynamic "routes" {
+      for_each = local.function_ingest_enabled ? [] : [1]
+
+      content {
+        path    = "/api/events"
+        methods = ["POST", "OPTIONS"]
+        backend {
+          type = "HTTP_BACKEND"
+          url  = "http://${local.api_lb_ip}:3000/api/events"
+        }
+      }
+    }
+
+    dynamic "routes" {
+      for_each = local.function_ingest_enabled ? [oci_functions_function.optional_ingest[0].id] : []
+
+      content {
+        path    = "/api/events"
+        methods = ["POST", "OPTIONS"]
+        backend {
+          type        = "ORACLE_FUNCTIONS_BACKEND"
+          function_id = routes.value
+        }
       }
     }
 
@@ -581,11 +599,27 @@ resource "oci_functions_application" "demo" {
 }
 
 resource "oci_functions_function" "optional_ingest" {
-  count          = var.function_image == "" ? 0 : 1
-  application_id = oci_functions_application.demo.id
-  display_name   = "${local.name_prefix}-event-ingest"
-  image          = var.function_image
-  memory_in_mbs  = 256
+  count              = var.function_image == "" ? 0 : 1
+  application_id     = oci_functions_application.demo.id
+  display_name       = "${local.name_prefix}-event-ingest"
+  image              = var.function_image
+  memory_in_mbs      = 256
+  timeout_in_seconds = 30
+
+  config = {
+    ADB_CONNECT_STRING          = local.adb_app_connect_string
+    ADB_PASSWORD                = var.adb_admin_password
+    ADB_USER                    = var.adb_user
+    LIVE_PLAYER_TTL_SECONDS     = tostring(var.live_player_ttl_seconds)
+    OCI_BUCKET_NAME             = oci_objectstorage_bucket.raw_events.name
+    OCI_NAMESPACE               = data.oci_objectstorage_namespace.namespace.namespace
+    OCI_REGION                  = var.region
+    OCI_STREAM_MESSAGE_ENDPOINT = oci_streaming_stream.events.messages_endpoint
+    OCI_STREAM_OCID             = oci_streaming_stream.events.id
+    REDIS_HOST                  = local.redis_host
+    REDIS_PORT                  = local.redis_port
+    REDIS_TLS                   = local.redis_tls
+  }
 }
 
 resource "oci_analytics_analytics_instance" "demo" {
@@ -612,6 +646,15 @@ resource "oci_identity_dynamic_group" "app_instances" {
   name           = replace("${local.name_prefix}-instances", "-", "_")
 }
 
+resource "oci_identity_dynamic_group" "functions" {
+  provider       = oci.home
+  count          = var.create_function_resource_principal_dynamic_group ? 1 : 0
+  compartment_id = var.tenancy_ocid
+  description    = "OCI Defense Grid Functions."
+  matching_rule  = "All {resource.type = 'fnfunc', resource.compartment.id = '${var.compartment_ocid}'}"
+  name           = replace("${local.name_prefix}-functions", "-", "_")
+}
+
 resource "oci_identity_policy" "app_instances" {
   provider       = oci.home
   count          = var.create_instance_principal_dynamic_group && var.create_instance_principal_policy ? 1 : 0
@@ -622,5 +665,17 @@ resource "oci_identity_policy" "app_instances" {
     "Allow dynamic-group ${oci_identity_dynamic_group.app_instances[0].name} to use stream-push in compartment id ${var.compartment_ocid}",
     "Allow dynamic-group ${oci_identity_dynamic_group.app_instances[0].name} to manage objects in compartment id ${var.compartment_ocid} where target.bucket.name='${oci_objectstorage_bucket.raw_events.name}'",
     "Allow dynamic-group ${oci_identity_dynamic_group.app_instances[0].name} to use generative-ai-family in compartment id ${coalesce(var.oci_genai_compartment_ocid, var.compartment_ocid)}"
+  ]
+}
+
+resource "oci_identity_policy" "functions" {
+  provider       = oci.home
+  count          = var.create_function_resource_principal_dynamic_group && var.create_function_resource_principal_policy ? 1 : 0
+  compartment_id = var.tenancy_ocid
+  description    = "Allow OCI Defense Grid Functions to ingest telemetry."
+  name           = replace("${local.name_prefix}-functions-policy", "-", "_")
+  statements = [
+    "Allow dynamic-group ${oci_identity_dynamic_group.functions[0].name} to use stream-push in compartment id ${var.compartment_ocid}",
+    "Allow dynamic-group ${oci_identity_dynamic_group.functions[0].name} to manage objects in compartment id ${var.compartment_ocid} where target.bucket.name='${oci_objectstorage_bucket.raw_events.name}'"
   ]
 }

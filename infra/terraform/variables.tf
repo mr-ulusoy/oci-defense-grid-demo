@@ -301,9 +301,21 @@ variable "analytics_idcs_access_token" {
 }
 
 variable "function_image" {
-  description = "Optional OCIR image for the event ingest/copilot function. Leave empty for V1 VM-backed API routes."
+  description = "Optional OCIR image for the OCI Functions event-ingest function. Leave empty to keep POST /api/events on the VM-backed API."
   type        = string
   default     = ""
+}
+
+variable "create_function_resource_principal_dynamic_group" {
+  description = "Create a tenancy-level dynamic group for OCI Functions resource principal access."
+  type        = bool
+  default     = false
+}
+
+variable "create_function_resource_principal_policy" {
+  description = "Create a tenancy-level IAM policy so the event-ingest Function can publish to Streaming and Object Storage."
+  type        = bool
+  default     = false
 }
 
 variable "create_instance_principal_policy" {

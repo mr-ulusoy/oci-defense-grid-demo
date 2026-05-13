@@ -11,6 +11,7 @@ flowchart LR
 
   webLb["OCI Load Balancer<br/>Public web entrypoint"]
   apiGw["OCI API Gateway<br/>/api/* routing, CORS, throttling"]
+  fn["OCI Functions<br/>event-ingest for POST /api/events"]
   apiLb["OCI Load Balancer<br/>Private API backend set"]
 
   subgraph compute["OCI Compute"]
@@ -33,7 +34,7 @@ flowchart LR
   end
 
   subgraph iam["Identity and Access"]
-    dg["Dynamic Group<br/>App instances"]
+    dg["Dynamic Groups<br/>App instances and Functions"]
     policy["IAM Policies<br/>Streaming, Object Storage, GenAI"]
   end
 
@@ -45,9 +46,14 @@ flowchart LR
 
   player -- "POST/GET /api/*" --> apiGw
   ops -- "status, analytics, copilot" --> apiGw
-  apiGw --> apiLb --> vm1
+  apiGw -- "POST /api/events when function_image is set" --> fn
+  apiGw -- "other /api routes and fallback /api/events" --> apiLb --> vm1
   apiLb --> vm2
 
+  fn --> stream
+  fn --> cache
+  fn --> bucket
+  fn --> adb
   vm1 --> stream
   vm2 --> stream
   vm1 --> cache
@@ -67,6 +73,7 @@ flowchart LR
   policy --> stream
   policy --> bucket
   policy --> genai
+  policy --> fn
 ```
 
 ## Demo Views
@@ -99,7 +106,7 @@ flowchart TB
 | Oracle Analytics Cloud | Optional dashboard layer on top of ADB. |
 | Generative AI | Gemini copilot insight in the ops HUD via OCI GenAI SDK. |
 | IAM Dynamic Group and Policies | Grants app VMs permission to publish telemetry, archive objects and call GenAI. |
-| OCI Functions | V1 stub for moving event ingestion or stream processing off the VMs later. |
+| OCI Functions | Optional event-ingest backend for `POST /api/events`, used when `function_image` points to an OCIR image. |
 
 ## Current GenAI Path
 
