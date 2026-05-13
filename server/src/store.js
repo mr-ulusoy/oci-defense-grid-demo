@@ -131,15 +131,15 @@ export function createStore() {
           id, run_id, session_id, event_type, level_no, score, cloud_action,
           fps, latency_ms, client_ts, server_ts, vm_name, payload_json
         ) values (
-          :id, :runId, :sessionId, :type, :level, :score, :cloudAction,
+          :id, :runId, :sessionId, :eventType, :eventLevel, :score, :cloudAction,
           :fps, :latencyMs, :clientTs, systimestamp, :vmName, :payload
         )`,
         batch.map((event) => ({
           id: event.id,
           runId: event.runId,
           sessionId: event.sessionId,
-          type: event.type,
-          level: event.level,
+          eventType: event.type,
+          eventLevel: event.level,
           score: event.score,
           cloudAction: event.cloudAction,
           fps: event.metrics.fps,
@@ -157,7 +157,7 @@ export function createStore() {
           `merge into high_scores target
            using (
              select :runId run_id, :sessionId session_id, :callsign callsign,
-                    :score score, :level level_no, :vmName vm_name
+                    :score score, :eventLevel level_no, :vmName vm_name
              from dual
            ) source
            on (target.run_id = source.run_id)
@@ -178,7 +178,7 @@ export function createStore() {
             sessionId: event.sessionId,
             callsign: event.callsign || `GRID-${event.sessionId.slice(0, 4).toUpperCase()}`,
             score: event.score,
-            level: event.level,
+            eventLevel: event.level,
             vmName: event.vm.name
           })),
           { autoCommit: true }
