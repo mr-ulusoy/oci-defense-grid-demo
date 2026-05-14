@@ -80,7 +80,7 @@ flowchart TB
   publicUrl["Public game URL<br/>http://&lt;web-lb-ip&gt;/"]
   playerView["Player view<br/>Original shooter, callsign, leaderboard"]
   opsUrl["Presenter URL<br/>http://&lt;web-lb-ip&gt;/?ops=1"]
-  opsHud["Ops HUD<br/>Active VM, CPU, RAM, cores, disk throughput,<br/>live players, Event Analytics, AI insight"]
+  opsHud["Ops HUD<br/>Active VM, CPU, RAM, cores, disk throughput,<br/>live players, leaderboard level, event chips,<br/>Event Analytics, AI insight"]
 
   publicUrl --> playerView
   opsUrl --> playerView

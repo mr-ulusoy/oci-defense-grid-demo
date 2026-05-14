@@ -52,6 +52,7 @@ const SCORE_EVENT_TYPES = [
   { key: "enemy_killed", label: "Kills" },
   { key: "player_hit", label: "Hits" },
   { key: "powerup", label: "Power up" },
+  { key: "extra_life", label: "Extra life" },
   { key: "boss_phase", label: "Boss" }
 ];
 
@@ -317,6 +318,7 @@ function renderLeaderboard(entries) {
     const item = document.createElement("li");
     item.innerHTML = [
       `<span class="leaderboard-name">${escapeHtml(entry.callsign)}</span>`,
+      `<span class="leaderboard-level">Lvl ${Number(entry.level ?? 1)}</span>`,
       `<span class="event-chip-set">${eventChipsHtml(entry.eventCounts)}</span>`,
       `<strong>${Number(entry.score ?? 0)}</strong>`
     ].join("");

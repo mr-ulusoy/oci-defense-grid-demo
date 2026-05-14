@@ -9,6 +9,7 @@ const EVENT_TYPES = new Set([
   "enemy_killed",
   "boss_phase",
   "powerup",
+  "extra_life",
   "player_hit",
   "run_end",
   "heartbeat"

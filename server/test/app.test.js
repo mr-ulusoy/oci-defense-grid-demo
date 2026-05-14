@@ -107,6 +107,7 @@ test("leaderboard uses submitted player callsign", async () => {
 
   assert.equal(body.entries[0].callsign, "ADA CLOUD");
   assert.equal(body.entries[0].score, 44000);
+  assert.equal(body.entries[0].level, 2);
   assert.equal(body.entries[0].eventCounts.enemy_killed, 1);
   assert.equal(body.entries[0].eventCounts.run_end, 1);
 });
@@ -190,6 +191,17 @@ test("event analytics summarizes live game events", async () => {
       cloudAction: "ai_scan",
       metrics: { fps: 59, latencyMs: 29 },
       clientTs: new Date().toISOString()
+    },
+    {
+      runId: "run-analytics-b",
+      sessionId: "session-analytics-b",
+      type: "extra_life",
+      level: 2,
+      score: 1800,
+      callsign: "Analytics Two",
+      cloudAction: "ai_scan",
+      metrics: { fps: 59, latencyMs: 29 },
+      clientTs: new Date().toISOString()
     }
   ];
 
@@ -203,10 +215,11 @@ test("event analytics summarizes live game events", async () => {
 
   assert.equal(response.status, 200);
   assert.equal(body.source, "memory");
-  assert.equal(body.windows.last15m, 3);
+  assert.equal(body.windows.last15m, 4);
   assert.equal(body.eventTypes.find((eventType) => eventType.type === "enemy_killed").count, 1);
   assert.equal(body.eventTypes.find((eventType) => eventType.type === "player_hit").count, 1);
   assert.equal(body.eventTypes.find((eventType) => eventType.type === "powerup").count, 1);
+  assert.equal(body.eventTypes.find((eventType) => eventType.type === "extra_life").count, 1);
   assert.equal(body.runs, undefined);
 });
 

@@ -16,7 +16,7 @@ Current demo endpoints:
 - Player URL: `http://207.127.95.12/`
 - Presenter/ops URL: `http://207.127.95.12/?ops=1`
 
-The player view keeps the game clean for public visitors. The ops view adds the Cloud Ops HUD with active VM, CPU, RAM, cores, disk throughput, LB/API status, latency, events/sec and AI insight.
+The player view keeps the game clean for public visitors. The ops view adds the Cloud Ops HUD with active VM, CPU, RAM, cores, disk throughput, LB/API status, latency, events/sec, live players, leaderboard level, gameplay event chips and AI insight.
 The ops view also includes a bounded `Stress VMs` control for autoscaling demos.
 
 ## Local Run
@@ -117,6 +117,18 @@ Telemetry events use this envelope:
 }
 ```
 
+Valid gameplay event types are:
+
+```text
+enemy_killed
+boss_phase
+powerup
+extra_life
+player_hit
+run_end
+heartbeat
+```
+
 ## OCI Deploy
 
 1. Push this repo to a Git remote that the OCI VMs can clone.
@@ -204,18 +216,20 @@ Browser POST /api/events
 
 By default `function_image = ""`, so Terraform keeps `/api/events` routed to the VM-backed API. To switch the route to OCI Functions, point Terraform at an existing OCIR image and make sure the manual IAM prerequisites above are in place.
 
-Current shared image:
+The Function source in this repo accepts the same telemetry event types as the VM API, including `extra_life`.
+
+Previously shared image:
 
 ```hcl
 function_image = "arn.ocir.io/fr9qm01oq44x/oci-defense-grid/event-ingest:0.1.0"
 ```
 
-Use that image for this demo. Build and push a new image only if the Function code changes or you deploy into an environment that cannot pull the shared OCIR image.
+If that OCIR image was built before the latest telemetry changes, rebuild and push a new private tag before routing `/api/events` to OCI Functions. Until then, keep the VM-backed `/api/events` fallback enabled if you need `extra_life` analytics.
 
 Recommended tfvars:
 
 ```hcl
-function_image = "arn.ocir.io/fr9qm01oq44x/oci-defense-grid/event-ingest:0.1.0"
+function_image = "arn.ocir.io/fr9qm01oq44x/oci-defense-grid/event-ingest:<current-tag>"
 ```
 
 The Function also uses `ADB_USER`, `ADB_PASSWORD`, `ADB_CONNECT_STRING`, `REDIS_HOST`, `REDIS_PORT` and `REDIS_TLS` from Terraform function config. Redis does not need IAM. ADB writes use the configured database credentials and the existing ADB network allow-list.
@@ -269,7 +283,17 @@ instance_ocpus      = 1
 instance_memory_gbs = 8
 ```
 
-The game now runs through 4 levels. Level 1 is space, level 2 is desert, level 3 is lava, and level 4 is the final star-fighter stage with its own background, player ship, enemies, bullets and boss pattern.
+The game now runs through 5 levels. Level 1 is space, level 2 is desert, level 3 is lava, level 4 is star-fighter overdrive, and level 5 is the new blue nebula final stage. Level 5 has been tuned down for a customer-demo finish: three waves, fewer heavy enemies and a calmer final boss.
+
+After each boss, an in-game OCI education briefing appears inside the game scene:
+
+| After level | Briefing | What it teaches |
+| --- | --- | --- |
+| 1 | Regions and Fault Domains | The stack deploys into one selected OCI region through Terraform, with VCN public/private subnets and fault-domain-aware VM placement. |
+| 2 | API Gateway and Load Balancer | The browser loads the game through the public Load Balancer, while `/api/*` calls go through API Gateway. |
+| 3 | Compute VMs and Instance Pools | Flexible VM shapes, private app fleet, instance pools and autoscaling. |
+| 4 | Functions, Cache and Streaming | Serverless event handling, OCI Cache live state and durable streaming telemetry. |
+| 5 | ADB and Object Storage | Autonomous Database as source of truth and Object Storage as durable raw event archive. |
 
 OCI Cache is enabled for the live player list:
 
@@ -359,8 +383,9 @@ ADB_CONNECT_STRING=...
 The presenter view reads `/api/analytics/events`, which summarizes the `game_events` table in Autonomous Database:
 
 - Events per minute over the last 1, 5 and 15 minutes.
-- Counts for `enemy_killed`, `player_hit`, `powerup`, `boss_phase`, `run_end` and `heartbeat`.
-- Live Players and Leaderboard include per-run event chips for kills, hits, powerups and boss phases.
+- Counts for `enemy_killed`, `player_hit`, `powerup`, `extra_life`, `boss_phase`, `run_end` and `heartbeat`.
+- Live Players and Leaderboard include per-run event chips for kills, hits, powerups, extra lives and boss phases.
+- Leaderboard rows include the level reached, so presenters can distinguish a high score from deeper progression.
 
 When ADB is not configured locally, the same endpoint falls back to the in-memory event buffer so the UI remains testable.
 
@@ -383,6 +408,7 @@ The customer-facing demo checks are:
 - `/api/status` shows the active VM/backend.
 - Compute uses an instance pool with autoscaling enabled.
 - Ops HUD lists active players from OCI Cache across both VM backends.
+- Leaderboard shows score, level reached and event chips including extra lives.
 - Gameplay events appear in Streaming and Object Storage.
 - Autonomous Database receives `game_events`.
 - Ops HUD Event Analytics reads from Autonomous Database and falls back to memory locally.

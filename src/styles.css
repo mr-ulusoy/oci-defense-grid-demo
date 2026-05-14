@@ -26,6 +26,11 @@ body {
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+body.game-active {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 button {
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -56,9 +61,28 @@ button:hover {
   flex-direction: column;
   justify-self: center;
   min-width: 0;
-  max-width: 760px;
+  max-width: min(100vw, 1120px);
   width: 100%;
   padding: 18px;
+}
+
+body.game-active .app-shell:not(.ops-visible) {
+  display: block;
+  min-height: 100svh;
+}
+
+body.game-active .app-shell:not(.ops-visible) .game-stage {
+  align-items: center;
+  background: #020507;
+  height: 100svh;
+  justify-content: center;
+  max-width: none;
+  padding: 0;
+}
+
+body.game-active .app-shell:not(.ops-visible) .top-strip,
+body.game-active .app-shell:not(.ops-visible) .pilot-bar {
+  display: none;
 }
 
 .app-shell.ops-visible .game-stage {
@@ -93,8 +117,7 @@ button:hover {
 }
 
 .app-shell.ops-visible .game-root {
-  flex: 0 1 auto;
-  min-height: min(520px, calc(100vh - 168px));
+  min-height: 0;
 }
 
 .top-strip {
@@ -183,14 +206,27 @@ h2 {
 .game-root {
   border: 1px solid var(--line);
   border-radius: 8px;
-  flex: 1;
-  min-height: 520px;
+  contain: layout size paint;
+  flex: 0 0 auto;
+  height: 640px;
+  margin: 0 auto;
+  min-height: 0;
   overflow: hidden;
   position: relative;
+  width: 480px;
+}
+
+body.game-active .app-shell:not(.ops-visible) .game-root {
+  border-radius: 0;
 }
 
 .game-root canvas {
   display: block;
+  height: 100% !important;
+  image-rendering: auto !important;
+  touch-action: none;
+  user-select: none;
+  width: 100% !important;
 }
 
 .ops-panel {
@@ -604,7 +640,7 @@ h2 {
   align-items: center;
   display: grid;
   gap: 10px;
-  grid-template-columns: minmax(88px, 1fr) minmax(180px, auto) auto;
+  grid-template-columns: minmax(82px, 1fr) auto minmax(180px, auto) auto;
   padding: 9px 0;
 }
 
@@ -612,6 +648,13 @@ h2 {
   font-weight: 700;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.leaderboard-level {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 @media (max-width: 980px) {
@@ -630,7 +673,7 @@ h2 {
   }
 
   .game-root {
-    min-height: 460px;
+    min-height: 0;
   }
 }
 
@@ -654,6 +697,6 @@ h2 {
   }
 
   .game-root {
-    min-height: 420px;
+    min-height: 0;
   }
 }

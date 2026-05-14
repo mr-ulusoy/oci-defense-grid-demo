@@ -3,6 +3,7 @@ dist/
 .env
 config.js
 .DS_Store
+Game/
 coverage/
 infra/terraform/.terraform/
 infra/terraform/.keys/

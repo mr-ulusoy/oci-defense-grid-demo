@@ -4,6 +4,9 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     create() {
+        document.body.classList.remove('game-active');
+        window.OCI_DEFENSE_LAYOUT_CHANGED?.();
+
         const width = this.cameras.main.width;
         this.callsign = this.normalizeCallsign(localStorage.getItem('playerCallsign') || '');
         this.setupCallsignControls();
@@ -64,12 +67,12 @@ export default class MenuScene extends Phaser.Scene {
             .setDisplaySize(44, 44)
             .setAlpha(0.95);
 
-        this.add.text(width / 2, 70, 'OCI', {
+        this.add.text(width / 2, 72, 'Oracle Cloud Infrastructure', {
             fontFamily: 'monospace',
-            fontSize: '36px',
-            fill: '#7cc8ff',
-            stroke: '#003b5c',
-            strokeThickness: 4
+            fontSize: '18px',
+            fill: '#ff3f2f',
+            stroke: '#3a0500',
+            strokeThickness: 3
         }).setOrigin(0.5);
 
         const titleDefense = this.add.text(width / 2, 120, 'DEFENSE GRID', {
@@ -96,8 +99,11 @@ export default class MenuScene extends Phaser.Scene {
             'API Gateway reports spikes.\n' +
             'Load Balancers are shifting traffic.\n' +
             'Compute fleets are holding the line.\n\n' +
+            'Functions process every event.\n' +
             'Streaming captures every signal.\n' +
-            'Analytics traces the pattern.\n' +
+            'OCI Cache keeps pilots live.\n' +
+            'Autonomous Database ranks every run.\n' +
+            'Object Storage archives raw events.\n' +
             'AI predicts the next anomaly.\n\n' +
             'Launch the grid defense.';
 

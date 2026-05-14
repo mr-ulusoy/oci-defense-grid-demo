@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-const VALID_EVENTS = new Set(["enemy_killed", "boss_phase", "powerup", "player_hit", "run_end", "heartbeat"]);
+const VALID_EVENTS = new Set(["enemy_killed", "boss_phase", "powerup", "extra_life", "player_hit", "run_end", "heartbeat"]);
 
 function httpGatewayContext(ctx) {
   return ctx?.httpGateway ?? ctx?.protocol ?? null;

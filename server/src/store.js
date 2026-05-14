@@ -3,11 +3,11 @@ import { createRedisLivePlayers } from "./livePlayers.js";
 
 const MAX_EVENTS = 5000;
 const SEED_LEADERBOARD = [
-  { callsign: "VEGA-9", score: 12400, runId: "seed-1", vm: "seed", createdAt: new Date().toISOString() },
-  { callsign: "ORACLE-1", score: 9800, runId: "seed-2", vm: "seed", createdAt: new Date().toISOString() },
-  { callsign: "PHOENIX", score: 7600, runId: "seed-3", vm: "seed", createdAt: new Date().toISOString() }
+  { callsign: "VEGA-9", score: 12400, level: 4, runId: "seed-1", vm: "seed", createdAt: new Date().toISOString() },
+  { callsign: "ORACLE-1", score: 9800, level: 3, runId: "seed-2", vm: "seed", createdAt: new Date().toISOString() },
+  { callsign: "PHOENIX", score: 7600, level: 3, runId: "seed-3", vm: "seed", createdAt: new Date().toISOString() }
 ];
-const EVENT_TYPES = ["enemy_killed", "player_hit", "powerup", "boss_phase", "run_end", "heartbeat"];
+const EVENT_TYPES = ["enemy_killed", "player_hit", "powerup", "extra_life", "boss_phase", "run_end", "heartbeat"];
 
 let schemaReady = false;
 
@@ -15,6 +15,7 @@ function scoreEntry(event) {
   return {
     callsign: event.callsign || `GRID-${event.sessionId.slice(0, 4).toUpperCase()}`,
     score: event.score,
+    level: event.level,
     runId: event.runId,
     vm: event.vm.name,
     createdAt: event.serverTs

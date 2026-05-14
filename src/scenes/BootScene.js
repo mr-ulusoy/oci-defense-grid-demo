@@ -195,6 +195,23 @@ export default class BootScene extends Phaser.Scene {
         this.load.image('final-ship-2', 'assets/sprites/final/player/ship-d2.png');
         this.load.image('final-ship-3', 'assets/sprites/final/player/ship-d3.png');
 
+        // ============== LEVEL 5 BACKGROUND ASSETS ==============
+
+        this.load.image('level5-bg', 'assets/backgrounds/level5/blue-with-stars.png');
+        this.load.image('level5-planet-small', 'assets/backgrounds/level5/prop-planet-small.png');
+        this.load.image('level5-planet-big', 'assets/backgrounds/level5/prop-planet-big.png');
+        this.load.image('level5-asteroid-1', 'assets/backgrounds/level5/asteroid-1.png');
+        this.load.image('level5-asteroid-2', 'assets/backgrounds/level5/asteroid-2.png');
+
+        // ============== OCI EDUCATION ASSETS ==============
+
+        this.load.image('briefing-storyteller', 'assets/briefings/storyteller.png');
+        this.load.image('briefing-region', 'assets/briefings/region.png');
+        this.load.image('briefing-api-lb', 'assets/briefings/api-lb.png');
+        this.load.image('briefing-compute', 'assets/briefings/compute.png');
+        this.load.image('briefing-fn-cache-stream', 'assets/briefings/fn-cache-stream.png');
+        this.load.image('briefing-adb-object-storage', 'assets/briefings/adb-object-storage.png');
+
         this.load.image('final-player-bullet-1', 'assets/sprites/final/bullets/bullet-d1.png');
         this.load.image('final-player-bullet-2', 'assets/sprites/final/bullets/bullet-d2.png');
         this.load.image('final-player-bullet-3', 'assets/sprites/final/bullets/bullet-d3.png');

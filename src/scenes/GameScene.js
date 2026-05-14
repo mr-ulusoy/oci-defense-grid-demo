@@ -1,5 +1,69 @@
 import { askCopilot, emitGameEvent, telemetry, updateHud } from "../ociRuntime.js";
 
+const BRIEFINGS_BY_LEVEL = {
+    1: {
+        title: 'REGIONS AND FAULT DOMAINS',
+        imageKey: 'briefing-region',
+        guideKey: 'briefing-storyteller',
+        durationMs: 45000,
+        lines: [
+            'Oracle Cloud Infrastructure is hosted in regions across the world, giving workloads geographic separation from other cities, power grids, network paths, and natural disaster zones.',
+            'This demo is deployed into one selected OCI region. The Terraform region variable decides where the full stack lands, so another team can run the same architecture in their own preferred region.',
+            'Inside the region, the demo builds a VCN with public and private subnets. The public entry points expose the Load Balancer and API Gateway, while the Compute VM fleet runs privately behind them.',
+            'Fault domains provide anti-affinity: they let the VM fleet spread across separate physical hardware, reducing the chance that one hardware failure affects every game server.',
+            'Regional services such as Functions, Streaming, OCI Cache, Autonomous Database, and Object Storage stay close to the game traffic, keeping the architecture compact, repeatable, and easy to tear down after the demo.'
+        ]
+    },
+    2: {
+        title: 'API GATEWAY AND LOAD BALANCER',
+        imageKey: 'briefing-api-lb',
+        guideKey: 'briefing-storyteller',
+        durationMs: 43000,
+        lines: [
+            'The Load Balancer serves the game from one public entry point and distributes player traffic across healthy Compute VMs inside the VCN.',
+            'Health checks make the fleet resilient: unhealthy instances stop receiving traffic, while healthy VMs continue serving the mission.',
+            'API Gateway is the controlled front door for /api/* calls. It can validate requests, handle CORS, enforce authentication and authorization, apply request limits, and route traffic to Functions or VM APIs.',
+            'Together they split the paths: the browser loads the game through the Load Balancer, while telemetry, leaderboard, and copilot calls go through API Gateway.'
+        ]
+    },
+    3: {
+        title: 'COMPUTE VMS AND INSTANCE POOLS',
+        imageKey: 'briefing-compute',
+        guideKey: 'briefing-storyteller',
+        durationMs: 40000,
+        lines: [
+            'OCI Compute VMs run the game servers and Node APIs behind the Load Balancer. In this demo, each VM can serve the frontend and answer health, status, and gameplay API requests.',
+            'Flexible shapes let us choose the OCPUs and memory each VM needs. Network bandwidth and VNIC capacity scale with the selected OCPU count, so the shape can match the workload.',
+            'Instance pools manage multiple VMs as one fleet. The pool can attach to the Load Balancer, place instances across fault domains or subnets, and grow or shrink during autoscaling.',
+            'When demand rises, the fleet adds workers. When the mission calms down, it scales back so the demo keeps performance high without leaving idle capacity behind.'
+        ]
+    },
+    4: {
+        title: 'FUNCTIONS CACHE AND STREAMING',
+        imageKey: 'briefing-fn-cache-stream',
+        guideKey: 'briefing-storyteller',
+        durationMs: 43000,
+        lines: [
+            'OCI Functions runs event-handling code without managing servers. In this demo, gameplay telemetry can arrive through API Gateway and be processed by a serverless function.',
+            'OCI Cache keeps live state fast. Active pilots, current scores, and presenter dashboard data can be read quickly without waiting for permanent database writes.',
+            'OCI Streaming is the durable event stream. It ingests high-volume messages in real time and decouples producers from consumers, so analytics and storage can move at their own pace.',
+            'Together they make the mission responsive: Functions process signals, Cache keeps the live battlefield fresh, and Streaming preserves the event flow for downstream services.'
+        ]
+    },
+    5: {
+        title: 'ADB AND OBJECT STORAGE',
+        imageKey: 'briefing-adb-object-storage',
+        guideKey: 'briefing-storyteller',
+        durationMs: 45000,
+        lines: [
+            'Autonomous Database is the source of truth for leaderboard, run summaries, and Event Analytics. It automates provisioning, backups, patching, upgrades, and elastic scaling.',
+            'Compute and storage can grow or shrink without downtime or service interruption. With Autonomous Data Guard enabled, Oracle highlights a 99.995% availability SLA for mission-critical deployments.',
+            'Object Storage archives raw gameplay events as durable objects. It stores unstructured data at internet scale and is not tied to any single Compute instance.',
+            'For durability, Object Storage is designed for 99.999999999% annual durability. It stores data redundantly across availability domains or fault domains, monitors integrity with checksums, and repairs corrupt data automatically.'
+        ]
+    }
+};
+
 export default class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
@@ -8,11 +72,14 @@ export default class GameScene extends Phaser.Scene {
     init(data) {
         // Level system
         this.level = data.level || 1;
-        this.maxLevel = 4;
+        this.maxLevel = 5;
         this.callsign = data.callsign || localStorage.getItem('playerCallsign') || 'UNKNOWN';
         this.wave = 1;
         // Level 4+ enters overdrive with longer stages.
         this.wavesPerLevel = Math.min(5, (this.level === 1 ? 2 : 3) + Math.max(0, this.level - 3));
+        if (this.isFinalLevel()) {
+            this.wavesPerLevel = 3;
+        }
         this.waveInProgress = false;
 
         // Player stats
@@ -49,6 +116,7 @@ export default class GameScene extends Phaser.Scene {
         // Fireball powerup (piercing shots)
         this.fireballActive = false;
         this.fireballTimer = null;
+        this.educationOverlayActive = false;
 
         // Touch controls
         this.touchPointer = null;
@@ -59,6 +127,11 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
+        if (!document.getElementById('appShell')?.classList.contains('ops-visible')) {
+            document.body.classList.add('game-active');
+        }
+        window.OCI_DEFENSE_LAYOUT_CHANGED?.();
+
         // Create backgrounds based on level
         this.createBackgrounds();
 
@@ -110,15 +183,53 @@ export default class GameScene extends Phaser.Scene {
         return this.level >= this.maxLevel;
     }
 
+    usesFinalAssetStyle() {
+        return this.level >= 4;
+    }
+
     // ============== BACKGROUNDS ==============
 
     createBackgrounds() {
         // Clear any existing background elements
         this.bgLayers = [];
+        this.level5Props = [];
 
         // Use static images for backgrounds (no seams), tileSprites only for stars
-        if (this.isFinalLevel()) {
-            // Final level: star fighter nebula from the imported Game asset pack.
+        if (this.level >= 5) {
+            // Level 5: blue nebula from the imported Game asset pack.
+            this.bg = this.add.tileSprite(0, 0, 480, 640, 'level5-bg')
+                .setOrigin(0, 0)
+                .setTileScale(2);
+
+            const planetBig = this.add.image(96, 150, 'level5-planet-big')
+                .setScale(3.2)
+                .setAlpha(0.85)
+                .setDepth(1);
+            const planetSmall = this.add.image(386, 92, 'level5-planet-small')
+                .setScale(2.4)
+                .setAlpha(0.75)
+                .setDepth(1);
+            const asteroidOne = this.add.image(372, 300, 'level5-asteroid-1')
+                .setScale(2.1)
+                .setAlpha(0.78)
+                .setDepth(2);
+            const asteroidTwo = this.add.image(104, 420, 'level5-asteroid-2')
+                .setScale(2.2)
+                .setAlpha(0.7)
+                .setDepth(2);
+
+            this.level5Props = [
+                { sprite: planetBig, speed: 0.18, resetY: -80 },
+                { sprite: planetSmall, speed: 0.24, resetY: -45 },
+                { sprite: asteroidOne, speed: 0.72, resetY: -55 },
+                { sprite: asteroidTwo, speed: 0.58, resetY: -45 }
+            ];
+
+            this.bgLayers = [
+                { sprite: this.bg, speed: 0.82, isTileSprite: true }
+            ];
+        } else if (this.usesFinalAssetStyle()) {
+            // Level 4: star fighter overdrive from the imported Game asset pack.
             this.bg = this.add.tileSprite(0, 0, 480, 640, 'final-bg')
                 .setOrigin(0, 0)
                 .setTileScale(1.6)
@@ -156,7 +267,7 @@ export default class GameScene extends Phaser.Scene {
                 { sprite: this.clouds, speed: 0.3, isTileSprite: true }
             ];
         } else {
-            // Level 3+: Lava/Hell. Later levels reuse the final biome in overdrive.
+            // Level 3: Lava/Hell.
             this.bg = this.add.image(240, 320, 'lava-bg')
                 .setDisplaySize(480, 640);
 
@@ -183,7 +294,7 @@ export default class GameScene extends Phaser.Scene {
     // ============== PLAYER ==============
 
     createPlayer() {
-        const playerConfig = this.isFinalLevel()
+        const playerConfig = this.usesFinalAssetStyle()
             ? { key: 'final-ship-1', anim: 'final-ship-idle', scale: 2.35, size: [18, 24] }
             : { key: 'ship', anim: 'ship-idle', scale: 2.55, size: [10, 17] };
 
@@ -211,7 +322,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Debug: Z key to skip to boss immediately
         this.input.keyboard.on('keydown-Z', () => {
-            if (!this.bossActive && !this.isDead) {
+            if (!this.bossActive && !this.isDead && !this.educationOverlayActive) {
                 // Stop current wave spawning
                 if (this.enemySpawnTimer) this.enemySpawnTimer.remove();
                 // Clear all enemies
@@ -224,7 +335,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Secret: X key to skip to next level
         this.input.keyboard.on('keydown-X', () => {
-            if (!this.isDead && !this.isSkipping) {
+            if (!this.isDead && !this.isSkipping && !this.educationOverlayActive) {
                 this.isSkipping = true;
                 // Stop all spawning and clear enemies
                 if (this.enemySpawnTimer) this.enemySpawnTimer.remove();
@@ -251,6 +362,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Touch controls - relative movement (drag direction controls ship)
         this.input.on('pointerdown', (pointer) => {
+            if (this.educationOverlayActive) return;
             this.touchPointer = pointer;
             this.touchStartX = pointer.x;
             this.touchStartY = pointer.y;
@@ -259,7 +371,7 @@ export default class GameScene extends Phaser.Scene {
         });
 
         this.input.on('pointermove', (pointer) => {
-            if (pointer.isDown && !this.isDead && this.touchPointer) {
+            if (pointer.isDown && !this.isDead && !this.educationOverlayActive && this.touchPointer) {
                 // Calculate delta from touch start position
                 const deltaX = pointer.x - this.touchStartX;
                 const deltaY = pointer.y - this.touchStartY;
@@ -304,7 +416,7 @@ export default class GameScene extends Phaser.Scene {
         this.healthBarBg = this.add.rectangle(240, 620, 200, 14, 0x333333).setDepth(100);
         this.healthBar = this.add.rectangle(141, 620, 196, 10, 0x00ff00)
             .setOrigin(0, 0.5).setDepth(100);
-        this.add.rectangle(240, 620, 200, 14).setStrokeStyle(2, 0xffffff).setDepth(100);
+        this.healthBorder = this.add.rectangle(240, 620, 200, 14).setStrokeStyle(2, 0xffffff).setDepth(100);
 
         // Announcement text
         this.announceText = this.add.text(240, 300, '', {
@@ -336,15 +448,31 @@ export default class GameScene extends Phaser.Scene {
         this.bossHealthContainer.add([label, bg, this.bossHealthBar, border]);
     }
 
+    updateLevel5Props() {
+        if (!this.level5Props) return;
+
+        this.level5Props.forEach(({ sprite, speed, resetY }) => {
+            if (!sprite || !sprite.active) return;
+            sprite.y += speed;
+            if (sprite.y > 700) sprite.y = resetY;
+        });
+    }
+
     // ============== GAME LOOP ==============
 
     update(time) {
         if (this.isDead) return;
 
+        if (this.educationOverlayActive) {
+            this.updateOciHud(time);
+            return;
+        }
+
         // Scroll backgrounds
         this.bgLayers.forEach(layer => {
             layer.sprite.tilePositionY -= layer.speed;
         });
+        this.updateLevel5Props();
 
         // Level 2 planet movement
         if (this.level === 2) {
@@ -425,7 +553,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     createBullet(x, y, velocityX) {
-        if (this.isFinalLevel()) {
+        if (this.usesFinalAssetStyle()) {
             const bullet = this.bullets.create(x, y, this.fireballActive ? 'final-player-bullet-4' : 'final-player-bullet-1');
             bullet.setScale(this.fireballActive ? 2.75 : 2.25);
             bullet.body.setSize(8, 12);
@@ -514,7 +642,10 @@ export default class GameScene extends Phaser.Scene {
         let enemyCount = baseCount + overdrive * 6 + Math.max(0, this.wave - 2) * overdrive * 2;
         if (this.level === 2) enemyCount += 4;
         if (this.level >= 3) enemyCount += 6;
-        if (this.isFinalLevel()) enemyCount += 8;
+        if (this.usesFinalAssetStyle()) enemyCount += 8;
+        if (this.isFinalLevel()) {
+            enemyCount = Math.max(24, Math.floor(enemyCount * 0.58));
+        }
         this.spawnWaveEnemies(enemyCount);
     }
 
@@ -523,7 +654,8 @@ export default class GameScene extends Phaser.Scene {
         const overdrive = Math.max(0, this.level - 3);
         let spawnDelay = Math.max(150, 800 - (this.level * 80) - (this.wave * 40) - overdrive * 35);
         if (this.level >= 3) spawnDelay = Math.max(140, spawnDelay - 50);
-        if (this.isFinalLevel()) spawnDelay = Math.max(105, spawnDelay - 35);
+        if (this.usesFinalAssetStyle()) spawnDelay = Math.max(105, spawnDelay - 35);
+        if (this.isFinalLevel()) spawnDelay = Math.max(220, spawnDelay + 135);
 
         this.enemySpawnTimer = this.time.addEvent({
             delay: spawnDelay,
@@ -542,8 +674,12 @@ export default class GameScene extends Phaser.Scene {
         const rand = Math.random();
         // Higher chances for tougher enemies = more chaos!
         const overdrive = Math.max(0, this.level - 3);
-        const bigChance = Math.min(0.08 + (this.level * 0.06) + (this.wave * 0.03) + overdrive * 0.03, 0.42);
-        const mediumChance = Math.min(0.25 + (this.level * 0.08) + (this.wave * 0.04) + overdrive * 0.04, 0.62);
+        let bigChance = Math.min(0.08 + (this.level * 0.06) + (this.wave * 0.03) + overdrive * 0.03, 0.42);
+        let mediumChance = Math.min(0.25 + (this.level * 0.08) + (this.wave * 0.04) + overdrive * 0.04, 0.62);
+        if (this.isFinalLevel()) {
+            bigChance = Math.min(0.12 + this.wave * 0.02, 0.2);
+            mediumChance = Math.min(0.28 + this.wave * 0.025, 0.4);
+        }
 
         if (rand < bigChance) {
             this.createBigEnemy(x);
@@ -577,7 +713,7 @@ export default class GameScene extends Phaser.Scene {
             2: { key: 'l2-enemy-small', anim: 'l2-enemy-small-fly', scale: 1.0, size: [40, 40] }, // 48*1=48
             3: { key: 'l3-enemy-small', anim: 'l3-enemy-small-fly', scale: 0.45, size: [45, 50] } // 112*0.45=50
         };
-        const s = this.isFinalLevel()
+        const s = this.usesFinalAssetStyle()
             ? { key: 'final-enemy-small', anim: null, scale: 1.35, size: [30, 30] }
             : (sprites[Math.min(this.level, 3)] || sprites[1]);
 
@@ -586,8 +722,8 @@ export default class GameScene extends Phaser.Scene {
         if (s.anim) enemy.play(s.anim);
         enemy.setSize(s.size[0], s.size[1]);
         enemy.enemyType = 'small';
-        enemy.health = this.isFinalLevel() ? 2 : (this.level >= 5 && Math.random() < 0.25 ? 2 : 1);
-        enemy.points = 100 + Math.max(0, this.level - 3) * 25 + (this.isFinalLevel() ? 75 : 0);
+        enemy.health = this.usesFinalAssetStyle() ? (this.isFinalLevel() ? 1 : 2) : 1;
+        enemy.points = 100 + Math.max(0, this.level - 3) * 25 + (this.usesFinalAssetStyle() ? 75 : 0);
         enemy.setVelocityY(Phaser.Math.Between(120 + this.level * 20, Math.min(420, 220 + this.level * 25)));
         const driftAmount = this.level >= 2 ? Math.min(140, 80 + this.level * 10) : 60;
         enemy.setVelocityX(Phaser.Math.Between(-driftAmount, driftAmount));
@@ -600,7 +736,7 @@ export default class GameScene extends Phaser.Scene {
             2: { key: 'l2-enemy-medium', anim: 'l2-enemy-medium-fly', scale: 1.8, size: [40, 40], rotate: false }, // 48*1.8=86
             3: { key: 'l3-enemy-medium', anim: 'l3-enemy-medium-fly', scale: 0.85, size: [75, 75], rotate: false } // 101*0.85=86
         };
-        const s = this.isFinalLevel()
+        const s = this.usesFinalAssetStyle()
             ? { key: 'final-enemy-medium', anim: null, scale: 1.8, size: [30, 32], rotate: false }
             : (sprites[Math.min(this.level, 3)] || sprites[1]);
 
@@ -611,12 +747,17 @@ export default class GameScene extends Phaser.Scene {
         enemy.setSize(s.size[0], s.size[1]);
         enemy.enemyType = 'medium';
         const overdrive = Math.max(0, this.level - 3);
-        enemy.health = 2 + Math.floor(overdrive / 2) + (this.isFinalLevel() ? 1 : 0);
-        enemy.points = 200 + overdrive * 50 + (this.isFinalLevel() ? 125 : 0);
+        enemy.health = 2 + Math.floor(overdrive / 2) + (this.usesFinalAssetStyle() ? 1 : 0);
+        if (this.isFinalLevel()) enemy.health = 2;
+        enemy.points = 200 + overdrive * 50 + (this.usesFinalAssetStyle() ? 125 : 0);
         enemy.canShoot = true;
         enemy.lastShot = 0;
-        const minDelay = Math.max(420, (this.level >= 3 ? 700 : 800 - this.level * 100) - overdrive * 60);
-        const maxDelay = Math.max(minDelay + 220, (this.level >= 3 ? 1400 : 1500 - this.level * 150) - overdrive * 90);
+        let minDelay = Math.max(420, (this.level >= 3 ? 700 : 800 - this.level * 100) - overdrive * 60);
+        let maxDelay = Math.max(minDelay + 220, (this.level >= 3 ? 1400 : 1500 - this.level * 150) - overdrive * 90);
+        if (this.isFinalLevel()) {
+            minDelay += 260;
+            maxDelay += 320;
+        }
         enemy.shootDelay = Phaser.Math.Between(minDelay, maxDelay);
         enemy.setVelocityY(Phaser.Math.Between(80 + overdrive * 8, 140 + overdrive * 14));
         enemy.setVelocityX(Phaser.Math.Between(-40 - overdrive * 10, 40 + overdrive * 10));
@@ -637,7 +778,7 @@ export default class GameScene extends Phaser.Scene {
             2: { key: 'l2-enemy-big', anim: 'l2-enemy-big-fly', scale: 1.7, size: [40, 40] }, // 48*1.7=82
             3: { key: 'l3-enemy-big', anim: 'l3-enemy-big-fly', scale: 1.7, size: [40, 40], rotate: false } // 48*1.7=82
         };
-        const s = this.isFinalLevel()
+        const s = this.usesFinalAssetStyle()
             ? { key: 'final-enemy-big', anim: null, scale: 2.1, size: [32, 34], rotate: false }
             : (sprites[Math.min(this.level, 3)] || sprites[1]);
 
@@ -648,13 +789,15 @@ export default class GameScene extends Phaser.Scene {
         enemy.setSize(s.size[0], s.size[1]);
         enemy.enemyType = 'big';
         const overdrive = Math.max(0, this.level - 3);
-        enemy.health = 3 + this.level + overdrive + (this.isFinalLevel() ? 2 : 0);
-        enemy.points = 500 + overdrive * 150 + (this.isFinalLevel() ? 250 : 0);
+        enemy.health = 3 + this.level + overdrive + (this.usesFinalAssetStyle() ? 2 : 0);
+        if (this.isFinalLevel()) enemy.health = 5;
+        enemy.points = 500 + overdrive * 150 + (this.usesFinalAssetStyle() ? 250 : 0);
         enemy.canShoot = true;
         enemy.lastShot = 0;
         enemy.shootDelay = this.level >= 3
             ? Phaser.Math.Between(Math.max(420, 700 - overdrive * 80), Math.max(760, 1200 - overdrive * 100))
             : Phaser.Math.Between(500, 1000);
+        if (this.isFinalLevel()) enemy.shootDelay += 360;
         enemy.setVelocityY(Phaser.Math.Between(50 + overdrive * 8, 90 + overdrive * 12));
         enemy.trackPlayer = true;
 
@@ -709,11 +852,11 @@ export default class GameScene extends Phaser.Scene {
         // Safety check
         if (!enemy || !enemy.active || !this.player || !this.player.active) return;
 
-        const bullet = this.isFinalLevel()
+        const bullet = this.usesFinalAssetStyle()
             ? this.enemyBullets.create(enemy.x, enemy.y + 20, 'final-enemy-bullet-1')
             : this.enemyBullets.create(enemy.x, enemy.y + 20, 'laser', 2);
-        bullet.setScale(this.isFinalLevel() ? 2.25 : 2);
-        if (this.isFinalLevel()) {
+        bullet.setScale(this.usesFinalAssetStyle() ? 2.25 : 2);
+        if (this.usesFinalAssetStyle()) {
             bullet.play('final-enemy-bullet-spin');
             bullet.body.setSize(8, 8);
         } else {
@@ -801,7 +944,7 @@ export default class GameScene extends Phaser.Scene {
                 hitbox: { w: 38, h: 38, ox: 5, oy: 5 }
             }
         };
-        const bossType = this.isFinalLevel() ? 4 : Math.min(this.level, 3);
+        const bossType = this.usesFinalAssetStyle() ? 4 : Math.min(this.level, 3);
         const config = bossConfigs[bossType] || bossConfigs[1];
 
         // Create boss and add to dedicated boss group
@@ -815,7 +958,10 @@ export default class GameScene extends Phaser.Scene {
         this.boss.bossTier = this.level;
 
         const overdrive = Math.max(0, this.level - 3);
-        this.bossMaxHP = 1000 + (this.level - 1) * 220 + overdrive * 280 + (this.isFinalLevel() ? 600 : 0);
+        this.bossMaxHP = 1000 + (this.level - 1) * 220 + overdrive * 280 + (this.usesFinalAssetStyle() ? 600 : 0);
+        if (this.isFinalLevel()) {
+            this.bossMaxHP = Math.floor(this.bossMaxHP * 0.62);
+        }
         this.bossHP = this.bossMaxHP;
         this.boss.points = 5000 * this.level;
         this.boss.lastShot = 0; // Will be set properly when active
@@ -893,6 +1039,9 @@ export default class GameScene extends Phaser.Scene {
                 shootDelay = Math.max(340, 600 - overdrive * 55);
                 this.boss.shootPattern = 0;
             }
+        }
+        if (bossType === 4 && bossTier >= this.maxLevel) {
+            shootDelay += 260;
         }
 
         if (time > this.boss.lastShot + shootDelay) {
@@ -1018,25 +1167,27 @@ export default class GameScene extends Phaser.Scene {
             };
 
             if (this.boss.shootPattern === 0) {
-                for (let i = -3; i <= 3; i++) {
-                    createFinalBossBullet(this.boss.x + i * 22, this.boss.y + 50, i * 58, 210 + Math.abs(i) * 10);
+                const spread = bossTier >= this.maxLevel ? 2 : 3;
+                for (let i = -spread; i <= spread; i++) {
+                    createFinalBossBullet(this.boss.x + i * 24, this.boss.y + 50, i * 46, 190 + Math.abs(i) * 8);
                 }
             } else if (this.boss.shootPattern === 1) {
-                for (let i = -2; i <= 2; i++) {
-                    const x = this.boss.x + i * 44;
+                const spread = bossTier >= this.maxLevel ? 1 : 2;
+                for (let i = -spread; i <= spread; i++) {
+                    const x = this.boss.x + i * 52;
                     const y = this.boss.y + 42;
                     const angle = Phaser.Math.Angle.Between(x, y, this.player.x, this.player.y);
-                    createFinalBossBullet(x, y, Math.cos(angle) * 260, Math.sin(angle) * 260);
+                    createFinalBossBullet(x, y, Math.cos(angle) * 215, Math.sin(angle) * 215);
                 }
             } else {
-                const bulletCount = 14;
+                const bulletCount = bossTier >= this.maxLevel ? 8 : 14;
                 for (let i = 0; i < bulletCount; i++) {
-                    const angle = (this.boss.phaseTime * 0.028) + (i * Math.PI * 2 / bulletCount);
+                    const angle = (this.boss.phaseTime * (bossTier >= this.maxLevel ? 0.018 : 0.028)) + (i * Math.PI * 2 / bulletCount);
                     createFinalBossBullet(
                         this.boss.x,
                         this.boss.y + 45,
-                        Math.cos(angle) * 220,
-                        Math.sin(angle) * 220 + 95
+                        Math.cos(angle) * 170,
+                        Math.sin(angle) * 170 + 80
                     );
                 }
             }
@@ -1151,6 +1302,211 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
+    setGameplayUiVisible(visible) {
+        [
+            this.scoreText,
+            this.levelText,
+            this.livesIcon,
+            this.livesText,
+            this.healthBarBg,
+            this.healthBar,
+            this.healthBorder,
+            this.oracleLogo,
+            this.bossHealthContainer
+        ].forEach(item => {
+            if (item) item.setVisible(visible);
+        });
+    }
+
+    clearStageForBriefing() {
+        if (this.enemySpawnTimer) {
+            this.enemySpawnTimer.remove();
+            this.enemySpawnTimer = null;
+        }
+
+        if (this.bossCollider) {
+            this.bossCollider.destroy();
+            this.bossCollider = null;
+        }
+        if (this.bossPlayerCollider) {
+            this.bossPlayerCollider.destroy();
+            this.bossPlayerCollider = null;
+        }
+
+        this.bullets.clear(true, true);
+        this.enemyBullets.clear(true, true);
+        this.enemies.clear(true, true);
+        this.powerups.clear(true, true);
+        this.bossGroup.clear(true, true);
+
+        this.boss = null;
+        this.bossActive = false;
+        this.waveInProgress = false;
+        this.touchPointer = null;
+
+        this.announceText.setAlpha(0);
+        this.shieldActive = false;
+        this.shieldSprite.clear();
+        this.setGameplayUiVisible(false);
+
+        if (this.player) {
+            this.player.setVisible(false);
+            this.player.setVelocity(0, 0);
+            if (this.player.body) this.player.body.enable = false;
+        }
+    }
+
+    showEducationOverlay(level, onDone) {
+        const briefing = BRIEFINGS_BY_LEVEL[level];
+        if (!briefing) {
+            onDone();
+            return;
+        }
+
+        this.educationOverlayActive = true;
+        this.clearStageForBriefing();
+
+        const overlay = this.add.container(0, 0).setDepth(1000).setAlpha(0);
+        let finished = false;
+        const blocker = this.add.rectangle(240, 320, 480, 640, 0x030814, 0.82)
+            .setInteractive();
+        const linearTextureFilter = Phaser.Textures?.FilterMode?.LINEAR;
+        if (linearTextureFilter !== undefined) {
+            this.textures.get(briefing.imageKey)?.setFilter?.(linearTextureFilter);
+        }
+        const briefingImage = this.add.image(240, 164, briefing.imageKey)
+            .setDisplaySize(408, 189);
+        const title = this.add.text(240, 28, briefing.title, {
+            fontFamily: 'monospace',
+            fontSize: '21px',
+            fill: '#ffffff',
+            stroke: '#062031',
+            strokeThickness: 5
+        }).setOrigin(0.5);
+        const subtitle = this.add.text(240, 55, 'MISSION BRIEFING', {
+            fontFamily: 'monospace',
+            fontSize: '13px',
+            fill: '#d7dde5',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(0.5);
+
+        const guide = this.add.image(84, 496, briefing.guideKey)
+            .setDisplaySize(116, 116);
+        const nameplate = this.add.rectangle(85, 566, 136, 30, 0x06111c, 0.8);
+        const guideLabel = this.add.text(85, 566, 'OCI GUIDE', {
+            fontFamily: 'monospace',
+            fontSize: '13px',
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(0.5);
+
+        const textMaskShape = this.add.graphics();
+        textMaskShape.fillStyle(0xffffff, 1);
+        textMaskShape.fillRect(154, 270, 304, 292);
+        textMaskShape.setVisible(false);
+        const textMask = textMaskShape.createGeometryMask();
+        const bodyText = this.add.text(162, 562, briefing.lines.join('\n\n'), {
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            fill: '#d9faff',
+            stroke: '#000000',
+            strokeThickness: 2,
+            lineSpacing: 5,
+            wordWrap: { width: 288 }
+        }).setMask(textMask);
+        const continueButton = this.add.rectangle(85, 612, 136, 34, 0xc74634, 0.95)
+            .setInteractive({ useHandCursor: true });
+        const continueText = this.add.text(85, 612, 'CONTINUE', {
+            fontFamily: 'monospace',
+            fontSize: '14px',
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(0.5);
+
+        overlay.add([
+            blocker,
+            textMaskShape,
+            briefingImage,
+            title,
+            subtitle,
+            guide,
+            nameplate,
+            guideLabel,
+            bodyText,
+            continueButton,
+            continueText
+        ]);
+
+        this.tweens.add({
+            targets: overlay,
+            alpha: 1,
+            duration: 450,
+            ease: 'Power2'
+        });
+        const scrollTween = this.tweens.add({
+            targets: bodyText,
+            y: 274 - bodyText.height,
+            duration: briefing.durationMs,
+            ease: 'Linear'
+        });
+
+        const finishBriefing = () => {
+            if (finished) return;
+            finished = true;
+            scrollTween.stop();
+            this.tweens.add({
+                targets: overlay,
+                alpha: 0,
+                duration: 450,
+                ease: 'Power2',
+                onComplete: () => {
+                    overlay.destroy(true);
+                    this.educationOverlayActive = false;
+                    onDone();
+                }
+            });
+        };
+
+        continueButton.on('pointerover', () => continueButton.setFillStyle(0xf15d4a, 1));
+        continueButton.on('pointerout', () => continueButton.setFillStyle(0xc74634, 0.95));
+        continueButton.on('pointerdown', finishBriefing);
+        this.input.keyboard.once('keydown-SPACE', finishBriefing);
+        this.input.keyboard.once('keydown-ENTER', finishBriefing);
+    }
+
+    goToNextStage(showLevelComplete = true) {
+        if (this.level >= this.maxLevel) {
+            // Game complete!
+            this.music.stop();
+            this.sendTelemetry('run_end');
+            void telemetry.flush();
+            this.scene.start('VictoryScene', { score: this.score });
+            return;
+        }
+
+        const startNextLevel = () => {
+            this.scene.start('GameScene', {
+                level: this.level + 1,
+                score: this.score,
+                weaponLevel: this.weaponLevel,
+                callsign: this.callsign
+            });
+        };
+
+        if (!showLevelComplete) {
+            startNextLevel();
+            return;
+        }
+
+        // Next level - music keeps playing until next stage loads
+        this.announceText.setText('LEVEL COMPLETE!');
+        this.announceText.setAlpha(1);
+        this.time.delayedCall(2500, startNextLevel);
+    }
+
     levelComplete() {
 
         // Save progress
@@ -1159,26 +1515,12 @@ export default class GameScene extends Phaser.Scene {
             localStorage.setItem('bestLevel', this.level);
         }
 
-        if (this.level >= this.maxLevel) {
-            // Game complete!
-            this.music.stop();
-            this.sendTelemetry('run_end');
-            void telemetry.flush();
-            this.scene.start('VictoryScene', { score: this.score });
-        } else {
-            // Next level - music keeps playing until next stage loads
-            this.announceText.setText('LEVEL COMPLETE!');
-            this.announceText.setAlpha(1);
-
-            this.time.delayedCall(2500, () => {
-                this.scene.start('GameScene', {
-                    level: this.level + 1,
-                    score: this.score,
-                    weaponLevel: this.weaponLevel,
-                    callsign: this.callsign
-                });
-            });
+        if (BRIEFINGS_BY_LEVEL[this.level]) {
+            this.showEducationOverlay(this.level, () => this.goToNextStage(false));
+            return;
         }
+
+        this.goToNextStage(true);
     }
 
     // ============== COLLISIONS ==============
@@ -1393,6 +1735,9 @@ export default class GameScene extends Phaser.Scene {
 
         this.showPowerupText(messages[type][0], messages[type][1]);
         this.sendTelemetry('powerup', type === 'weapon' ? 'rebalance_lb' : 'ai_scan');
+        if (type === 'life') {
+            this.sendTelemetry('extra_life', 'ai_scan');
+        }
         powerup.destroy();
     }
 
@@ -1431,7 +1776,7 @@ export default class GameScene extends Phaser.Scene {
     // ============== EXPLOSIONS & CLEANUP ==============
 
     createExplosion(x, y, type) {
-        const config = this.isFinalLevel()
+        const config = this.usesFinalAssetStyle()
             ? {
                 small: ['final-explosion', 'final-explode', 2.1],
                 medium: ['final-explosion', 'final-explode', 2.8],
