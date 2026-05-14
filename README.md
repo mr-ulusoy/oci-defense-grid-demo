@@ -260,7 +260,8 @@ The script defaults to the current demo hosts:
 
 ```bash
 BASTION_HOST=82.70.59.158
-VM_HOSTS="10.42.20.153 10.42.20.192"
+VM_DNS_PATTERN="ocidefense-9591c7-%d.private.ocidefense.oraclevcn.com"
+VM_DNS_SCAN_MAX=12
 SSH_KEY=infra/terraform/.keys/oci-defense-grid-demo
 DEPLOY_PATH=/opt/oci-defense-grid
 DEPLOY_BRANCH=main
@@ -269,10 +270,12 @@ REDIS_PORT=6379
 REDIS_TLS=true
 ```
 
-It SSHes through the bastion to each private VM, optionally writes the Redis/OCI Cache environment drop-in, pulls the latest `main`, installs production dependencies and restarts `oci-defense-api` and `nginx`. Override any value as an environment variable if the VM list changes after autoscaling, for example:
+It SSHes through the bastion, discovers active private VM DNS names in the VCN, optionally writes the Redis/OCI Cache environment drop-in, pulls the latest `main`, installs production dependencies and restarts `oci-defense-api` and `nginx`. This avoids stale private IPs when autoscaling replaces instances.
+
+Override any value as an environment variable if needed, for example:
 
 ```bash
-VM_HOSTS="10.42.20.153 10.42.20.192 10.42.20.210" scripts/deploy-via-bastion.sh
+VM_HOSTS="ocidefense-9591c7-3.private.ocidefense.oraclevcn.com ocidefense-9591c7-5.private.ocidefense.oraclevcn.com" scripts/deploy-via-bastion.sh
 ```
 
 The default app VM shape is:

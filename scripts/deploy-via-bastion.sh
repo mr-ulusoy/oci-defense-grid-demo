@@ -4,7 +4,9 @@ set -euo pipefail
 BASTION_HOST="${BASTION_HOST:-82.70.59.158}"
 BASTION_USER="${BASTION_USER:-ubuntu}"
 VM_USER="${VM_USER:-ubuntu}"
-VM_HOSTS="${VM_HOSTS:-10.42.20.153 10.42.20.192}"
+VM_HOSTS="${VM_HOSTS:-}"
+VM_DNS_PATTERN="${VM_DNS_PATTERN:-ocidefense-9591c7-%d.private.ocidefense.oraclevcn.com}"
+VM_DNS_SCAN_MAX="${VM_DNS_SCAN_MAX:-12}"
 DEPLOY_PATH="${DEPLOY_PATH:-/opt/oci-defense-grid}"
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
 KNOWN_HOSTS="${KNOWN_HOSTS:-/tmp/oci-defense-known-hosts}"
@@ -21,6 +23,27 @@ SSH_KEY="${SSH_KEY:-${REPO_ROOT}/infra/terraform/.keys/oci-defense-grid-demo}"
 
 if [[ ! -f "$SSH_KEY" ]]; then
   echo "SSH key not found: $SSH_KEY" >&2
+  exit 1
+fi
+
+discover_vm_hosts() {
+  ssh \
+    -i "$SSH_KEY" \
+    -o BatchMode=yes \
+    -o ConnectTimeout=8 \
+    -o StrictHostKeyChecking=no \
+    -o UserKnownHostsFile="$KNOWN_HOSTS" \
+    "${BASTION_USER}@${BASTION_HOST}" \
+    "pattern='${VM_DNS_PATTERN}'; for i in \$(seq 1 '${VM_DNS_SCAN_MAX}'); do host=\$(printf \"\$pattern\" \"\$i\"); getent hosts \"\$host\" >/dev/null 2>&1 && printf '%s\n' \"\$host\"; done; true"
+}
+
+if [[ -z "$VM_HOSTS" ]]; then
+  echo "Discovering VM hosts via bastion DNS pattern: ${VM_DNS_PATTERN}"
+  VM_HOSTS="$(discover_vm_hosts | tr '\n' ' ')"
+fi
+
+if [[ -z "$(printf '%s' "$VM_HOSTS" | tr -d '[:space:]')" ]]; then
+  echo "No VM hosts found. Set VM_HOSTS manually or update VM_DNS_PATTERN." >&2
   exit 1
 fi
 
