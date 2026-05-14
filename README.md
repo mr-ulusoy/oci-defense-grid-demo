@@ -1,5 +1,4 @@
-<img width="484" height="745" alt="image" src="https://github.com/user-attachments/assets/634f786e-6ec2-4137-911f-7965187b02c3" /><img width="236" height="742" alt="image" src="https://github.com/user-attachments/assets/ddf8907d-fcda-4ce2-b309-6843cdc7c2b5" />
-
+<img width="484" height="745" alt="image" src="https://github.com/user-attachments/assets/634f786e-6ec2-4137-911f-7965187b02c3" /><img width="435" height="727" alt="image" src="https://github.com/user-attachments/assets/a1ee51b7-8cfd-4221-a9e3-87ee44053f56" />
 
 # OCI Defense Grid Demo
 
