@@ -8,7 +8,7 @@ export default class GameScene extends Phaser.Scene {
     init(data) {
         // Level system
         this.level = data.level || 1;
-        this.maxLevel = 6;
+        this.maxLevel = 4;
         this.callsign = data.callsign || localStorage.getItem('playerCallsign') || 'UNKNOWN';
         this.wave = 1;
         // Level 4+ enters overdrive with longer stages.
@@ -106,6 +106,10 @@ export default class GameScene extends Phaser.Scene {
         this.sendTelemetry('heartbeat');
     }
 
+    isFinalLevel() {
+        return this.level >= this.maxLevel;
+    }
+
     // ============== BACKGROUNDS ==============
 
     createBackgrounds() {
@@ -113,7 +117,23 @@ export default class GameScene extends Phaser.Scene {
         this.bgLayers = [];
 
         // Use static images for backgrounds (no seams), tileSprites only for stars
-        if (this.level === 1) {
+        if (this.isFinalLevel()) {
+            // Final level: star fighter nebula from the imported Game asset pack.
+            this.bg = this.add.tileSprite(0, 0, 480, 640, 'final-bg')
+                .setOrigin(0, 0)
+                .setTileScale(1.6)
+                .setTint(0xb7d7ff);
+            this.finalStars = this.add.tileSprite(0, 0, 480, 640, 'stars')
+                .setOrigin(0, 0)
+                .setTileScale(2)
+                .setAlpha(0.45)
+                .setTint(0x8fd8ff);
+
+            this.bgLayers = [
+                { sprite: this.bg, speed: 0.7, isTileSprite: true },
+                { sprite: this.finalStars, speed: 1.0, isTileSprite: true }
+            ];
+        } else if (this.level === 1) {
             // Level 1: Deep space - static background, scrolling stars
             this.bg = this.add.image(240, 320, 'background')
                 .setDisplaySize(480, 640);
@@ -163,11 +183,15 @@ export default class GameScene extends Phaser.Scene {
     // ============== PLAYER ==============
 
     createPlayer() {
-        this.player = this.physics.add.sprite(240, 550, 'ship');
-        this.player.setScale(2.55);
+        const playerConfig = this.isFinalLevel()
+            ? { key: 'final-ship-1', anim: 'final-ship-idle', scale: 2.35, size: [18, 24] }
+            : { key: 'ship', anim: 'ship-idle', scale: 2.55, size: [10, 17] };
+
+        this.player = this.physics.add.sprite(240, 550, playerConfig.key);
+        this.player.setScale(playerConfig.scale);
         this.player.setCollideWorldBounds(true);
-        this.player.play('ship-idle');
-        this.player.setSize(10, 17);
+        this.player.play(playerConfig.anim);
+        this.player.setSize(playerConfig.size[0], playerConfig.size[1]);
         this.player.setDepth(10);
 
         this.shieldSprite = this.add.graphics();
@@ -401,6 +425,19 @@ export default class GameScene extends Phaser.Scene {
     }
 
     createBullet(x, y, velocityX) {
+        if (this.isFinalLevel()) {
+            const bullet = this.bullets.create(x, y, this.fireballActive ? 'final-player-bullet-4' : 'final-player-bullet-1');
+            bullet.setScale(this.fireballActive ? 2.75 : 2.25);
+            bullet.body.setSize(8, 12);
+            bullet.setVelocity(velocityX * (this.fireballActive ? 0.9 : 1), -this.bulletSpeed * (this.fireballActive ? 0.95 : 1.08));
+
+            if (this.fireballActive) {
+                bullet.play('final-bullet-spin');
+                bullet.isPiercing = true;
+            }
+            return;
+        }
+
         if (this.fireballActive) {
             // Fireball - piercing shot
             const bullet = this.bullets.create(x, y, 'fireball');
@@ -429,7 +466,10 @@ export default class GameScene extends Phaser.Scene {
     // ============== WAVE SYSTEM ==============
 
     showLevelIntro() {
-        this.announceText.setText(this.level >= 4 ? `LEVEL ${this.level}\nOVERDRIVE` : `LEVEL ${this.level}`);
+        const label = this.isFinalLevel()
+            ? `LEVEL ${this.level}\nFINAL GRID`
+            : (this.level >= 4 ? `LEVEL ${this.level}\nOVERDRIVE` : `LEVEL ${this.level}`);
+        this.announceText.setText(label);
         this.announceText.setAlpha(1);
         this.oracleLogo.setAlpha(0.95);
 
@@ -474,6 +514,7 @@ export default class GameScene extends Phaser.Scene {
         let enemyCount = baseCount + overdrive * 6 + Math.max(0, this.wave - 2) * overdrive * 2;
         if (this.level === 2) enemyCount += 4;
         if (this.level >= 3) enemyCount += 6;
+        if (this.isFinalLevel()) enemyCount += 8;
         this.spawnWaveEnemies(enemyCount);
     }
 
@@ -482,6 +523,7 @@ export default class GameScene extends Phaser.Scene {
         const overdrive = Math.max(0, this.level - 3);
         let spawnDelay = Math.max(150, 800 - (this.level * 80) - (this.wave * 40) - overdrive * 35);
         if (this.level >= 3) spawnDelay = Math.max(140, spawnDelay - 50);
+        if (this.isFinalLevel()) spawnDelay = Math.max(105, spawnDelay - 35);
 
         this.enemySpawnTimer = this.time.addEvent({
             delay: spawnDelay,
@@ -535,15 +577,17 @@ export default class GameScene extends Phaser.Scene {
             2: { key: 'l2-enemy-small', anim: 'l2-enemy-small-fly', scale: 1.0, size: [40, 40] }, // 48*1=48
             3: { key: 'l3-enemy-small', anim: 'l3-enemy-small-fly', scale: 0.45, size: [45, 50] } // 112*0.45=50
         };
-        const s = sprites[Math.min(this.level, 3)] || sprites[1];
+        const s = this.isFinalLevel()
+            ? { key: 'final-enemy-small', anim: null, scale: 1.35, size: [30, 30] }
+            : (sprites[Math.min(this.level, 3)] || sprites[1]);
 
         const enemy = this.enemies.create(x, -30, s.key);
         enemy.setScale(s.scale);
-        enemy.play(s.anim);
+        if (s.anim) enemy.play(s.anim);
         enemy.setSize(s.size[0], s.size[1]);
         enemy.enemyType = 'small';
-        enemy.health = this.level >= 5 && Math.random() < 0.25 ? 2 : 1;
-        enemy.points = 100 + Math.max(0, this.level - 3) * 25;
+        enemy.health = this.isFinalLevel() ? 2 : (this.level >= 5 && Math.random() < 0.25 ? 2 : 1);
+        enemy.points = 100 + Math.max(0, this.level - 3) * 25 + (this.isFinalLevel() ? 75 : 0);
         enemy.setVelocityY(Phaser.Math.Between(120 + this.level * 20, Math.min(420, 220 + this.level * 25)));
         const driftAmount = this.level >= 2 ? Math.min(140, 80 + this.level * 10) : 60;
         enemy.setVelocityX(Phaser.Math.Between(-driftAmount, driftAmount));
@@ -556,17 +600,19 @@ export default class GameScene extends Phaser.Scene {
             2: { key: 'l2-enemy-medium', anim: 'l2-enemy-medium-fly', scale: 1.8, size: [40, 40], rotate: false }, // 48*1.8=86
             3: { key: 'l3-enemy-medium', anim: 'l3-enemy-medium-fly', scale: 0.85, size: [75, 75], rotate: false } // 101*0.85=86
         };
-        const s = sprites[Math.min(this.level, 3)] || sprites[1];
+        const s = this.isFinalLevel()
+            ? { key: 'final-enemy-medium', anim: null, scale: 1.8, size: [30, 32], rotate: false }
+            : (sprites[Math.min(this.level, 3)] || sprites[1]);
 
         const enemy = this.enemies.create(x, -30, s.key);
         enemy.setScale(s.scale);
         if (s.rotate) enemy.setAngle(90); // Rotate side-facing sprites to face down
-        enemy.play(s.anim);
+        if (s.anim) enemy.play(s.anim);
         enemy.setSize(s.size[0], s.size[1]);
         enemy.enemyType = 'medium';
         const overdrive = Math.max(0, this.level - 3);
-        enemy.health = 2 + Math.floor(overdrive / 2);
-        enemy.points = 200 + overdrive * 50;
+        enemy.health = 2 + Math.floor(overdrive / 2) + (this.isFinalLevel() ? 1 : 0);
+        enemy.points = 200 + overdrive * 50 + (this.isFinalLevel() ? 125 : 0);
         enemy.canShoot = true;
         enemy.lastShot = 0;
         const minDelay = Math.max(420, (this.level >= 3 ? 700 : 800 - this.level * 100) - overdrive * 60);
@@ -591,17 +637,19 @@ export default class GameScene extends Phaser.Scene {
             2: { key: 'l2-enemy-big', anim: 'l2-enemy-big-fly', scale: 1.7, size: [40, 40] }, // 48*1.7=82
             3: { key: 'l3-enemy-big', anim: 'l3-enemy-big-fly', scale: 1.7, size: [40, 40], rotate: false } // 48*1.7=82
         };
-        const s = sprites[Math.min(this.level, 3)] || sprites[1];
+        const s = this.isFinalLevel()
+            ? { key: 'final-enemy-big', anim: null, scale: 2.1, size: [32, 34], rotate: false }
+            : (sprites[Math.min(this.level, 3)] || sprites[1]);
 
         const enemy = this.enemies.create(x, -50, s.key);
         enemy.setScale(s.scale);
         if (s.rotate) enemy.setAngle(90); // Rotate side-facing sprites to face down
-        enemy.play(s.anim);
+        if (s.anim) enemy.play(s.anim);
         enemy.setSize(s.size[0], s.size[1]);
         enemy.enemyType = 'big';
         const overdrive = Math.max(0, this.level - 3);
-        enemy.health = 3 + this.level + overdrive;
-        enemy.points = 500 + overdrive * 150;
+        enemy.health = 3 + this.level + overdrive + (this.isFinalLevel() ? 2 : 0);
+        enemy.points = 500 + overdrive * 150 + (this.isFinalLevel() ? 250 : 0);
         enemy.canShoot = true;
         enemy.lastShot = 0;
         enemy.shootDelay = this.level >= 3
@@ -661,9 +709,16 @@ export default class GameScene extends Phaser.Scene {
         // Safety check
         if (!enemy || !enemy.active || !this.player || !this.player.active) return;
 
-        const bullet = this.enemyBullets.create(enemy.x, enemy.y + 20, 'laser', 2);
-        bullet.setScale(2);
-        bullet.setTint(0xff0000);
+        const bullet = this.isFinalLevel()
+            ? this.enemyBullets.create(enemy.x, enemy.y + 20, 'final-enemy-bullet-1')
+            : this.enemyBullets.create(enemy.x, enemy.y + 20, 'laser', 2);
+        bullet.setScale(this.isFinalLevel() ? 2.25 : 2);
+        if (this.isFinalLevel()) {
+            bullet.play('final-enemy-bullet-spin');
+            bullet.body.setSize(8, 8);
+        } else {
+            bullet.setTint(0xff0000);
+        }
         const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, this.player.x, this.player.y);
         const bulletSpeed = Math.min(330, 200 + Math.max(0, this.level - 1) * 18);
         bullet.setVelocity(Math.cos(angle) * bulletSpeed, Math.sin(angle) * bulletSpeed);
@@ -738,9 +793,16 @@ export default class GameScene extends Phaser.Scene {
                 anim: 'demon-idle',
                 scale: 1.8,
                 hitbox: { w: 200, h: 180, ox: -20, oy: -18 }
+            },
+            4: {
+                key: 'final-enemy-boss',
+                anim: 'final-enemy-pulse',
+                scale: 4.3,
+                hitbox: { w: 38, h: 38, ox: 5, oy: 5 }
             }
         };
-        const config = bossConfigs[Math.min(this.level, 3)] || bossConfigs[1];
+        const bossType = this.isFinalLevel() ? 4 : Math.min(this.level, 3);
+        const config = bossConfigs[bossType] || bossConfigs[1];
 
         // Create boss and add to dedicated boss group
         this.boss = this.bossGroup.create(240, -100, config.key);
@@ -749,11 +811,11 @@ export default class GameScene extends Phaser.Scene {
         this.boss.setDepth(5);
 
         // Store boss type for later reference
-        this.boss.bossType = Math.min(this.level, 3);
+        this.boss.bossType = bossType;
         this.boss.bossTier = this.level;
 
         const overdrive = Math.max(0, this.level - 3);
-        this.bossMaxHP = 1000 + (this.level - 1) * 220 + overdrive * 280;
+        this.bossMaxHP = 1000 + (this.level - 1) * 220 + overdrive * 280 + (this.isFinalLevel() ? 600 : 0);
         this.bossHP = this.bossMaxHP;
         this.boss.points = 5000 * this.level;
         this.boss.lastShot = 0; // Will be set properly when active
@@ -812,7 +874,7 @@ export default class GameScene extends Phaser.Scene {
         // Shooting patterns based on health
         // Use scene-level HP variables
         const healthPercent = this.bossHP / this.bossMaxHP;
-        const bossType = Math.min(this.boss.bossType || 1, 3);
+        const bossType = this.boss.bossType || 1;
         let shootDelay = 600;
 
         if (bossType === 1) {
@@ -861,7 +923,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     bossShoot() {
-        const bossType = Math.min(this.boss.bossType || 1, 3);
+        const bossType = this.boss.bossType || 1;
         const bossTier = this.boss.bossTier || bossType;
         const overdrive = Math.max(0, bossTier - 3);
 
@@ -943,6 +1005,39 @@ export default class GameScene extends Phaser.Scene {
                     const angle = Phaser.Math.Angle.Between(bullet.x, bullet.y, this.player.x, this.player.y);
                     const speed = 230 + overdrive * 20;
                     bullet.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+                }
+            }
+        } else if (bossType === 4) {
+            const createFinalBossBullet = (x, y, velocityX, velocityY) => {
+                const bullet = this.enemyBullets.create(x, y, 'final-enemy-bullet-1');
+                bullet.setScale(2.35);
+                bullet.body.setSize(8, 8);
+                bullet.play('final-enemy-bullet-spin');
+                bullet.setVelocity(velocityX, velocityY);
+                return bullet;
+            };
+
+            if (this.boss.shootPattern === 0) {
+                for (let i = -3; i <= 3; i++) {
+                    createFinalBossBullet(this.boss.x + i * 22, this.boss.y + 50, i * 58, 210 + Math.abs(i) * 10);
+                }
+            } else if (this.boss.shootPattern === 1) {
+                for (let i = -2; i <= 2; i++) {
+                    const x = this.boss.x + i * 44;
+                    const y = this.boss.y + 42;
+                    const angle = Phaser.Math.Angle.Between(x, y, this.player.x, this.player.y);
+                    createFinalBossBullet(x, y, Math.cos(angle) * 260, Math.sin(angle) * 260);
+                }
+            } else {
+                const bulletCount = 14;
+                for (let i = 0; i < bulletCount; i++) {
+                    const angle = (this.boss.phaseTime * 0.028) + (i * Math.PI * 2 / bulletCount);
+                    createFinalBossBullet(
+                        this.boss.x,
+                        this.boss.y + 45,
+                        Math.cos(angle) * 220,
+                        Math.sin(angle) * 220 + 95
+                    );
                 }
             }
         }
@@ -1336,12 +1431,19 @@ export default class GameScene extends Phaser.Scene {
     // ============== EXPLOSIONS & CLEANUP ==============
 
     createExplosion(x, y, type) {
-        const config = {
-            small: ['explosion', 'explode', 4],
-            medium: ['explosion-large', 'explode-large', 2.5],
-            big: ['explosion-big', 'explode-big', 2],
-            boss: ['explosion-boss', 'explode-boss', 1.5]
-        };
+        const config = this.isFinalLevel()
+            ? {
+                small: ['final-explosion', 'final-explode', 2.1],
+                medium: ['final-explosion', 'final-explode', 2.8],
+                big: ['final-explosion', 'final-explode', 3.3],
+                boss: ['final-explosion', 'final-explode', 4.7]
+            }
+            : {
+                small: ['explosion', 'explode', 4],
+                medium: ['explosion-large', 'explode-large', 2.5],
+                big: ['explosion-big', 'explode-big', 2],
+                boss: ['explosion-boss', 'explode-boss', 1.5]
+            };
 
         const [sprite, anim, scale] = config[type] || config.small;
         const explosion = this.add.sprite(x, y, sprite).setScale(scale).setDepth(50);

@@ -269,7 +269,7 @@ instance_ocpus      = 1
 instance_memory_gbs = 8
 ```
 
-The game runs through level 6. Levels 4-6 reuse the lava biome as overdrive levels with more waves, denser spawns, tougher enemies and harder boss patterns.
+The game now runs through 4 levels. Level 1 is space, level 2 is desert, level 3 is lava, and level 4 is the final star-fighter stage with its own background, player ship, enemies, bullets and boss pattern.
 
 OCI Cache is enabled for the live player list:
 

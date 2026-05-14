@@ -99,7 +99,7 @@ export default class VictoryScene extends Phaser.Scene {
 
         // Save completion
         localStorage.setItem('gameCompleted', 'true');
-        localStorage.setItem('bestLevel', '3');
+        localStorage.setItem('bestLevel', '4');
 
         // Initial celebration flash
         this.cameras.main.flash(1000, 255, 200, 100);

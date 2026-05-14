@@ -178,6 +178,35 @@ export default class BootScene extends Phaser.Scene {
         this.load.spritesheet('demon-attack', 'assets/sprites/level3/demon-attack.png', {
             frameWidth: 240, frameHeight: 192
         });
+
+        // ============== FINAL LEVEL ASSETS (Star Fighter) ==============
+
+        this.load.image('final-bg', 'assets/backgrounds/final/starfield-back.png');
+        this.load.spritesheet('final-asteroids', 'assets/sprites/final/asteroids.png', {
+            frameWidth: 48, frameHeight: 48
+        });
+
+        this.load.image('final-enemy-small', 'assets/sprites/final/enemies/enemy-ship1.png');
+        this.load.image('final-enemy-medium', 'assets/sprites/final/enemies/enemy-ship2.png');
+        this.load.image('final-enemy-big', 'assets/sprites/final/enemies/enemy-ship3.png');
+        this.load.image('final-enemy-boss', 'assets/sprites/final/enemies/enemy-ship.png');
+
+        this.load.image('final-ship-1', 'assets/sprites/final/player/ship-d1.png');
+        this.load.image('final-ship-2', 'assets/sprites/final/player/ship-d2.png');
+        this.load.image('final-ship-3', 'assets/sprites/final/player/ship-d3.png');
+
+        this.load.image('final-player-bullet-1', 'assets/sprites/final/bullets/bullet-d1.png');
+        this.load.image('final-player-bullet-2', 'assets/sprites/final/bullets/bullet-d2.png');
+        this.load.image('final-player-bullet-3', 'assets/sprites/final/bullets/bullet-d3.png');
+        this.load.image('final-player-bullet-4', 'assets/sprites/final/bullets/bullet-d4.png');
+        this.load.image('final-enemy-bullet-1', 'assets/sprites/final/bullets/bullet-e1.png');
+        this.load.image('final-enemy-bullet-2', 'assets/sprites/final/bullets/bullet-e2.png');
+        this.load.image('final-enemy-bullet-3', 'assets/sprites/final/bullets/bullet-e3.png');
+        this.load.image('final-enemy-bullet-4', 'assets/sprites/final/bullets/bullet-e4.png');
+
+        this.load.spritesheet('final-explosion', 'assets/sprites/final/effects/explosions-a.png', {
+            frameWidth: 32, frameHeight: 32
+        });
     }
 
     create() {
@@ -365,6 +394,64 @@ export default class BootScene extends Phaser.Scene {
             frames: this.anims.generateFrameNumbers('fireball', { start: 0, end: 2 }),
             frameRate: 12,
             repeat: -1
+        });
+
+        // Final level animations
+        this.anims.create({
+            key: 'final-ship-idle',
+            frames: [{ key: 'final-ship-1' }, { key: 'final-ship-2' }, { key: 'final-ship-3' }],
+            frameRate: 8,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'final-enemy-pulse',
+            frames: [
+                { key: 'final-enemy-small' },
+                { key: 'final-enemy-medium' },
+                { key: 'final-enemy-big' },
+                { key: 'final-enemy-boss' }
+            ],
+            frameRate: 6,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'final-bullet-spin',
+            frames: [
+                { key: 'final-player-bullet-1' },
+                { key: 'final-player-bullet-2' },
+                { key: 'final-player-bullet-3' },
+                { key: 'final-player-bullet-4' }
+            ],
+            frameRate: 14,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'final-enemy-bullet-spin',
+            frames: [
+                { key: 'final-enemy-bullet-1' },
+                { key: 'final-enemy-bullet-2' },
+                { key: 'final-enemy-bullet-3' },
+                { key: 'final-enemy-bullet-4' }
+            ],
+            frameRate: 12,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'final-asteroid-spin',
+            frames: this.anims.generateFrameNumbers('final-asteroids', { start: 0, end: 8 }),
+            frameRate: 8,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'final-explode',
+            frames: this.anims.generateFrameNumbers('final-explosion', { start: 0, end: 5 }),
+            frameRate: 16,
+            repeat: 0
         });
 
         // Start menu scene
