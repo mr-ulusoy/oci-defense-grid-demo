@@ -196,6 +196,7 @@ export default class GameScene extends Phaser.Scene {
 
     create() {
         createLevelAnimations(this, this.level);
+        this.physics.world.setBounds(0, 0, 480, this.scale.height);
 
         if (!document.getElementById('appShell')?.classList.contains('ops-visible')) {
             document.body.classList.add('game-active');
@@ -277,11 +278,13 @@ export default class GameScene extends Phaser.Scene {
         // Clear any existing background elements
         this.bgLayers = [];
         this.level5Props = [];
+        const height = this.scale.height;
+        const centerY = height / 2;
 
         // Use static images for backgrounds (no seams), tileSprites only for stars
         if (this.level >= 5) {
             // Level 5: blue nebula from the imported Game asset pack.
-            this.bg = this.add.tileSprite(0, 0, 480, 640, 'level5-bg')
+            this.bg = this.add.tileSprite(0, 0, 480, height, 'level5-bg')
                 .setOrigin(0, 0)
                 .setTileScale(2);
 
@@ -314,11 +317,11 @@ export default class GameScene extends Phaser.Scene {
             ];
         } else if (this.usesFinalAssetStyle()) {
             // Level 4: star fighter overdrive from the imported Game asset pack.
-            this.bg = this.add.tileSprite(0, 0, 480, 640, 'final-bg')
+            this.bg = this.add.tileSprite(0, 0, 480, height, 'final-bg')
                 .setOrigin(0, 0)
                 .setTileScale(1.6)
                 .setTint(0xb7d7ff);
-            this.finalStars = this.add.tileSprite(0, 0, 480, 640, 'stars')
+            this.finalStars = this.add.tileSprite(0, 0, 480, height, 'stars')
                 .setOrigin(0, 0)
                 .setTileScale(2)
                 .setAlpha(0.45)
@@ -330,11 +333,11 @@ export default class GameScene extends Phaser.Scene {
             ];
         } else if (this.level === 1) {
             // Level 1: Deep space - static background, scrolling stars
-            this.bg = this.add.image(240, 320, 'background')
-                .setDisplaySize(480, 640);
-            this.farPlanets = this.add.image(240, 320, 'far-planets')
-                .setDisplaySize(480, 640);
-            this.stars = this.add.tileSprite(0, 0, 480, 640, 'stars')
+            this.bg = this.add.image(240, centerY, 'background')
+                .setDisplaySize(480, height);
+            this.farPlanets = this.add.image(240, centerY, 'far-planets')
+                .setDisplaySize(480, height);
+            this.stars = this.add.tileSprite(0, 0, 480, height, 'stars')
                 .setOrigin(0, 0).setTileScale(2);
 
             this.bgLayers = [
@@ -342,9 +345,9 @@ export default class GameScene extends Phaser.Scene {
             ];
         } else if (this.level === 2) {
             // Level 2: Desert Canyon
-            this.bg = this.add.image(240, 320, 'desert-bg')
-                .setDisplaySize(480, 640);
-            this.clouds = this.add.tileSprite(0, 0, 480, 640, 'desert-clouds')
+            this.bg = this.add.image(240, centerY, 'desert-bg')
+                .setDisplaySize(480, height);
+            this.clouds = this.add.tileSprite(0, 0, 480, height, 'desert-clouds')
                 .setOrigin(0, 0).setTileScale(3).setAlpha(0.4);
 
             this.bgLayers = [
@@ -352,17 +355,17 @@ export default class GameScene extends Phaser.Scene {
             ];
         } else {
             // Level 3: Lava/Hell.
-            this.bg = this.add.image(240, 320, 'lava-bg')
-                .setDisplaySize(480, 640);
+            this.bg = this.add.image(240, centerY, 'lava-bg')
+                .setDisplaySize(480, height);
 
             // Rising embers effect - reuse stars with orange tint, scrolling UP
-            this.embers = this.add.tileSprite(0, 0, 480, 640, 'stars')
+            this.embers = this.add.tileSprite(0, 0, 480, height, 'stars')
                 .setOrigin(0, 0).setTileScale(2).setAlpha(0.5).setTint(0xff6600);
 
             // Animated lava flow at the bottom
             this.lavaSprites = [];
             for (let i = 0; i < 16; i++) {
-                const lava = this.add.sprite(i * 32, 620, 'lava-flow')
+                const lava = this.add.sprite(i * 32, height - 20, 'lava-flow')
                     .setScale(1).setOrigin(0, 0.5).setDepth(2);
                 lava.play('lava-flow');
                 lava.anims.setProgress(i * 0.0625); // Offset timing
@@ -382,7 +385,7 @@ export default class GameScene extends Phaser.Scene {
             ? { key: 'final-ship-1', anim: 'final-ship-idle', scale: 2.35, size: [18, 24] }
             : { key: 'ship', anim: 'ship-idle', scale: 2.55, size: [10, 17] };
 
-        this.player = this.physics.add.sprite(240, 550, playerConfig.key);
+        this.player = this.physics.add.sprite(240, this.scale.height - 90, playerConfig.key);
         this.player.setScale(playerConfig.scale);
         this.player.setCollideWorldBounds(true);
         this.player.play(playerConfig.anim);
@@ -466,7 +469,7 @@ export default class GameScene extends Phaser.Scene {
                 const newY = this.playerStartY + deltaY;
 
                 this.player.x = Phaser.Math.Clamp(newX, 30, 450);
-                this.player.y = Phaser.Math.Clamp(newY, 30, 610);
+                this.player.y = Phaser.Math.Clamp(newY, 30, this.scale.height - 30);
             }
         });
 
@@ -498,10 +501,11 @@ export default class GameScene extends Phaser.Scene {
         }).setDepth(100);
 
         // Health bar
-        this.healthBarBg = this.add.rectangle(240, 620, 200, 14, 0x333333).setDepth(100);
-        this.healthBar = this.add.rectangle(141, 620, 196, 10, 0x00ff00)
+        const healthY = this.scale.height - 20;
+        this.healthBarBg = this.add.rectangle(240, healthY, 200, 14, 0x333333).setDepth(100);
+        this.healthBar = this.add.rectangle(141, healthY, 196, 10, 0x00ff00)
             .setOrigin(0, 0.5).setDepth(100);
-        this.healthBorder = this.add.rectangle(240, 620, 200, 14).setStrokeStyle(2, 0xffffff).setDepth(100);
+        this.healthBorder = this.add.rectangle(240, healthY, 200, 14).setStrokeStyle(2, 0xffffff).setDepth(100);
 
         // Announcement text
         this.announceText = this.add.text(240, 300, '', {
@@ -539,7 +543,7 @@ export default class GameScene extends Phaser.Scene {
         this.level5Props.forEach(({ sprite, speed, resetY }) => {
             if (!sprite || !sprite.active) return;
             sprite.y += speed;
-            if (sprite.y > 700) sprite.y = resetY;
+            if (sprite.y > this.scale.height + 60) sprite.y = resetY;
         });
     }
 
@@ -1471,9 +1475,14 @@ export default class GameScene extends Phaser.Scene {
         this.clearStageForBriefing();
 
         const overlay = this.add.container(0, 0).setDepth(1000).setAlpha(0);
+        const height = this.scale.height;
+        const extraY = Math.max(0, height - 640);
+        const textMaskHeight = 292 + extraY;
+        const textStartY = 562 + extraY;
+        const buttonY = 612 + extraY;
         let finished = false;
         let briefingReady = false;
-        const blocker = this.add.rectangle(240, 320, 480, 640, 0x030814, 0.82)
+        const blocker = this.add.rectangle(240, height / 2, 480, height, 0x030814, 0.82)
             .setInteractive();
         const linearTextureFilter = Phaser.Textures?.FilterMode?.LINEAR;
         if (linearTextureFilter !== undefined) {
@@ -1496,10 +1505,10 @@ export default class GameScene extends Phaser.Scene {
             strokeThickness: 3
         }).setOrigin(0.5);
 
-        const guide = this.add.image(84, 496, briefing.guideKey)
+        const guide = this.add.image(84, 496 + extraY, briefing.guideKey)
             .setDisplaySize(116, 116);
-        const nameplate = this.add.rectangle(85, 566, 136, 30, 0x06111c, 0.8);
-        const guideLabel = this.add.text(85, 566, 'OCI GUIDE', {
+        const nameplate = this.add.rectangle(85, 566 + extraY, 136, 30, 0x06111c, 0.8);
+        const guideLabel = this.add.text(85, 566 + extraY, 'OCI GUIDE', {
             fontFamily: 'monospace',
             fontSize: '13px',
             fill: '#ffffff',
@@ -1509,10 +1518,10 @@ export default class GameScene extends Phaser.Scene {
 
         const textMaskShape = this.add.graphics();
         textMaskShape.fillStyle(0xffffff, 1);
-        textMaskShape.fillRect(154, 270, 304, 292);
+        textMaskShape.fillRect(154, 270, 304, textMaskHeight);
         textMaskShape.setVisible(false);
         const textMask = textMaskShape.createGeometryMask();
-        const bodyText = this.add.text(162, 562, briefing.lines.join('\n\n'), {
+        const bodyText = this.add.text(162, textStartY, briefing.lines.join('\n\n'), {
             fontFamily: 'monospace',
             fontSize: '12px',
             fill: '#d9faff',
@@ -1521,18 +1530,18 @@ export default class GameScene extends Phaser.Scene {
             lineSpacing: 5,
             wordWrap: { width: 288 }
         }).setMask(textMask);
-        const replayButton = this.add.rectangle(154, 612, 116, 34, 0x12384a, 0.95)
+        const replayButton = this.add.rectangle(154, buttonY, 116, 34, 0x12384a, 0.95)
             .setInteractive({ useHandCursor: true });
-        const replayText = this.add.text(154, 612, 'REPLAY', {
+        const replayText = this.add.text(154, buttonY, 'REPLAY', {
             fontFamily: 'monospace',
             fontSize: '13px',
             fill: '#ffffff',
             stroke: '#000000',
             strokeThickness: 3
         }).setOrigin(0.5);
-        const continueButton = this.add.rectangle(344, 612, 136, 34, 0x4a4a4a, 0.72)
+        const continueButton = this.add.rectangle(344, buttonY, 136, 34, 0x4a4a4a, 0.72)
             .setInteractive({ useHandCursor: true });
-        const continueText = this.add.text(344, 612, 'CONTINUE', {
+        const continueText = this.add.text(344, buttonY, 'CONTINUE', {
             fontFamily: 'monospace',
             fontSize: '14px',
             fill: '#ffffff',
@@ -1572,7 +1581,7 @@ export default class GameScene extends Phaser.Scene {
 
         const startScroll = () => {
             if (scrollTween) scrollTween.stop();
-            bodyText.setY(562);
+            bodyText.setY(textStartY);
             setContinueReady(false);
             scrollTween = this.tweens.add({
                 targets: bodyText,
@@ -1754,7 +1763,9 @@ export default class GameScene extends Phaser.Scene {
         this.clearStageForBriefing();
 
         const overlay = this.add.container(0, 0).setDepth(1010).setAlpha(0);
-        const blocker = this.add.rectangle(240, 320, 480, 640, 0x030814, 0.9).setInteractive();
+        const height = this.scale.height;
+        const extraY = Math.max(0, height - 640);
+        const blocker = this.add.rectangle(240, height / 2, 480, height, 0x030814, 0.9).setInteractive();
         const title = this.add.text(240, 36, question.title, {
             fontFamily: 'monospace',
             fontSize: '24px',
@@ -1778,8 +1789,8 @@ export default class GameScene extends Phaser.Scene {
             lineSpacing: 4,
             wordWrap: { width: 384 }
         });
-        const guide = this.add.image(78, 470, 'briefing-storyteller').setDisplaySize(108, 108);
-        const statusText = this.add.text(150, 418, 'Choose the strongest OCI answer.', {
+        const guide = this.add.image(78, 470 + extraY, 'briefing-storyteller').setDisplaySize(108, 108);
+        const statusText = this.add.text(150, 418 + extraY, 'Choose the strongest OCI answer.', {
             fontFamily: 'monospace',
             fontSize: '11px',
             fill: '#d9faff',
@@ -1788,10 +1799,10 @@ export default class GameScene extends Phaser.Scene {
             lineSpacing: 3,
             wordWrap: { width: 290 }
         });
-        const continueButton = this.add.rectangle(330, 594, 176, 38, 0xc74634, 0.95)
+        const continueButton = this.add.rectangle(330, 594 + extraY, 176, 38, 0xc74634, 0.95)
             .setInteractive({ useHandCursor: true })
             .setVisible(false);
-        const continueText = this.add.text(330, 594, 'CONTINUE', {
+        const continueText = this.add.text(330, 594 + extraY, 'CONTINUE', {
             fontFamily: 'monospace',
             fontSize: '14px',
             fill: '#ffffff',
@@ -2041,7 +2052,7 @@ export default class GameScene extends Phaser.Scene {
         this.updateHealthBar();
         this.createExplosion(this.player.x, this.player.y, 'big');
 
-        this.player.setPosition(240, 550);
+        this.player.setPosition(240, this.scale.height - 90);
         this.player.setVelocity(0, 0);
 
         this.isInvincible = true;

@@ -6,12 +6,19 @@ import GameOverScene from "./scenes/GameOverScene.js";
 import VictoryScene from "./scenes/VictoryScene.js";
 
 const GAME_WIDTH = 480;
-const GAME_HEIGHT = 640;
-const GAME_ASPECT = GAME_WIDTH / GAME_HEIGHT;
+const BASE_GAME_HEIGHT = 640;
 const MAX_MENU_SCALE = 1.35;
 const MAX_GAME_SCALE = 1.75;
 const MAX_OPS_SCALE = 0.9;
 const RENDER_RESOLUTION = Math.min(window.devicePixelRatio || 1, 2);
+const isMobileViewport =
+  window.matchMedia?.("(max-width: 820px), (pointer: coarse)")?.matches === true;
+const initialViewportWidth = Math.max(1, window.visualViewport?.width ?? window.innerWidth);
+const initialViewportHeight = window.visualViewport?.height ?? window.innerHeight;
+const GAME_HEIGHT = isMobileViewport
+  ? Math.min(920, Math.max(BASE_GAME_HEIGHT, Math.round(GAME_WIDTH * (initialViewportHeight / initialViewportWidth))))
+  : BASE_GAME_HEIGHT;
+const GAME_ASPECT = GAME_WIDTH / GAME_HEIGHT;
 let stableFullscreenViewport = {
   width: window.innerWidth,
   height: window.innerHeight

@@ -11,6 +11,8 @@ export default class GameOverScene extends Phaser.Scene {
 
     create() {
         const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        const centerY = height / 2;
 
         // Stop any previous music and play title music (somber mood)
         this.sound.stopAll();
@@ -18,12 +20,12 @@ export default class GameOverScene extends Phaser.Scene {
         this.music.play();
 
         // Dark red tinted background
-        this.bg = this.add.image(240, 320, 'background')
-            .setDisplaySize(480, 640)
+        this.bg = this.add.image(240, centerY, 'background')
+            .setDisplaySize(480, height)
             .setTint(0x440000);
 
         // Scrolling stars (slower, red tinted)
-        this.stars = this.add.tileSprite(0, 0, 480, 640, 'stars')
+        this.stars = this.add.tileSprite(0, 0, 480, height, 'stars')
             .setOrigin(0, 0)
             .setTileScale(2)
             .setTint(0xff4444)

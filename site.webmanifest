@@ -1,0 +1,19 @@
+{
+  "name": "OCI Defense Grid",
+  "short_name": "OCI Grid",
+  "description": "OCI Defense Grid game demo",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#030814",
+  "theme_color": "#030814",
+  "icons": [
+    {
+      "src": "/oracle.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -15,6 +15,8 @@ export default class VictoryScene extends Phaser.Scene {
 
     create() {
         const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        const centerY = height / 2;
 
         // Stop any previous music and play victory/ending music
         this.sound.stopAll();
@@ -22,12 +24,12 @@ export default class VictoryScene extends Phaser.Scene {
         this.music.play();
 
         // Epic golden tinted background
-        this.bg = this.add.image(240, 320, 'background')
-            .setDisplaySize(480, 640)
+        this.bg = this.add.image(240, centerY, 'background')
+            .setDisplaySize(480, height)
             .setTint(0x222244);
 
         // Fast scrolling stars (victory zoom effect)
-        this.stars = this.add.tileSprite(0, 0, 480, 640, 'stars')
+        this.stars = this.add.tileSprite(0, 0, 480, height, 'stars')
             .setOrigin(0, 0)
             .setTileScale(2)
             .setTint(0xaaddff);
@@ -231,7 +233,7 @@ export default class VictoryScene extends Phaser.Scene {
 
     createFirework() {
         const x = Phaser.Math.Between(50, 430);
-        const y = Phaser.Math.Between(50, 600);
+        const y = Phaser.Math.Between(50, this.cameras.main.height - 40);
 
         const colors = [0xffdd00, 0x00ffff, 0xff00ff, 0x00ff00, 0xff8800, 0xffffff];
         const color = Phaser.Math.RND.pick(colors);

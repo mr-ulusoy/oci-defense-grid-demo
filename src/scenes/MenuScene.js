@@ -8,6 +8,8 @@ export default class MenuScene extends Phaser.Scene {
         window.OCI_DEFENSE_LAYOUT_CHANGED?.();
 
         const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        const centerY = height / 2;
         this.callsign = this.normalizeCallsign(localStorage.getItem('playerCallsign') || '');
         this.setupCallsignControls();
 
@@ -19,8 +21,8 @@ export default class MenuScene extends Phaser.Scene {
         // Dynamic background. Later level backgrounds are lazy-loaded after launch.
         this.bgIndex = 0;
         this.backgrounds = ['background'];
-        this.bg = this.add.image(240, 320, this.backgrounds[0])
-            .setDisplaySize(480, 640);
+        this.bg = this.add.image(240, centerY, this.backgrounds[0])
+            .setDisplaySize(480, height);
 
         // Cycle backgrounds every 3 seconds
         this.time.addEvent({
@@ -47,7 +49,7 @@ export default class MenuScene extends Phaser.Scene {
         });
 
         // Scrolling stars layer
-        this.stars = this.add.tileSprite(0, 0, 480, 640, 'stars')
+        this.stars = this.add.tileSprite(0, 0, 480, height, 'stars')
             .setOrigin(0, 0)
             .setTileScale(2)
             .setAlpha(0.7);
@@ -61,7 +63,7 @@ export default class MenuScene extends Phaser.Scene {
         });
 
         // Dark overlay for better text readability
-        this.add.rectangle(240, 320, 480, 640, 0x000000, 0.4);
+        this.add.rectangle(240, centerY, 480, height, 0x000000, 0.4);
 
         // ===== TITLE =====
 
@@ -201,7 +203,7 @@ export default class MenuScene extends Phaser.Scene {
 
         // Update background enemies
         this.bgEnemies.forEach((enemy, index) => {
-            if (enemy.y > 700) {
+            if (enemy.y > this.cameras.main.height + 60) {
                 enemy.destroy();
                 this.bgEnemies.splice(index, 1);
             }
@@ -226,7 +228,7 @@ export default class MenuScene extends Phaser.Scene {
 
         this.tweens.add({
             targets: enemy,
-            y: 700,
+            y: this.cameras.main.height + 60,
             duration: Phaser.Math.Between(4000, 8000),
             ease: 'Linear'
         });
