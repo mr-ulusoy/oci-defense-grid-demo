@@ -129,6 +129,8 @@ run_end
 heartbeat
 ```
 
+`level` is not a separate event type. It is a numeric field included on every telemetry event and is also stored with leaderboard rows as the level reached.
+
 ## OCI Deploy
 
 1. Push this repo to a Git remote that the OCI VMs can clone.
