@@ -324,8 +324,20 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     focusCallsignInput() {
-        this.callsignInput?.focus();
+        this.callsignInput?.focus({ preventScroll: true });
         this.callsignInput?.select();
+    }
+
+    requestMobileFullscreen() {
+        const isSmallTouchScreen =
+            window.matchMedia?.('(max-width: 820px), (pointer: coarse)')?.matches === true;
+        const target = document.getElementById('appShell') || document.documentElement;
+
+        if (!isSmallTouchScreen || document.fullscreenElement || !target.requestFullscreen) return;
+
+        target.requestFullscreen({ navigationUI: 'hide' }).catch(() => {
+            // Mobile browsers can reject fullscreen outside supported contexts. The CSS layout still fills the viewport.
+        });
     }
 
     launch() {
@@ -350,6 +362,8 @@ export default class MenuScene extends Phaser.Scene {
             return;
         }
 
+        this.callsignInput?.blur();
+        this.requestMobileFullscreen();
         this.cameras.main.flash(500, 255, 255, 255);
         this.time.delayedCall(300, () => {
             this.scene.start('GameScene', { level: 1, callsign: this.callsign });

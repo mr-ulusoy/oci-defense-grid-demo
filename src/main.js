@@ -12,6 +12,10 @@ const MAX_MENU_SCALE = 1.35;
 const MAX_GAME_SCALE = 1.75;
 const MAX_OPS_SCALE = 0.9;
 const RENDER_RESOLUTION = Math.min(window.devicePixelRatio || 1, 2);
+let stableFullscreenViewport = {
+  width: window.innerWidth,
+  height: window.innerHeight
+};
 
 function sizeGameRoot() {
   const root = document.getElementById("gameRoot");
@@ -20,10 +24,29 @@ function sizeGameRoot() {
 
   const appShell = document.getElementById("appShell");
   const viewport = window.visualViewport;
-  const viewportWidth = viewport?.width ?? window.innerWidth;
-  const viewportHeight = viewport?.height ?? window.innerHeight;
+  const visualViewportWidth = viewport?.width ?? window.innerWidth;
+  const visualViewportHeight = viewport?.height ?? window.innerHeight;
   const isOps = appShell?.classList.contains("ops-visible") === true;
   const isFullscreenGame = document.body.classList.contains("game-active") && !isOps;
+  const focusedElement = document.activeElement;
+  const hasGameTextFocus =
+    focusedElement?.nodeType === 1 &&
+    root.contains(focusedElement) &&
+    ["INPUT", "TEXTAREA", "SELECT"].includes(focusedElement.tagName);
+
+  if (isFullscreenGame && !hasGameTextFocus) {
+    stableFullscreenViewport = {
+      width: visualViewportWidth,
+      height: Math.max(visualViewportHeight, window.innerHeight)
+    };
+  }
+
+  const viewportWidth = isFullscreenGame && hasGameTextFocus
+    ? stableFullscreenViewport.width
+    : visualViewportWidth;
+  const viewportHeight = isFullscreenGame && hasGameTextFocus
+    ? stableFullscreenViewport.height
+    : visualViewportHeight;
   const stageStyle = window.getComputedStyle(stage);
   const stageRect = stage.getBoundingClientRect();
   const rootRect = root.getBoundingClientRect();

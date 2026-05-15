@@ -1629,7 +1629,17 @@ export default class GameScene extends Phaser.Scene {
             <div class="game-coach-title">OCI Guide</div>
             <div class="game-coach-question" data-coach-question>Ask a question below.</div>
             <div class="game-coach-row">
-                <input data-coach-input maxlength="300" placeholder="Ask for a hint..." />
+                <input
+                    data-coach-input
+                    maxlength="300"
+                    placeholder="Ask for a hint..."
+                    autocomplete="off"
+                    autocapitalize="sentences"
+                    autocorrect="off"
+                    spellcheck="false"
+                    inputmode="text"
+                    aria-label="Ask OCI Guide for a hint"
+                />
                 <button type="button" data-coach-send>Ask</button>
             </div>
         `;
@@ -1671,6 +1681,7 @@ export default class GameScene extends Phaser.Scene {
             if (busy) return;
             busy = true;
             send.disabled = true;
+            const shouldRefocus = document.activeElement === input;
             questionText.textContent = message;
             statusText.setText('OCI GUIDE IS THINKING...');
 
@@ -1684,17 +1695,25 @@ export default class GameScene extends Phaser.Scene {
             statusText.setText(result.reply.toUpperCase());
             busy = false;
             send.disabled = false;
-            input.focus();
+            if (shouldRefocus) {
+                input.focus({ preventScroll: true });
+            }
         };
 
         panel.addEventListener('pointerdown', stopGameInput);
         panel.addEventListener('mousedown', stopGameInput);
         panel.addEventListener('touchstart', stopGameInput, { passive: true });
         input.addEventListener('focus', () => {
+            document.body.classList.add('coach-input-active');
+            panel.classList.add('is-editing');
             pauseGameKeyboard();
+            window.OCI_DEFENSE_LAYOUT_CHANGED?.();
         });
         input.addEventListener('blur', () => {
+            document.body.classList.remove('coach-input-active');
+            panel.classList.remove('is-editing');
             resumeGameKeyboard();
+            window.OCI_DEFENSE_LAYOUT_CHANGED?.();
         });
         send.addEventListener('pointerdown', handleCoachSubmit);
         send.addEventListener('mousedown', handleCoachSubmit);
@@ -1716,6 +1735,7 @@ export default class GameScene extends Phaser.Scene {
             ask,
             destroy() {
                 destroyed = true;
+                document.body.classList.remove('coach-input-active');
                 resumeGameKeyboard();
                 panel.remove();
             }
