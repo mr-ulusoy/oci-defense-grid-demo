@@ -18,6 +18,7 @@ EVENT_INGEST_ROUTE_MODE="${EVENT_INGEST_ROUTE_MODE:-}"
 OCI_GENAI_ENDPOINT="${OCI_GENAI_ENDPOINT:-}"
 OCI_GENAI_BEARER_TOKEN="${OCI_GENAI_BEARER_TOKEN:-}"
 OCI_GENAI_MODEL="${OCI_GENAI_MODEL:-}"
+OCI_GENAI_COACH_MODEL="${OCI_GENAI_COACH_MODEL:-}"
 OCI_GENAI_COMPARTMENT_OCID="${OCI_GENAI_COMPARTMENT_OCID:-}"
 OCI_GENAI_TIMEOUT_MS="${OCI_GENAI_TIMEOUT_MS:-25000}"
 ADB_USER="${ADB_USER:-ADMIN}"
@@ -69,10 +70,10 @@ deploy_host() {
     remote_command="${remote_command}; printf '%s\n' '[Service]' 'Environment=EVENT_INGEST_ROUTE_MODE=${EVENT_INGEST_ROUTE_MODE}' | sudo tee /etc/systemd/system/oci-defense-api.service.d/event-ingest.conf >/dev/null"
     remote_command="${remote_command}; sudo systemctl daemon-reload"
   fi
-  if [[ -n "$OCI_GENAI_ENDPOINT" || -n "$OCI_GENAI_BEARER_TOKEN" || -n "$OCI_GENAI_MODEL" || -n "$OCI_GENAI_COMPARTMENT_OCID" ]]; then
+  if [[ -n "$OCI_GENAI_ENDPOINT" || -n "$OCI_GENAI_BEARER_TOKEN" || -n "$OCI_GENAI_MODEL" || -n "$OCI_GENAI_COACH_MODEL" || -n "$OCI_GENAI_COMPARTMENT_OCID" ]]; then
     remote_command="${remote_command}; sudo mkdir -p /etc/systemd/system/oci-defense-api.service.d"
     remote_command="${remote_command}; printf '%s\n' '[Service]' 'EnvironmentFile=-/etc/oci-defense-genai.env' | sudo tee /etc/systemd/system/oci-defense-api.service.d/genai.conf >/dev/null"
-    remote_command="${remote_command}; printf '%s\n' 'OCI_GENAI_ENDPOINT=${OCI_GENAI_ENDPOINT}' 'OCI_GENAI_BEARER_TOKEN=${OCI_GENAI_BEARER_TOKEN}' 'OCI_GENAI_MODEL=${OCI_GENAI_MODEL}' 'OCI_GENAI_COMPARTMENT_OCID=${OCI_GENAI_COMPARTMENT_OCID}' 'OCI_GENAI_TIMEOUT_MS=${OCI_GENAI_TIMEOUT_MS}' | sudo tee /etc/oci-defense-genai.env >/dev/null"
+    remote_command="${remote_command}; printf '%s\n' 'OCI_GENAI_ENDPOINT=${OCI_GENAI_ENDPOINT}' 'OCI_GENAI_BEARER_TOKEN=${OCI_GENAI_BEARER_TOKEN}' 'OCI_GENAI_MODEL=${OCI_GENAI_MODEL}' 'OCI_GENAI_COACH_MODEL=${OCI_GENAI_COACH_MODEL}' 'OCI_GENAI_COMPARTMENT_OCID=${OCI_GENAI_COMPARTMENT_OCID}' 'OCI_GENAI_TIMEOUT_MS=${OCI_GENAI_TIMEOUT_MS}' | sudo tee /etc/oci-defense-genai.env >/dev/null"
     remote_command="${remote_command}; sudo chmod 600 /etc/oci-defense-genai.env"
     remote_command="${remote_command}; sudo systemctl daemon-reload"
   fi

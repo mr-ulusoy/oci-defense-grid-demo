@@ -15,6 +15,7 @@ app_git_ref  = "main"
 oci_genai_endpoint     = "https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com"
 oci_genai_bearer_token = ""
 oci_genai_model        = "ocid1.generativeaimodel.oc1.eu-frankfurt-1.amaaaaaask7dceyan6gecfjovk7wtgl3r65b5tmpuegfxojbp2mebjgtvhra"
+oci_genai_coach_model  = "google.gemini-2.5-flash-lite"
 oci_genai_compartment_ocid = null
 
 instance_shape      = "VM.Standard.E4.Flex"

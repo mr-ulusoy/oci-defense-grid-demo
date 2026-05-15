@@ -10,7 +10,9 @@ const FALLBACK_INSIGHTS = [
 const DEFAULT_GENAI_ENDPOINT = "https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com";
 const DEFAULT_GENAI_MODEL =
   "ocid1.generativeaimodel.oc1.eu-frankfurt-1.amaaaaaask7dceyan6gecfjovk7wtgl3r65b5tmpuegfxojbp2mebjgtvhra";
+const DEFAULT_COACH_GENAI_MODEL = "google.gemini-2.5-flash-lite";
 const DEFAULT_GENAI_TIMEOUT_MS = 25000;
+const DEFAULT_COACH_GENAI_TIMEOUT_MS = 12000;
 const COACH_REPLY_WORD_LIMIT = 45;
 
 const QUIZ_COACH_CONTEXT = {
@@ -138,9 +140,16 @@ export function getCoachQuestion(questionId) {
   return QUIZ_COACH_CONTEXT[questionId] ?? null;
 }
 
-function buildCopilotRequest(prompt) {
+function getCopilotModel() {
+  return process.env.OCI_GENAI_MODEL || DEFAULT_GENAI_MODEL;
+}
+
+function getCoachModel() {
+  return process.env.OCI_GENAI_COACH_MODEL || DEFAULT_COACH_GENAI_MODEL;
+}
+
+function buildCopilotRequest(prompt, model = getCopilotModel(), maxTokens = 80) {
   const endpoint = process.env.OCI_GENAI_ENDPOINT ?? "";
-  const model = process.env.OCI_GENAI_MODEL || DEFAULT_GENAI_MODEL;
 
   if (endpoint.includes("/chat/completions")) {
     return {
@@ -155,7 +164,7 @@ function buildCopilotRequest(prompt) {
           content: prompt
         }
       ],
-      max_tokens: 80,
+      max_tokens: maxTokens,
       temperature: 0.2
     };
   }
@@ -164,24 +173,24 @@ function buildCopilotRequest(prompt) {
     return {
       model,
       input: prompt,
-      max_output_tokens: 80,
+      max_output_tokens: maxTokens,
       temperature: 0.2
     };
   }
 
   return {
     prompt,
-    maxTokens: 80,
+    maxTokens,
     temperature: 0.2
   };
 }
 
-function buildSdkChatRequest(prompt) {
+function buildSdkChatRequest(prompt, model = getCopilotModel(), maxTokens = 1200) {
   return {
     chatDetails: {
       compartmentId: process.env.OCI_GENAI_COMPARTMENT_OCID,
       servingMode: {
-        modelId: process.env.OCI_GENAI_MODEL || DEFAULT_GENAI_MODEL,
+        modelId: model,
         servingType: "ON_DEMAND"
       },
       chatRequest: {
@@ -197,7 +206,7 @@ function buildSdkChatRequest(prompt) {
           }
         ],
         apiFormat: "GENERIC",
-        maxTokens: 1200,
+        maxTokens,
         temperature: 0.2,
         frequencyPenalty: 0,
         presencePenalty: 0,
@@ -272,7 +281,7 @@ async function getSdkClient() {
   return sdkClientPromise;
 }
 
-async function callSdkCopilot(prompt) {
+async function callSdkCopilot(prompt, options = {}) {
   if (!process.env.OCI_GENAI_COMPARTMENT_OCID) {
     return null;
   }
@@ -280,13 +289,13 @@ async function callSdkCopilot(prompt) {
   const client = await getSdkClient();
   const common = await import("oci-common");
   const response = await client.chat({
-    ...buildSdkChatRequest(prompt),
+    ...buildSdkChatRequest(prompt, options.model, options.maxTokens),
     retryConfiguration: common.NoRetryConfigurationDetails
   });
   return extractCopilotText(response);
 }
 
-async function callBearerCopilot(prompt) {
+async function callBearerCopilot(prompt, options = {}) {
   const endpoint = process.env.OCI_GENAI_ENDPOINT ?? "";
   if (!endpoint || !process.env.OCI_GENAI_BEARER_TOKEN) {
     return null;
@@ -298,7 +307,7 @@ async function callBearerCopilot(prompt) {
       Authorization: `Bearer ${process.env.OCI_GENAI_BEARER_TOKEN}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(buildCopilotRequest(prompt))
+    body: JSON.stringify(buildCopilotRequest(prompt, options.model, options.maxTokens))
   });
 
   if (!response.ok) {
@@ -309,14 +318,14 @@ async function callBearerCopilot(prompt) {
   return extractCopilotText(payload);
 }
 
-async function callExternalCopilot(prompt) {
+async function callExternalCopilot(prompt, options = {}) {
   const endpoint = process.env.OCI_GENAI_ENDPOINT ?? "";
 
   if (endpoint.includes("/chat/completions") || endpoint.includes("/responses")) {
-    return callBearerCopilot(prompt);
+    return callBearerCopilot(prompt, options);
   }
 
-  return callSdkCopilot(prompt);
+  return callSdkCopilot(prompt, options);
 }
 
 function withTimeout(promise, timeoutMs) {
@@ -339,7 +348,13 @@ export async function createCopilotInsight(context) {
 
   try {
     const timeoutMs = Number(process.env.OCI_GENAI_TIMEOUT_MS ?? DEFAULT_GENAI_TIMEOUT_MS);
-    const externalInsight = await withTimeout(callExternalCopilot(prompt), timeoutMs);
+    const externalInsight = await withTimeout(
+      callExternalCopilot(prompt, {
+        model: getCopilotModel(),
+        maxTokens: 80
+      }),
+      timeoutMs
+    );
     if (externalInsight) {
       return externalInsight.trim().slice(0, 280);
     }
@@ -359,8 +374,16 @@ export async function createCoachReply({ level, questionId, message = "", attemp
   const prompt = buildCoachPrompt({ context, message, attemptCount });
 
   try {
-    const timeoutMs = Number(process.env.OCI_GENAI_TIMEOUT_MS ?? DEFAULT_GENAI_TIMEOUT_MS);
-    const externalReply = await withTimeout(callExternalCopilot(prompt), timeoutMs);
+    const timeoutMs = Number(
+      process.env.OCI_GENAI_COACH_TIMEOUT_MS ?? DEFAULT_COACH_GENAI_TIMEOUT_MS
+    );
+    const externalReply = await withTimeout(
+      callExternalCopilot(prompt, {
+        model: getCoachModel(),
+        maxTokens: 120
+      }),
+      timeoutMs
+    );
     if (externalReply) {
       return {
         questionId,

@@ -215,6 +215,12 @@ variable "oci_genai_model" {
   default     = "ocid1.generativeaimodel.oc1.eu-frankfurt-1.amaaaaaask7dceyan6gecfjovk7wtgl3r65b5tmpuegfxojbp2mebjgtvhra"
 }
 
+variable "oci_genai_coach_model" {
+  description = "OCI Generative AI model used by the player-facing OCI Guide quiz coach."
+  type        = string
+  default     = "google.gemini-2.5-flash-lite"
+}
+
 variable "oci_genai_compartment_ocid" {
   description = "Compartment OCID used for OCI Generative AI inference. Defaults to the demo compartment when null."
   type        = string

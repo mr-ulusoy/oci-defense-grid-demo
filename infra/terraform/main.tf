@@ -46,6 +46,7 @@ locals {
     genai_endpoint     = var.oci_genai_endpoint
     genai_bearer_token = var.oci_genai_bearer_token
     genai_model        = var.oci_genai_model
+    genai_coach_model  = var.oci_genai_coach_model
     genai_compartment  = coalesce(var.oci_genai_compartment_ocid, var.compartment_ocid)
     event_ingest_mode  = local.function_ingest_enabled ? "oci-functions" : "vm-api"
     redis_host         = local.redis_host

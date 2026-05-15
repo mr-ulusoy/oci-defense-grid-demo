@@ -285,6 +285,7 @@ REDIS_TLS=true
 EVENT_INGEST_ROUTE_MODE=oci-functions
 OCI_GENAI_ENDPOINT=<GenAI inference endpoint>
 OCI_GENAI_MODEL=<GenAI model OCID>
+OCI_GENAI_COACH_MODEL=google.gemini-2.5-flash-lite
 OCI_GENAI_COMPARTMENT_OCID=<compartment OCID>
 OCI_GENAI_TIMEOUT_MS=25000
 ```
@@ -357,7 +358,10 @@ The current Gemini path uses native SDK mode:
 ```hcl
 oci_genai_endpoint = "https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com"
 oci_genai_model    = "ocid1.generativeaimodel.oc1.eu-frankfurt-1.amaaaaaask7dceyan6gecfjovk7wtgl3r65b5tmpuegfxojbp2mebjgtvhra"
+oci_genai_coach_model = "google.gemini-2.5-flash-lite"
 ```
+
+`oci_genai_model` is used for the ops copilot. `oci_genai_coach_model` is used for the player-facing OCI Guide during quiz hints, and defaults to Gemini 2.5 Flash-Lite for faster short answers.
 
 Local tests use an OCI security-token profile:
 
@@ -378,7 +382,7 @@ On deployed VMs, the API uses instance principal auth through `dg_cengiz`. The r
 Allow dynamic-group OracleIdentityCloudService/dg_cengiz to use generative-ai-family in compartment id <genai_compartment_ocid>
 ```
 
-`/api/copilot` is intentionally ops-only. The public player view does not call GenAI. If GenAI is unavailable, slow, or misconfigured, `/api/copilot` falls back to deterministic demo insights so the ops HUD still works.
+`/api/copilot` is intentionally ops-only. The player view only reaches GenAI through the guarded `/api/coach` endpoint during quiz hints. If GenAI is unavailable, slow, or misconfigured, both copilot and coach fall back to deterministic demo text so the demo still works.
 
 ## Autonomous Database
 
