@@ -1766,7 +1766,7 @@ export default class GameScene extends Phaser.Scene {
         const height = this.scale.height;
         const extraY = Math.max(0, height - 640);
         const answerY = Math.min(418 + extraY * 0.62, height - 320);
-        const guideY = Math.min(answerY + 70, height - 190);
+        const guideY = Math.min(answerY + 94, height - 170);
         const continueY = Math.min(594 + extraY, height - 46);
         const blocker = this.add.rectangle(240, height / 2, 480, height, 0x030814, 0.9).setInteractive();
         const title = this.add.text(240, 36, question.title, {
@@ -1785,10 +1785,11 @@ export default class GameScene extends Phaser.Scene {
         }).setOrigin(0.5);
         const prompt = this.add.text(48, 100, question.prompt, {
             fontFamily: 'monospace',
-            fontSize: '17px',
+            fontSize: '18px',
+            fontStyle: 'bold',
             fill: '#d9faff',
             stroke: '#000000',
-            strokeThickness: 3,
+            strokeThickness: 4,
             lineSpacing: 5,
             wordWrap: { width: 384 }
         });
@@ -1826,11 +1827,12 @@ export default class GameScene extends Phaser.Scene {
                 .setInteractive({ useHandCursor: true });
             const label = this.add.text(58, y - 23, `${String.fromCharCode(65 + index)}. ${option}`, {
                 fontFamily: 'monospace',
-                fontSize: '13px',
+                fontSize: '14px',
+                fontStyle: 'bold',
                 fill: '#ffffff',
                 stroke: '#000000',
-                strokeThickness: 3,
-                lineSpacing: 4,
+                strokeThickness: 4,
+                lineSpacing: 5,
                 wordWrap: { width: 364 }
             });
 
