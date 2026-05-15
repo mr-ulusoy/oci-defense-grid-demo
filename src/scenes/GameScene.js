@@ -1765,25 +1765,37 @@ export default class GameScene extends Phaser.Scene {
         const overlay = this.add.container(0, 0).setDepth(1010).setAlpha(0);
         const height = this.scale.height;
         const extraY = Math.max(0, height - 640);
-        const answerY = Math.min(418 + extraY * 0.62, height - 320);
-        const guideY = Math.min(answerY + 94, height - 170);
+        const tallLayout = height > 720;
+        const titleY = tallLayout ? 48 : 36;
+        const subtitleY = tallLayout ? 82 : 66;
+        const promptY = tallLayout ? 128 : 100;
+        const optionStartY = tallLayout ? 266 : 210;
+        const optionGap = tallLayout ? 90 : 76;
+        const optionHeight = tallLayout ? 78 : 64;
+        const optionLabelOffsetY = tallLayout ? 29 : 24;
+        const answerY = tallLayout
+            ? Math.min(optionStartY + optionGap * 3 + 74, height - 300)
+            : Math.min(424 + extraY * 0.55, height - 220);
+        const guideY = tallLayout
+            ? Math.min(answerY + 112, height - 198)
+            : Math.min(answerY + 92, height - 160);
         const continueY = Math.min(594 + extraY, height - 46);
         const blocker = this.add.rectangle(240, height / 2, 480, height, 0x030814, 0.9).setInteractive();
-        const title = this.add.text(240, 36, question.title, {
+        const title = this.add.text(240, titleY, question.title, {
             fontFamily: 'monospace',
             fontSize: '24px',
             fill: '#ffffff',
             stroke: '#062031',
             strokeThickness: 5
         }).setOrigin(0.5);
-        const subtitle = this.add.text(240, 66, 'UNLOCK NEXT LEVEL', {
+        const subtitle = this.add.text(240, subtitleY, 'UNLOCK NEXT LEVEL', {
             fontFamily: 'monospace',
             fontSize: '12px',
             fill: '#7cc8ff',
             stroke: '#000000',
             strokeThickness: 3
         }).setOrigin(0.5);
-        const prompt = this.add.text(48, 100, question.prompt, {
+        const prompt = this.add.text(48, promptY, question.prompt, {
             fontFamily: 'monospace',
             fontSize: '18px',
             fontStyle: 'bold',
@@ -1821,19 +1833,19 @@ export default class GameScene extends Phaser.Scene {
         let coachPanel = null;
 
         question.options.forEach((option, index) => {
-            const y = 206 + index * 76;
-            const button = this.add.rectangle(240, y, 408, 62, 0x102432, 0.94)
+            const y = optionStartY + index * optionGap;
+            const button = this.add.rectangle(240, y, 408, optionHeight, 0x102432, 0.94)
                 .setStrokeStyle(1, 0x2e4450)
                 .setInteractive({ useHandCursor: true });
-            const label = this.add.text(58, y - 23, `${String.fromCharCode(65 + index)}. ${option}`, {
+            const label = this.add.text(58, y - optionLabelOffsetY, `${String.fromCharCode(65 + index)}. ${option}`, {
                 fontFamily: 'monospace',
                 fontSize: '14px',
                 fontStyle: 'bold',
                 fill: '#ffffff',
                 stroke: '#000000',
-                strokeThickness: 4,
-                lineSpacing: 5,
-                wordWrap: { width: 364 }
+                strokeThickness: 3,
+                lineSpacing: 4,
+                wordWrap: { width: 350, useAdvancedWrap: true }
             });
 
             button.on('pointerover', () => {
