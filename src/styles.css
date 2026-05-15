@@ -253,12 +253,12 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   text-transform: uppercase;
 }
 
-.game-coach-reply {
-  color: var(--text);
+.game-coach-question {
+  color: var(--muted);
   font-family: monospace;
   font-size: 11px;
-  line-height: 1.35;
-  min-height: 44px;
+  line-height: 1.3;
+  min-height: 15px;
 }
 
 .game-coach-row {

@@ -1620,7 +1620,7 @@ export default class GameScene extends Phaser.Scene {
         panel.className = 'game-coach-panel';
         panel.innerHTML = `
             <div class="game-coach-title">OCI Guide</div>
-            <div class="game-coach-reply" data-coach-reply>Pick an answer, or ask for a hint.</div>
+            <div class="game-coach-question" data-coach-question>Ask a question below.</div>
             <div class="game-coach-row">
                 <input data-coach-input maxlength="300" placeholder="Ask for a hint..." />
                 <button type="button" data-coach-send>Ask</button>
@@ -1628,7 +1628,7 @@ export default class GameScene extends Phaser.Scene {
         `;
         root.appendChild(panel);
 
-        const reply = panel.querySelector('[data-coach-reply]');
+        const questionText = panel.querySelector('[data-coach-question]');
         const input = panel.querySelector('[data-coach-input]');
         const send = panel.querySelector('[data-coach-send]');
         let busy = false;
@@ -1664,7 +1664,7 @@ export default class GameScene extends Phaser.Scene {
             if (busy) return;
             busy = true;
             send.disabled = true;
-            reply.textContent = 'OCI Guide is thinking...';
+            questionText.textContent = message;
             statusText.setText('OCI GUIDE IS THINKING...');
 
             const result = await askCoach({
@@ -1674,7 +1674,6 @@ export default class GameScene extends Phaser.Scene {
                 attemptCount
             });
             if (destroyed) return;
-            reply.textContent = result.reply;
             statusText.setText(result.reply.toUpperCase());
             busy = false;
             send.disabled = false;
