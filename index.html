@@ -84,12 +84,22 @@
                 <div class="arch-flow arch-flow-api" data-flow="telemetry"></div>
                 <div class="arch-node" id="archFunctions">
                   <span>OCI Functions</span>
-                  <strong id="archFunctionState">Events</strong>
+                  <strong id="archFunctionState">Events to stream</strong>
                 </div>
-                <div class="arch-flow arch-flow-api arch-flow-dashed" data-flow="vm-api"></div>
-                <div class="arch-node" id="archVmApi">
-                  <span>VM API fallback</span>
-                  <strong id="archVmApiState">Standby</strong>
+                <div class="arch-flow arch-flow-api" data-flow="telemetry"></div>
+                <div class="arch-node arch-node-hub" id="archStreaming">
+                  <span>Streaming</span>
+                  <strong id="archStreamState">Event hub</strong>
+                </div>
+                <div class="arch-flow arch-flow-api" data-flow="telemetry"></div>
+                <div class="arch-node" id="archAdb">
+                  <span>ADB</span>
+                  <strong id="archAdbState">Analytics</strong>
+                </div>
+                <div class="arch-flow arch-flow-api" data-flow="telemetry"></div>
+                <div class="arch-node" id="archObjectStorage">
+                  <span>Object Storage</span>
+                  <strong id="archObjectState">Raw archive</strong>
                 </div>
               </div>
 
@@ -118,22 +128,16 @@
 
               <div class="arch-lane arch-lane-services">
                 <div class="arch-lane-label">Data + AI</div>
+                <div class="arch-node" id="archVmApi">
+                  <span>VM API fallback</span>
+                  <strong id="archVmApiState">Standby</strong>
+                </div>
+                <div class="arch-flow arch-flow-status" data-flow="status"></div>
                 <div class="arch-node" id="archCache">
                   <span>OCI Cache</span>
                   <strong id="archCacheState">Live players</strong>
                 </div>
-                <div class="arch-node" id="archStreaming">
-                  <span>Streaming</span>
-                  <strong id="archStreamState">Events</strong>
-                </div>
-                <div class="arch-node" id="archAdb">
-                  <span>ADB</span>
-                  <strong id="archAdbState">Analytics</strong>
-                </div>
-                <div class="arch-node" id="archObjectStorage">
-                  <span>Object Storage</span>
-                  <strong id="archObjectState">Raw archive</strong>
-                </div>
+                <div class="arch-flow arch-flow-ai" data-flow="ai"></div>
                 <div class="arch-node" id="archGenai">
                   <span>OCI GenAI</span>
                   <strong id="archGenaiState">Coach/Ops</strong>

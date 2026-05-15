@@ -238,26 +238,28 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   const streamStatus = status?.sinks?.streaming ?? "memory";
   const objectStatus = status?.sinks?.objectStorage ?? "memory";
   const adbStatus = eventAnalytics?.source === "autonomousDatabase" ? "ADB live" : (status?.sinks?.autonomousDatabase ?? "memory");
+  const flowSpeed = eventRate >= 4 ? "0.55s" : eventRate >= 2 ? "0.78s" : eventRate > 0.05 ? "1.25s" : "2.4s";
 
   architecture.map.classList.toggle("mode-functions", functionMode);
   architecture.map.classList.toggle("mode-vm", !functionMode);
   architecture.map.classList.toggle("flow-fast", eventRate >= 2);
   architecture.map.classList.toggle("flow-idle", eventRate <= 0.05);
+  architecture.map.style.setProperty("--arch-flow-speed", flowSpeed);
 
   architecture.routeMode.textContent = functionMode ? "Functions ingest" : "VM API fallback";
   architecture.eventRate.textContent = `${Number(eventRate).toFixed(1)} events/sec`;
   architecture.publicLbState.textContent = status?.loadBalancer ?? "Frontend route";
   architecture.vmState.textContent = `${recentNodes || 1} nodes observed`;
   architecture.apiState.textContent = status?.gateway ?? "/api/*";
-  architecture.functionState.textContent = functionMode ? "Ingesting events" : "Standby";
-  architecture.vmApiState.textContent = functionMode ? "Fallback ready" : "Ingesting events";
+  architecture.functionState.textContent = functionMode ? "Events -> stream" : "Standby";
+  architecture.vmApiState.textContent = functionMode ? "Ingest fallback" : "Event ingest";
   architecture.opsApiState.textContent = status?.gateway ?? "Ops APIs";
   architecture.privateLbState.textContent = status?.loadBalancer ? "Private API route" : "VM API route";
   architecture.vmApiOpsState.textContent = activeVmKey ? `Active ${observedVms.get(activeVmKey)?.name ?? "VM"}` : "Status + leaderboard";
-  architecture.cacheState.textContent = cacheStatus;
-  architecture.streamState.textContent = streamStatus;
-  architecture.adbState.textContent = adbStatus;
-  architecture.objectState.textContent = objectStatus;
+  architecture.cacheState.textContent = cacheStatus === "connected" ? "Live players" : cacheStatus;
+  architecture.streamState.textContent = serviceConfigured(streamStatus) ? "Durable event hub" : streamStatus;
+  architecture.adbState.textContent = serviceConfigured(adbStatus) ? "Curated analytics" : adbStatus;
+  architecture.objectState.textContent = serviceConfigured(objectStatus) ? "Raw NDJSON archive" : objectStatus;
   architecture.genaiState.textContent = "Flash Lite coach";
 
   setNodeLive(architecture.nodes.player, true);
@@ -271,14 +273,19 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   setNodeLive(architecture.nodes.privateLb, true);
   setNodeLive(architecture.nodes.vmApiOps, recentNodes > 0);
   setNodeLive(architecture.nodes.cache, cacheStatus === "connected");
-  setNodeLive(architecture.nodes.streaming, streamStatus === "connected" || eventRate > 0);
-  setNodeLive(architecture.nodes.adb, eventAnalytics?.source === "autonomousDatabase" || adbStatus === "connected");
-  setNodeLive(architecture.nodes.objectStorage, objectStatus === "connected");
+  setNodeLive(architecture.nodes.streaming, serviceConfigured(streamStatus) || eventRate > 0);
+  setNodeLive(architecture.nodes.adb, serviceConfigured(adbStatus));
+  setNodeLive(architecture.nodes.objectStorage, serviceConfigured(objectStatus));
   setNodeLive(architecture.nodes.genai, true);
 }
 
 function setNodeLive(node, live) {
   node?.classList.toggle("is-live", Boolean(live));
+}
+
+function serviceConfigured(status) {
+  const normalized = String(status ?? "").toLowerCase();
+  return normalized !== "" && normalized !== "memory" && normalized !== "browser fallback";
 }
 
 function eventChipsHtml(eventCounts = {}) {

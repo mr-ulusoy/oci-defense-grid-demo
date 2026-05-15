@@ -436,6 +436,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .architecture-map {
+  --arch-flow-speed: 1.55s;
   display: grid;
   gap: 9px;
 }
@@ -454,8 +455,14 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
     minmax(100px, 1fr);
 }
 
+.arch-lane-telemetry {
+  grid-template-columns:
+    96px minmax(94px, 1fr) 24px minmax(94px, 1fr) 24px minmax(94px, 1fr) 24px
+    minmax(94px, 1fr) 24px minmax(94px, 1fr);
+}
+
 .arch-lane-services {
-  grid-template-columns: 96px repeat(5, minmax(94px, 1fr));
+  grid-template-columns: 96px minmax(118px, 1fr) 28px minmax(118px, 1fr) 28px minmax(118px, 1fr);
 }
 
 .arch-lane-label {
@@ -490,6 +497,13 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .arch-node.is-live {
   border-color: rgba(61, 220, 151, 0.72);
   box-shadow: inset 0 0 0 1px rgba(61, 220, 151, 0.18);
+}
+
+.arch-node-hub {
+  border-color: rgba(124, 200, 255, 0.46);
+  box-shadow:
+    inset 0 0 0 1px rgba(124, 200, 255, 0.12),
+    0 0 18px rgba(124, 200, 255, 0.08);
 }
 
 .arch-node.is-live::before {
@@ -527,34 +541,61 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .arch-flow {
   align-self: center;
-  background: linear-gradient(90deg, transparent, var(--accent-2), transparent);
+  background: linear-gradient(90deg, transparent, rgba(124, 200, 255, 0.5), transparent);
   border-radius: 999px;
-  height: 3px;
-  opacity: 0.48;
+  height: 5px;
+  opacity: 0.72;
+  overflow: hidden;
   position: relative;
 }
 
+.arch-flow::before,
 .arch-flow::after {
-  animation: arch-pulse 1.7s linear infinite;
+  animation: arch-pulse var(--arch-flow-speed) linear infinite;
   background: var(--accent);
   border-radius: 999px;
   box-shadow: 0 0 10px rgba(61, 220, 151, 0.78);
   content: "";
-  height: 7px;
+  height: 9px;
   left: 0;
   position: absolute;
   top: -2px;
-  width: 18px;
+  width: 24px;
 }
 
+.arch-flow::before {
+  animation-delay: calc(var(--arch-flow-speed) * -0.5);
+  opacity: 0.45;
+}
+
+.arch-flow-game {
+  background: linear-gradient(90deg, transparent, rgba(124, 200, 255, 0.62), transparent);
+}
+
+.arch-flow-game::before,
 .arch-flow-game::after {
   background: var(--accent-2);
   box-shadow: 0 0 10px rgba(124, 200, 255, 0.78);
 }
 
+.arch-flow-status {
+  background: linear-gradient(90deg, transparent, rgba(255, 209, 102, 0.46), transparent);
+}
+
+.arch-flow-status::before,
 .arch-flow-status::after {
   background: var(--warning);
   box-shadow: 0 0 10px rgba(255, 209, 102, 0.65);
+}
+
+.arch-flow-ai {
+  background: linear-gradient(90deg, transparent, rgba(181, 139, 255, 0.5), transparent);
+}
+
+.arch-flow-ai::before,
+.arch-flow-ai::after {
+  background: #b58bff;
+  box-shadow: 0 0 10px rgba(181, 139, 255, 0.72);
 }
 
 .arch-flow-dashed {
@@ -562,17 +603,14 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
     repeating-linear-gradient(90deg, rgba(124, 200, 255, 0.65) 0 8px, transparent 8px 14px);
 }
 
-.architecture-map.flow-fast .arch-flow::after {
-  animation-duration: 0.85s;
+.architecture-map.flow-fast .arch-flow {
+  opacity: 0.95;
 }
 
-.architecture-map.flow-idle .arch-flow::after {
-  animation-play-state: paused;
-  opacity: 0.42;
-}
-
-.architecture-map.mode-functions [data-flow="vm-api"] {
-  opacity: 0.24;
+.architecture-map.flow-idle [data-flow="telemetry"]::before,
+.architecture-map.flow-idle [data-flow="telemetry"]::after {
+  animation-duration: 2.8s;
+  opacity: 0.28;
 }
 
 .architecture-map.mode-vm [data-flow="telemetry"] {
@@ -586,10 +624,10 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 @keyframes arch-pulse {
   from {
-    transform: translateX(0);
+    transform: translateX(-28px);
   }
   to {
-    transform: translateX(24px);
+    transform: translateX(42px);
   }
 }
 
