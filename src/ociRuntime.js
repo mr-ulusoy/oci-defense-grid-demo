@@ -252,7 +252,7 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   architecture.vmState.textContent = `${recentNodes || 1} nodes observed`;
   architecture.apiState.textContent = status?.gateway ?? "/api/*";
   architecture.functionState.textContent = functionMode ? "Events -> stream" : "Standby";
-  architecture.vmApiState.textContent = functionMode ? "Ingest fallback" : "Event ingest";
+  architecture.vmApiState.textContent = functionMode ? "Live API + fallback" : "Live API + ingest";
   architecture.opsApiState.textContent = status?.gateway ?? "Ops APIs";
   architecture.privateLbState.textContent = status?.loadBalancer ? "Private API route" : "VM API route";
   architecture.vmApiOpsState.textContent = activeVmKey ? `Active ${observedVms.get(activeVmKey)?.name ?? "VM"}` : "Status + leaderboard";
