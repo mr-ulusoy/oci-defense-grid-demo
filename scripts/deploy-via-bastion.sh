@@ -14,6 +14,7 @@ REDIS_HOST="${REDIS_HOST:-}"
 REDIS_PORT="${REDIS_PORT:-6379}"
 REDIS_TLS="${REDIS_TLS:-true}"
 LIVE_PLAYER_TTL_SECONDS="${LIVE_PLAYER_TTL_SECONDS:-60}"
+EVENT_INGEST_ROUTE_MODE="${EVENT_INGEST_ROUTE_MODE:-}"
 ADB_USER="${ADB_USER:-ADMIN}"
 ADB_PASSWORD="${ADB_PASSWORD:-}"
 ADB_CONNECT_STRING="${ADB_CONNECT_STRING:-}"
@@ -56,6 +57,11 @@ deploy_host() {
     remote_command="${remote_command}; sudo mkdir -p /etc/systemd/system/oci-defense-api.service.d"
     remote_command="${remote_command}; printf '%s\n' '[Service]' 'EnvironmentFile=-/etc/oci-defense-redis.env' | sudo tee /etc/systemd/system/oci-defense-api.service.d/redis.conf >/dev/null"
     remote_command="${remote_command}; printf '%s\n' 'REDIS_HOST=${REDIS_HOST}' 'REDIS_PORT=${REDIS_PORT}' 'REDIS_TLS=${REDIS_TLS}' 'LIVE_PLAYER_TTL_SECONDS=${LIVE_PLAYER_TTL_SECONDS}' | sudo tee /etc/oci-defense-redis.env >/dev/null"
+    remote_command="${remote_command}; sudo systemctl daemon-reload"
+  fi
+  if [[ -n "$EVENT_INGEST_ROUTE_MODE" ]]; then
+    remote_command="${remote_command}; sudo mkdir -p /etc/systemd/system/oci-defense-api.service.d"
+    remote_command="${remote_command}; printf '%s\n' '[Service]' 'Environment=EVENT_INGEST_ROUTE_MODE=${EVENT_INGEST_ROUTE_MODE}' | sudo tee /etc/systemd/system/oci-defense-api.service.d/event-ingest.conf >/dev/null"
     remote_command="${remote_command}; sudo systemctl daemon-reload"
   fi
   if [[ -n "$ADB_CONNECT_STRING" && -n "$ADB_PASSWORD" ]]; then

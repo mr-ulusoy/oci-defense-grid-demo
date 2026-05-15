@@ -282,9 +282,10 @@ DEPLOY_BRANCH=main
 REDIS_HOST=<terraform redis_live_players_endpoint>
 REDIS_PORT=6379
 REDIS_TLS=true
+EVENT_INGEST_ROUTE_MODE=oci-functions
 ```
 
-It SSHes through the bastion, discovers active private VM DNS names in the VCN, optionally writes the Redis/OCI Cache environment drop-in, pulls the latest `main`, installs production dependencies and restarts `oci-defense-api` and `nginx`. This avoids stale private IPs when autoscaling replaces instances.
+It SSHes through the bastion, discovers active private VM DNS names in the VCN, optionally writes the Redis/OCI Cache and event-ingest environment drop-ins, pulls the latest `main`, installs production dependencies and restarts `oci-defense-api` and `nginx`. This avoids stale private IPs when autoscaling replaces instances.
 
 Override any value as an environment variable if needed, for example:
 
