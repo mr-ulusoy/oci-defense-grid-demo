@@ -1765,6 +1765,9 @@ export default class GameScene extends Phaser.Scene {
         const overlay = this.add.container(0, 0).setDepth(1010).setAlpha(0);
         const height = this.scale.height;
         const extraY = Math.max(0, height - 640);
+        const answerY = Math.min(418 + extraY * 0.62, height - 320);
+        const guideY = Math.min(answerY + 70, height - 190);
+        const continueY = Math.min(594 + extraY, height - 46);
         const blocker = this.add.rectangle(240, height / 2, 480, height, 0x030814, 0.9).setInteractive();
         const title = this.add.text(240, 36, question.title, {
             fontFamily: 'monospace',
@@ -1782,29 +1785,29 @@ export default class GameScene extends Phaser.Scene {
         }).setOrigin(0.5);
         const prompt = this.add.text(48, 100, question.prompt, {
             fontFamily: 'monospace',
-            fontSize: '15px',
+            fontSize: '17px',
             fill: '#d9faff',
             stroke: '#000000',
             strokeThickness: 3,
-            lineSpacing: 4,
+            lineSpacing: 5,
             wordWrap: { width: 384 }
         });
-        const guide = this.add.image(78, 470 + extraY, 'briefing-storyteller').setDisplaySize(108, 108);
-        const statusText = this.add.text(150, 418 + extraY, 'Choose the strongest OCI answer.', {
-            fontFamily: 'monospace',
-            fontSize: '11px',
-            fill: '#d9faff',
-            stroke: '#000000',
-            strokeThickness: 2,
-            lineSpacing: 3,
-            wordWrap: { width: 290 }
-        });
-        const continueButton = this.add.rectangle(330, 594 + extraY, 176, 38, 0xc74634, 0.95)
-            .setInteractive({ useHandCursor: true })
-            .setVisible(false);
-        const continueText = this.add.text(330, 594 + extraY, 'CONTINUE', {
+        const guide = this.add.image(78, guideY, 'briefing-storyteller').setDisplaySize(124, 124);
+        const statusText = this.add.text(132, answerY, 'Choose the strongest OCI answer.', {
             fontFamily: 'monospace',
             fontSize: '14px',
+            fill: '#d9faff',
+            stroke: '#000000',
+            strokeThickness: 3,
+            lineSpacing: 5,
+            wordWrap: { width: 326 }
+        });
+        const continueButton = this.add.rectangle(330, continueY, 176, 42, 0xc74634, 0.95)
+            .setInteractive({ useHandCursor: true })
+            .setVisible(false);
+        const continueText = this.add.text(330, continueY, 'CONTINUE', {
+            fontFamily: 'monospace',
+            fontSize: '15px',
             fill: '#ffffff',
             stroke: '#000000',
             strokeThickness: 3
@@ -1817,17 +1820,18 @@ export default class GameScene extends Phaser.Scene {
         let coachPanel = null;
 
         question.options.forEach((option, index) => {
-            const y = 188 + index * 64;
-            const button = this.add.rectangle(240, y, 390, 50, 0x102432, 0.94)
+            const y = 206 + index * 76;
+            const button = this.add.rectangle(240, y, 408, 62, 0x102432, 0.94)
                 .setStrokeStyle(1, 0x2e4450)
                 .setInteractive({ useHandCursor: true });
-            const label = this.add.text(66, y - 17, `${String.fromCharCode(65 + index)}. ${option}`, {
+            const label = this.add.text(58, y - 23, `${String.fromCharCode(65 + index)}. ${option}`, {
                 fontFamily: 'monospace',
-                fontSize: '11px',
+                fontSize: '13px',
                 fill: '#ffffff',
                 stroke: '#000000',
-                strokeThickness: 2,
-                wordWrap: { width: 348 }
+                strokeThickness: 3,
+                lineSpacing: 4,
+                wordWrap: { width: 364 }
             });
 
             button.on('pointerover', () => {
