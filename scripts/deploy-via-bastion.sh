@@ -15,6 +15,10 @@ REDIS_PORT="${REDIS_PORT:-6379}"
 REDIS_TLS="${REDIS_TLS:-true}"
 LIVE_PLAYER_TTL_SECONDS="${LIVE_PLAYER_TTL_SECONDS:-60}"
 EVENT_INGEST_ROUTE_MODE="${EVENT_INGEST_ROUTE_MODE:-}"
+OCI_GENAI_ENDPOINT="${OCI_GENAI_ENDPOINT:-}"
+OCI_GENAI_BEARER_TOKEN="${OCI_GENAI_BEARER_TOKEN:-}"
+OCI_GENAI_MODEL="${OCI_GENAI_MODEL:-}"
+OCI_GENAI_COMPARTMENT_OCID="${OCI_GENAI_COMPARTMENT_OCID:-}"
 ADB_USER="${ADB_USER:-ADMIN}"
 ADB_PASSWORD="${ADB_PASSWORD:-}"
 ADB_CONNECT_STRING="${ADB_CONNECT_STRING:-}"
@@ -62,6 +66,13 @@ deploy_host() {
   if [[ -n "$EVENT_INGEST_ROUTE_MODE" ]]; then
     remote_command="${remote_command}; sudo mkdir -p /etc/systemd/system/oci-defense-api.service.d"
     remote_command="${remote_command}; printf '%s\n' '[Service]' 'Environment=EVENT_INGEST_ROUTE_MODE=${EVENT_INGEST_ROUTE_MODE}' | sudo tee /etc/systemd/system/oci-defense-api.service.d/event-ingest.conf >/dev/null"
+    remote_command="${remote_command}; sudo systemctl daemon-reload"
+  fi
+  if [[ -n "$OCI_GENAI_ENDPOINT" || -n "$OCI_GENAI_BEARER_TOKEN" || -n "$OCI_GENAI_MODEL" || -n "$OCI_GENAI_COMPARTMENT_OCID" ]]; then
+    remote_command="${remote_command}; sudo mkdir -p /etc/systemd/system/oci-defense-api.service.d"
+    remote_command="${remote_command}; printf '%s\n' '[Service]' 'EnvironmentFile=-/etc/oci-defense-genai.env' | sudo tee /etc/systemd/system/oci-defense-api.service.d/genai.conf >/dev/null"
+    remote_command="${remote_command}; printf '%s\n' 'OCI_GENAI_ENDPOINT=${OCI_GENAI_ENDPOINT}' 'OCI_GENAI_BEARER_TOKEN=${OCI_GENAI_BEARER_TOKEN}' 'OCI_GENAI_MODEL=${OCI_GENAI_MODEL}' 'OCI_GENAI_COMPARTMENT_OCID=${OCI_GENAI_COMPARTMENT_OCID}' | sudo tee /etc/oci-defense-genai.env >/dev/null"
+    remote_command="${remote_command}; sudo chmod 600 /etc/oci-defense-genai.env"
     remote_command="${remote_command}; sudo systemctl daemon-reload"
   fi
   if [[ -n "$ADB_CONNECT_STRING" && -n "$ADB_PASSWORD" ]]; then

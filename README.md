@@ -283,9 +283,12 @@ REDIS_HOST=<terraform redis_live_players_endpoint>
 REDIS_PORT=6379
 REDIS_TLS=true
 EVENT_INGEST_ROUTE_MODE=oci-functions
+OCI_GENAI_ENDPOINT=<GenAI inference endpoint>
+OCI_GENAI_MODEL=<GenAI model OCID>
+OCI_GENAI_COMPARTMENT_OCID=<compartment OCID>
 ```
 
-It SSHes through the bastion, discovers active private VM DNS names in the VCN, optionally writes the Redis/OCI Cache and event-ingest environment drop-ins, pulls the latest `main`, installs production dependencies and restarts `oci-defense-api` and `nginx`. This avoids stale private IPs when autoscaling replaces instances.
+It SSHes through the bastion, discovers active private VM DNS names in the VCN, optionally writes the Redis/OCI Cache, event-ingest and GenAI environment drop-ins, pulls the latest `main`, installs production dependencies and restarts `oci-defense-api` and `nginx`. This avoids stale private IPs when autoscaling replaces instances.
 
 Override any value as an environment variable if needed, for example:
 
