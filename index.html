@@ -47,45 +47,77 @@
 
           <section class="live-architecture" aria-label="Live OCI architecture">
             <div class="architecture-title">
-              <span>Live Architecture</span>
-              <strong id="archRouteMode">VM API fallback</strong>
+              <div>
+                <span>Live Architecture</span>
+                <strong>OCI service flow</strong>
+              </div>
+              <div class="architecture-badges" aria-label="Live architecture state">
+                <strong id="archRouteMode">VM API fallback</strong>
+                <em id="archEventRate">0.0 events/sec</em>
+              </div>
             </div>
             <div class="architecture-map" id="architectureMap">
-              <div class="arch-row arch-row-entry">
+              <div class="arch-lane arch-lane-game">
+                <div class="arch-lane-label">Game load</div>
                 <div class="arch-node arch-player" id="archPlayer">
-                  <span>Player</span>
-                  <strong>Browser</strong>
+                  <span>Player Browser</span>
+                  <strong>Playable URL</strong>
                 </div>
                 <div class="arch-flow arch-flow-game" data-flow="game"></div>
                 <div class="arch-node" id="archPublicLb">
-                  <span>Public LB</span>
-                  <strong>Game entry</strong>
+                  <span>Public Load Balancer</span>
+                  <strong id="archPublicLbState">Frontend route</strong>
                 </div>
                 <div class="arch-flow arch-flow-game" data-flow="game"></div>
                 <div class="arch-node" id="archVmFleet">
-                  <span>VM Fleet</span>
+                  <span>VM Fleet / Nginx</span>
                   <strong id="archVmState">Observed 1</strong>
                 </div>
               </div>
 
-              <div class="arch-row arch-row-api">
+              <div class="arch-lane arch-lane-telemetry">
+                <div class="arch-lane-label">Telemetry</div>
                 <div class="arch-node" id="archApiGateway">
                   <span>API Gateway</span>
                   <strong id="archApiState">/api/*</strong>
                 </div>
                 <div class="arch-flow arch-flow-api" data-flow="telemetry"></div>
                 <div class="arch-node" id="archFunctions">
-                  <span>Functions</span>
+                  <span>OCI Functions</span>
                   <strong id="archFunctionState">Events</strong>
                 </div>
                 <div class="arch-flow arch-flow-api arch-flow-dashed" data-flow="vm-api"></div>
-                <div class="arch-node" id="archPrivateLb">
-                  <span>Private LB</span>
-                  <strong>VM API</strong>
+                <div class="arch-node" id="archVmApi">
+                  <span>VM API fallback</span>
+                  <strong id="archVmApiState">Standby</strong>
                 </div>
               </div>
 
-              <div class="arch-row arch-row-services">
+              <div class="arch-lane arch-lane-ops">
+                <div class="arch-lane-label">Ops/status</div>
+                <div class="arch-node" id="archOpsBrowser">
+                  <span>Ops Browser</span>
+                  <strong>?ops=1</strong>
+                </div>
+                <div class="arch-flow arch-flow-status" data-flow="status"></div>
+                <div class="arch-node" id="archOpsApiGateway">
+                  <span>API Gateway</span>
+                  <strong id="archOpsApiState">Ops APIs</strong>
+                </div>
+                <div class="arch-flow arch-flow-status" data-flow="status"></div>
+                <div class="arch-node" id="archPrivateLb">
+                  <span>Private Load Balancer</span>
+                  <strong id="archPrivateLbState">VM API route</strong>
+                </div>
+                <div class="arch-flow arch-flow-status" data-flow="status"></div>
+                <div class="arch-node" id="archVmApiOps">
+                  <span>Node/Express API</span>
+                  <strong id="archVmApiOpsState">Status + leaderboard</strong>
+                </div>
+              </div>
+
+              <div class="arch-lane arch-lane-services">
+                <div class="arch-lane-label">Data + AI</div>
                 <div class="arch-node" id="archCache">
                   <span>OCI Cache</span>
                   <strong id="archCacheState">Live players</strong>
@@ -103,8 +135,8 @@
                   <strong id="archObjectState">Raw archive</strong>
                 </div>
                 <div class="arch-node" id="archGenai">
-                  <span>GenAI</span>
-                  <strong>Coach/Ops</strong>
+                  <span>OCI GenAI</span>
+                  <strong id="archGenaiState">Coach/Ops</strong>
                 </div>
               </div>
             </div>

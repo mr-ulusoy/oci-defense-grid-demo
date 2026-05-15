@@ -351,11 +351,13 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .live-architecture {
-  background: rgba(7, 16, 23, 0.58);
+  background:
+    linear-gradient(180deg, rgba(7, 16, 23, 0.72), rgba(5, 13, 21, 0.9)),
+    rgba(7, 16, 23, 0.58);
   border: 1px solid rgba(124, 200, 255, 0.22);
   border-radius: 8px;
   margin-top: 16px;
-  padding: 12px;
+  padding: 14px;
 }
 
 .architecture-title {
@@ -366,52 +368,115 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   margin-bottom: 10px;
 }
 
-.architecture-title span {
+.architecture-title span,
+.arch-lane-label {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
   text-transform: uppercase;
 }
 
-.architecture-title strong {
+.architecture-title strong,
+.architecture-badges strong {
+  color: var(--text);
+  display: block;
+  font-size: 0.95rem;
+  margin-top: 2px;
+}
+
+.architecture-badges {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.architecture-badges strong {
   color: var(--accent);
   font-size: 0.78rem;
   text-align: right;
 }
 
-.architecture-map {
-  display: grid;
-  gap: 8px;
+.architecture-badges em {
+  border: 1px solid rgba(124, 200, 255, 0.24);
+  border-radius: 999px;
+  color: var(--accent-2);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 800;
+  padding: 3px 8px;
 }
 
-.arch-row {
+.architecture-map {
+  display: grid;
+  gap: 9px;
+}
+
+.arch-lane {
   align-items: stretch;
   display: grid;
-  gap: 6px;
+  gap: 8px;
+  grid-template-columns: 96px minmax(112px, 1fr) 34px minmax(112px, 1fr) 34px minmax(112px, 1fr);
   min-width: 0;
 }
 
-.arch-row-entry,
-.arch-row-api {
-  grid-template-columns: minmax(78px, 1fr) 22px minmax(78px, 1fr) 22px minmax(78px, 1fr);
+.arch-lane-ops {
+  grid-template-columns:
+    96px minmax(100px, 1fr) 28px minmax(100px, 1fr) 28px minmax(100px, 1fr) 28px
+    minmax(100px, 1fr);
 }
 
-.arch-row-services {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+.arch-lane-services {
+  grid-template-columns: 96px repeat(5, minmax(94px, 1fr));
+}
+
+.arch-lane-label {
+  align-self: center;
+  color: var(--accent-2);
+  font-size: 0.68rem;
+  letter-spacing: 0;
 }
 
 .arch-node {
-  background: #0b151d;
+  background:
+    linear-gradient(180deg, rgba(15, 34, 44, 0.92), rgba(8, 18, 25, 0.96));
   border: 1px solid rgba(145, 168, 166, 0.22);
   border-radius: 7px;
   min-width: 0;
-  min-height: 54px;
+  min-height: 62px;
   padding: 8px;
+  position: relative;
+}
+
+.arch-node::before {
+  background: rgba(145, 168, 166, 0.56);
+  border-radius: 999px;
+  content: "";
+  height: 6px;
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 6px;
 }
 
 .arch-node.is-live {
   border-color: rgba(61, 220, 151, 0.72);
   box-shadow: inset 0 0 0 1px rgba(61, 220, 151, 0.18);
+}
+
+.arch-node.is-live::before {
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(61, 220, 151, 0.72);
+}
+
+.arch-node.is-busy {
+  border-color: rgba(255, 209, 102, 0.78);
+}
+
+.arch-node.is-busy::before {
+  animation: arch-node-breathe 0.75s ease-in-out infinite alternate;
+  background: var(--warning);
+  box-shadow: 0 0 12px rgba(255, 209, 102, 0.78);
 }
 
 .arch-node span {
@@ -425,9 +490,11 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .arch-node strong {
   color: var(--text);
   display: block;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
+  line-height: 1.2;
   margin-top: 4px;
   overflow-wrap: anywhere;
+  padding-right: 8px;
 }
 
 .arch-flow {
@@ -452,6 +519,16 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   width: 18px;
 }
 
+.arch-flow-game::after {
+  background: var(--accent-2);
+  box-shadow: 0 0 10px rgba(124, 200, 255, 0.78);
+}
+
+.arch-flow-status::after {
+  background: var(--warning);
+  box-shadow: 0 0 10px rgba(255, 209, 102, 0.65);
+}
+
 .arch-flow-dashed {
   background:
     repeating-linear-gradient(90deg, rgba(124, 200, 255, 0.65) 0 8px, transparent 8px 14px);
@@ -474,12 +551,28 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   opacity: 0.32;
 }
 
+.architecture-map.mode-functions #archVmApi,
+.architecture-map.mode-vm #archFunctions {
+  opacity: 0.64;
+}
+
 @keyframes arch-pulse {
   from {
     transform: translateX(0);
   }
   to {
     transform: translateX(24px);
+  }
+}
+
+@keyframes arch-node-breathe {
+  from {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.25);
   }
 }
 
@@ -912,10 +1005,13 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
     grid-template-columns: 1fr;
   }
 
-  .arch-row-entry,
-  .arch-row-api,
-  .arch-row-services {
+  .arch-lane,
+  .arch-lane-services {
     grid-template-columns: 1fr;
+  }
+
+  .arch-lane-label {
+    margin-top: 6px;
   }
 
   .arch-flow {

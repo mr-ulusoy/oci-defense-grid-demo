@@ -51,20 +51,31 @@ const elements = {
 const architecture = {
   map: document.getElementById("architectureMap"),
   routeMode: document.getElementById("archRouteMode"),
+  eventRate: document.getElementById("archEventRate"),
+  publicLbState: document.getElementById("archPublicLbState"),
   vmState: document.getElementById("archVmState"),
   apiState: document.getElementById("archApiState"),
   functionState: document.getElementById("archFunctionState"),
+  vmApiState: document.getElementById("archVmApiState"),
+  opsApiState: document.getElementById("archOpsApiState"),
+  privateLbState: document.getElementById("archPrivateLbState"),
+  vmApiOpsState: document.getElementById("archVmApiOpsState"),
   cacheState: document.getElementById("archCacheState"),
   streamState: document.getElementById("archStreamState"),
   adbState: document.getElementById("archAdbState"),
   objectState: document.getElementById("archObjectState"),
+  genaiState: document.getElementById("archGenaiState"),
   nodes: {
     player: document.getElementById("archPlayer"),
+    opsBrowser: document.getElementById("archOpsBrowser"),
+    opsApiGateway: document.getElementById("archOpsApiGateway"),
     publicLb: document.getElementById("archPublicLb"),
     vmFleet: document.getElementById("archVmFleet"),
     apiGateway: document.getElementById("archApiGateway"),
     functions: document.getElementById("archFunctions"),
+    vmApi: document.getElementById("archVmApi"),
     privateLb: document.getElementById("archPrivateLb"),
+    vmApiOps: document.getElementById("archVmApiOps"),
     cache: document.getElementById("archCache"),
     streaming: document.getElementById("archStreaming"),
     adb: document.getElementById("archAdb"),
@@ -234,20 +245,31 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   architecture.map.classList.toggle("flow-idle", eventRate <= 0.05);
 
   architecture.routeMode.textContent = functionMode ? "Functions ingest" : "VM API fallback";
-  architecture.vmState.textContent = `Observed ${recentNodes || 1}`;
+  architecture.eventRate.textContent = `${Number(eventRate).toFixed(1)} events/sec`;
+  architecture.publicLbState.textContent = status?.loadBalancer ?? "Frontend route";
+  architecture.vmState.textContent = `${recentNodes || 1} nodes observed`;
   architecture.apiState.textContent = status?.gateway ?? "/api/*";
-  architecture.functionState.textContent = functionMode ? "Active events" : "Standby";
+  architecture.functionState.textContent = functionMode ? "Ingesting events" : "Standby";
+  architecture.vmApiState.textContent = functionMode ? "Fallback ready" : "Ingesting events";
+  architecture.opsApiState.textContent = status?.gateway ?? "Ops APIs";
+  architecture.privateLbState.textContent = status?.loadBalancer ? "Private API route" : "VM API route";
+  architecture.vmApiOpsState.textContent = activeVmKey ? `Active ${observedVms.get(activeVmKey)?.name ?? "VM"}` : "Status + leaderboard";
   architecture.cacheState.textContent = cacheStatus;
   architecture.streamState.textContent = streamStatus;
   architecture.adbState.textContent = adbStatus;
   architecture.objectState.textContent = objectStatus;
+  architecture.genaiState.textContent = "Flash Lite coach";
 
   setNodeLive(architecture.nodes.player, true);
+  setNodeLive(architecture.nodes.opsBrowser, true);
+  setNodeLive(architecture.nodes.opsApiGateway, !telemetry.offline);
   setNodeLive(architecture.nodes.publicLb, !telemetry.offline);
   setNodeLive(architecture.nodes.vmFleet, recentNodes > 0);
   setNodeLive(architecture.nodes.apiGateway, !telemetry.offline);
   setNodeLive(architecture.nodes.functions, functionMode);
+  setNodeLive(architecture.nodes.vmApi, !functionMode);
   setNodeLive(architecture.nodes.privateLb, true);
+  setNodeLive(architecture.nodes.vmApiOps, recentNodes > 0);
   setNodeLive(architecture.nodes.cache, cacheStatus === "connected");
   setNodeLive(architecture.nodes.streaming, streamStatus === "connected" || eventRate > 0);
   setNodeLive(architecture.nodes.adb, eventAnalytics?.source === "autonomousDatabase" || adbStatus === "connected");
@@ -406,7 +428,12 @@ export async function askCopilot(snapshot = {}) {
   if (!isOpsView) return;
 
   elements.insight.textContent = "Analyzing live telemetry...";
-  elements.insight.textContent = await telemetry.askCopilot(snapshot);
+  architecture.nodes.genai?.classList.add("is-busy");
+  try {
+    elements.insight.textContent = await telemetry.askCopilot(snapshot);
+  } finally {
+    architecture.nodes.genai?.classList.remove("is-busy");
+  }
 }
 
 export async function askCoach(context = {}) {
