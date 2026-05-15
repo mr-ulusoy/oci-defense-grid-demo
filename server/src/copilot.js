@@ -10,7 +10,7 @@ const FALLBACK_INSIGHTS = [
 const DEFAULT_GENAI_ENDPOINT = "https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com";
 const DEFAULT_GENAI_MODEL =
   "ocid1.generativeaimodel.oc1.eu-frankfurt-1.amaaaaaask7dceyan6gecfjovk7wtgl3r65b5tmpuegfxojbp2mebjgtvhra";
-const DEFAULT_GENAI_TIMEOUT_MS = 8500;
+const DEFAULT_GENAI_TIMEOUT_MS = 25000;
 const COACH_REPLY_WORD_LIMIT = 45;
 
 const QUIZ_COACH_CONTEXT = {
