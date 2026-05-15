@@ -97,6 +97,34 @@ body.game-active .app-shell:not(.ops-visible) .game-stage {
   width: 100vw;
 }
 
+body.game-active.game-level-2 .app-shell:not(.ops-visible) .game-stage {
+  background:
+    linear-gradient(rgba(3, 8, 20, 0.34), rgba(3, 8, 20, 0.34)),
+    url("/assets/backgrounds/level2/desert-backgorund.png") center / cover no-repeat,
+    #171215;
+}
+
+body.game-active.game-level-3 .app-shell:not(.ops-visible) .game-stage {
+  background:
+    linear-gradient(rgba(3, 8, 20, 0.32), rgba(3, 8, 20, 0.32)),
+    url("/assets/backgrounds/level3/lava-background.png") center / cover no-repeat,
+    #120713;
+}
+
+body.game-active.game-level-4 .app-shell:not(.ops-visible) .game-stage {
+  background:
+    linear-gradient(rgba(3, 8, 20, 0.28), rgba(3, 8, 20, 0.28)),
+    url("/assets/backgrounds/final/starfield-back.png") center / cover no-repeat,
+    #050b14;
+}
+
+body.game-active.game-level-5 .app-shell:not(.ops-visible) .game-stage {
+  background:
+    linear-gradient(rgba(3, 8, 20, 0.24), rgba(3, 8, 20, 0.24)),
+    url("/assets/backgrounds/level5/blue-with-stars.png") center / cover no-repeat,
+    #020c19;
+}
+
 body.game-active .app-shell:not(.ops-visible) .top-strip,
 body.game-active .app-shell:not(.ops-visible) .pilot-bar {
   display: none;

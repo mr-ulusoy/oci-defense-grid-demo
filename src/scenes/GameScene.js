@@ -200,6 +200,7 @@ export default class GameScene extends Phaser.Scene {
 
         if (!document.getElementById('appShell')?.classList.contains('ops-visible')) {
             document.body.classList.add('game-active');
+            this.setMobileStageBackdrop();
         }
         window.OCI_DEFENSE_LAYOUT_CHANGED?.();
 
@@ -273,6 +274,18 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // ============== BACKGROUNDS ==============
+
+    setMobileStageBackdrop() {
+        const levelClass = `game-level-${Math.min(Math.max(this.level, 1), this.maxLevel)}`;
+        document.body.classList.remove(
+            'game-level-1',
+            'game-level-2',
+            'game-level-3',
+            'game-level-4',
+            'game-level-5'
+        );
+        document.body.classList.add(levelClass);
+    }
 
     createBackgrounds() {
         // Clear any existing background elements
