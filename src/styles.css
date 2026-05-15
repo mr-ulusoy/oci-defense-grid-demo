@@ -457,12 +457,11 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .arch-lane-telemetry {
   grid-template-columns:
-    96px minmax(94px, 1fr) 24px minmax(94px, 1fr) 24px minmax(94px, 1fr) 24px
-    minmax(94px, 1fr) 24px minmax(94px, 1fr);
+    96px minmax(110px, 0.9fr) 24px minmax(110px, 0.9fr) 58px minmax(520px, 3.1fr);
 }
 
 .arch-lane-services {
-  grid-template-columns: 96px minmax(170px, 1fr) 54px minmax(300px, 2fr);
+  grid-template-columns: 96px minmax(170px, 0.9fr) 58px minmax(390px, 2.2fr);
 }
 
 .arch-lane-label {
@@ -601,7 +600,19 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .arch-service-targets {
   display: grid;
   gap: 12px;
+  min-width: 0;
+}
+
+.arch-service-targets-two {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.arch-service-targets-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.arch-service-targets-four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .arch-fanout {
@@ -613,6 +624,10 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   height: 54px;
   opacity: 0.82;
   position: relative;
+}
+
+.arch-fanout-app {
+  height: 66px;
 }
 
 .arch-fanout::before,
@@ -1163,6 +1178,13 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
   .arch-lane,
   .arch-lane-services {
+    grid-template-columns: 1fr;
+  }
+
+  .arch-service-targets,
+  .arch-service-targets-two,
+  .arch-service-targets-three,
+  .arch-service-targets-four {
     grid-template-columns: 1fr;
   }
 

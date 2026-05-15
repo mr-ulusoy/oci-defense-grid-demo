@@ -76,10 +76,10 @@
               </div>
 
               <div class="arch-lane arch-lane-api-entry">
-                <div class="arch-lane-label">API entry</div>
+                <div class="arch-lane-label">App APIs</div>
                 <div class="arch-node" id="archApiClient">
                   <span>Player + Ops APIs</span>
-                  <strong>Events, coach, ops</strong>
+                  <strong>Coach, ops, status</strong>
                 </div>
                 <div class="arch-flow arch-flow-status" data-flow="status"></div>
                 <div class="arch-node" id="archApiGateway">
@@ -100,42 +100,55 @@
 
               <div class="arch-lane arch-lane-telemetry">
                 <div class="arch-lane-label">Event ingest</div>
+                <div class="arch-node" id="archEventApi">
+                  <span>API Gateway</span>
+                  <strong>/api/events</strong>
+                </div>
+                <div class="arch-flow arch-flow-api" data-flow="telemetry"></div>
                 <div class="arch-node" id="archFunctions">
                   <span>OCI Functions</span>
-                  <strong id="archFunctionState">Events to stream</strong>
+                  <strong id="archFunctionState">Fan-out writes</strong>
                 </div>
-                <div class="arch-flow arch-flow-api" data-flow="telemetry"></div>
-                <div class="arch-node arch-node-hub" id="archStreaming">
-                  <span>Streaming</span>
-                  <strong id="archStreamState">Event hub</strong>
-                </div>
-                <div class="arch-flow arch-flow-api" data-flow="telemetry"></div>
-                <div class="arch-node" id="archAdb">
-                  <span>ADB</span>
-                  <strong id="archAdbState">Analytics</strong>
-                </div>
-                <div class="arch-flow arch-flow-api" data-flow="telemetry"></div>
-                <div class="arch-node" id="archObjectStorage">
-                  <span>Object Storage</span>
-                  <strong id="archObjectState">Raw archive</strong>
+                <div class="arch-fanout arch-fanout-event" aria-hidden="true"></div>
+                <div class="arch-service-targets arch-service-targets-four">
+                  <div class="arch-node" id="archIngestCache">
+                    <span>OCI Cache</span>
+                    <strong id="archIngestCacheState">Live state write</strong>
+                  </div>
+                  <div class="arch-node arch-node-hub" id="archStreaming">
+                    <span>Streaming</span>
+                    <strong id="archStreamState">Durable hub</strong>
+                  </div>
+                  <div class="arch-node" id="archAdb">
+                    <span>ADB</span>
+                    <strong id="archAdbState">Curated events</strong>
+                  </div>
+                  <div class="arch-node" id="archObjectStorage">
+                    <span>Object Storage</span>
+                    <strong id="archObjectState">Raw archive</strong>
+                  </div>
                 </div>
               </div>
 
               <div class="arch-lane arch-lane-services">
-                <div class="arch-lane-label">Live state + AI</div>
+                <div class="arch-lane-label">VM App fan-out</div>
                 <div class="arch-node" id="archVmApi">
                   <span>VM App</span>
-                  <strong id="archVmApiState">Writes Cache / Calls GenAI</strong>
+                  <strong id="archVmApiState">Live APIs</strong>
                 </div>
-                <div class="arch-fanout" aria-hidden="true"></div>
-                <div class="arch-service-targets">
+                <div class="arch-fanout arch-fanout-app" aria-hidden="true"></div>
+                <div class="arch-service-targets arch-service-targets-three">
                   <div class="arch-node" id="archCache">
                     <span>OCI Cache</span>
                     <strong id="archCacheState">Live players</strong>
                   </div>
                   <div class="arch-node" id="archGenai">
                     <span>OCI GenAI</span>
-                    <strong id="archGenaiState">Coach/Ops</strong>
+                    <strong id="archGenaiState">Coach + Ops Copilot</strong>
+                  </div>
+                  <div class="arch-node" id="archAppAdb">
+                    <span>ADB</span>
+                    <strong id="archAppAdbState">Leaderboard + analytics</strong>
                   </div>
                 </div>
               </div>
