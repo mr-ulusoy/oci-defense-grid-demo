@@ -1,4 +1,5 @@
 import { askCoach, askCopilot, emitGameEvent, telemetry, updateHud } from "../ociRuntime.js";
+import { createLevelAnimations, loadLevelAssets } from "../gameAssets.js";
 
 const BRIEFINGS_BY_LEVEL = {
     1: {
@@ -189,7 +190,13 @@ export default class GameScene extends Phaser.Scene {
         this.playerStartY = 0;
     }
 
+    preload() {
+        loadLevelAssets(this, this.level);
+    }
+
     create() {
+        createLevelAnimations(this, this.level);
+
         if (!document.getElementById('appShell')?.classList.contains('ops-visible')) {
             document.body.classList.add('game-active');
         }

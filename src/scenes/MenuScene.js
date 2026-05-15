@@ -16,9 +16,9 @@ export default class MenuScene extends Phaser.Scene {
         this.music = this.sound.add('music-title', { loop: true, volume: 0.5 });
         this.music.play();
 
-        // Dynamic background with all three level backgrounds cycling
+        // Dynamic background. Later level backgrounds are lazy-loaded after launch.
         this.bgIndex = 0;
-        this.backgrounds = ['background', 'desert-bg', 'lava-bg'];
+        this.backgrounds = ['background'];
         this.bg = this.add.image(240, 320, this.backgrounds[0])
             .setDisplaySize(480, 640);
 
@@ -26,7 +26,9 @@ export default class MenuScene extends Phaser.Scene {
         this.time.addEvent({
             delay: 3000,
             callback: () => {
-                this.bgIndex = (this.bgIndex + 1) % 3;
+                if (this.backgrounds.length < 2) return;
+
+                this.bgIndex = (this.bgIndex + 1) % this.backgrounds.length;
                 this.tweens.add({
                     targets: this.bg,
                     alpha: 0,
@@ -210,8 +212,7 @@ export default class MenuScene extends Phaser.Scene {
         const enemies = [
             { key: 'enemy-small', anim: 'enemy-small-fly', scale: 2 },
             { key: 'enemy-medium', anim: 'enemy-medium-fly', scale: 2 },
-            { key: 'l2-enemy-small', anim: 'l2-enemy-small-fly', scale: 1 },
-            { key: 'l3-enemy-small', anim: 'l3-enemy-small-fly', scale: 0.3 }
+            { key: 'enemy-big', anim: 'enemy-big-fly', scale: 1.4 }
         ];
         const config = Phaser.Math.RND.pick(enemies);
 

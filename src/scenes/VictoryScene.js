@@ -1,3 +1,5 @@
+import { loadVictoryAssets } from "../gameAssets.js";
+
 export default class VictoryScene extends Phaser.Scene {
     constructor() {
         super({ key: 'VictoryScene' });
@@ -5,6 +7,10 @@ export default class VictoryScene extends Phaser.Scene {
 
     init(data) {
         this.finalScore = data.score || 0;
+    }
+
+    preload() {
+        loadVictoryAssets(this);
     }
 
     create() {
