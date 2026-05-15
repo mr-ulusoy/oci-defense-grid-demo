@@ -449,7 +449,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   min-width: 0;
 }
 
-.arch-lane-ops {
+.arch-lane-api-entry {
   grid-template-columns:
     96px minmax(100px, 1fr) 28px minmax(100px, 1fr) 28px minmax(100px, 1fr) 28px
     minmax(100px, 1fr);
@@ -462,7 +462,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .arch-lane-services {
-  grid-template-columns: 96px minmax(118px, 1fr) 28px minmax(118px, 1fr) 28px minmax(118px, 1fr);
+  grid-template-columns: 96px minmax(118px, 1fr) 38px minmax(118px, 1fr) 38px minmax(118px, 1fr);
 }
 
 .arch-lane-label {
@@ -598,6 +598,53 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   box-shadow: 0 0 10px rgba(181, 139, 255, 0.72);
 }
 
+.arch-split {
+  align-self: center;
+  height: 44px;
+  opacity: 0.82;
+  position: relative;
+}
+
+.arch-split::before,
+.arch-split::after {
+  content: "";
+  position: absolute;
+}
+
+.arch-split::before {
+  border-bottom: 3px solid rgba(255, 209, 102, 0.62);
+  border-right: 3px solid rgba(255, 209, 102, 0.62);
+  border-top: 3px solid rgba(255, 209, 102, 0.62);
+  border-radius: 0 8px 8px 0;
+  height: 30px;
+  left: 0;
+  top: 6px;
+  width: 28px;
+}
+
+.arch-split::after {
+  animation: arch-split-pulse var(--arch-flow-speed) linear infinite;
+  background: var(--warning);
+  border-radius: 999px;
+  box-shadow: 0 0 10px rgba(255, 209, 102, 0.7);
+  height: 8px;
+  left: 15px;
+  top: 18px;
+  width: 8px;
+}
+
+.arch-split-ai::before {
+  border-bottom-color: rgba(181, 139, 255, 0.64);
+  border-right-color: rgba(181, 139, 255, 0.64);
+  border-top-color: rgba(181, 139, 255, 0.64);
+}
+
+.arch-split-ai::after {
+  animation-delay: calc(var(--arch-flow-speed) * -0.35);
+  background: #b58bff;
+  box-shadow: 0 0 10px rgba(181, 139, 255, 0.72);
+}
+
 .arch-flow-dashed {
   background:
     repeating-linear-gradient(90deg, rgba(124, 200, 255, 0.65) 0 8px, transparent 8px 14px);
@@ -628,6 +675,33 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   }
   to {
     transform: translateX(42px);
+  }
+}
+
+@keyframes arch-split-pulse {
+  0% {
+    opacity: 0;
+    transform: translate(-10px, 0);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(0, -13px);
+  }
+  50% {
+    opacity: 0.7;
+    transform: translate(12px, -13px);
+  }
+  51% {
+    opacity: 0;
+    transform: translate(0, 13px);
+  }
+  75% {
+    opacity: 1;
+    transform: translate(0, 13px);
+  }
+  100% {
+    opacity: 0.7;
+    transform: translate(12px, 13px);
   }
 }
 

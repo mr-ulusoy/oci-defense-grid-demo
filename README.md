@@ -19,7 +19,7 @@ Current demo endpoints:
 - Presenter/ops URL: `http://207.127.95.12/?ops=1`
 
 The player view keeps the game clean for public visitors. The ops view adds the Cloud Ops HUD with live architecture flow, active VM, CPU, RAM, cores, disk throughput, LB/API status, latency, events/sec, live players, leaderboard level, gameplay event chips and AI insight.
-The live architecture panel shows game-load, telemetry and ops/status paths across Public LB, API Gateway, Functions, Private LB, VM App, OCI Cache, Streaming, Autonomous Database, Object Storage and OCI GenAI.
+The live architecture panel shows game-load, API entry, event ingest, and live-state/AI paths across Public LB, API Gateway, Functions, Private LB, VM App, OCI Cache, Streaming, Autonomous Database, Object Storage and OCI GenAI.
 The ops view also includes a bounded `Stress VMs` control for autoscaling demos.
 
 ## Local Run
@@ -54,11 +54,8 @@ Game API calls
         -> VM-backed Node API fallback, when function_image is empty
      -> other /api routes
         -> private OCI Load Balancer
-           -> Compute Instance Pool Node/Express API
+           -> Compute Instance Pool VM App
               -> OCI Cache live player state
-              -> OCI Streaming
-              -> Autonomous Database
-              -> Object Storage raw event archive
               -> OCI Generative AI Gemini copilot or deterministic fallback
 ```
 

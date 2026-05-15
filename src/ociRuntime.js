@@ -56,10 +56,9 @@ const architecture = {
   vmState: document.getElementById("archVmState"),
   apiState: document.getElementById("archApiState"),
   functionState: document.getElementById("archFunctionState"),
+  vmAppState: document.getElementById("archVmAppState"),
   vmApiState: document.getElementById("archVmApiState"),
-  opsApiState: document.getElementById("archOpsApiState"),
   privateLbState: document.getElementById("archPrivateLbState"),
-  vmApiOpsState: document.getElementById("archVmApiOpsState"),
   cacheState: document.getElementById("archCacheState"),
   streamState: document.getElementById("archStreamState"),
   adbState: document.getElementById("archAdbState"),
@@ -67,15 +66,14 @@ const architecture = {
   genaiState: document.getElementById("archGenaiState"),
   nodes: {
     player: document.getElementById("archPlayer"),
-    opsBrowser: document.getElementById("archOpsBrowser"),
-    opsApiGateway: document.getElementById("archOpsApiGateway"),
+    apiClient: document.getElementById("archApiClient"),
     publicLb: document.getElementById("archPublicLb"),
     vmFleet: document.getElementById("archVmFleet"),
     apiGateway: document.getElementById("archApiGateway"),
     functions: document.getElementById("archFunctions"),
+    vmApp: document.getElementById("archVmApp"),
     vmApi: document.getElementById("archVmApi"),
     privateLb: document.getElementById("archPrivateLb"),
-    vmApiOps: document.getElementById("archVmApiOps"),
     cache: document.getElementById("archCache"),
     streaming: document.getElementById("archStreaming"),
     adb: document.getElementById("archAdb"),
@@ -252,10 +250,9 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   architecture.vmState.textContent = `${recentNodes || 1} nodes observed`;
   architecture.apiState.textContent = status?.gateway ?? "/api/*";
   architecture.functionState.textContent = functionMode ? "Events -> stream" : "Standby";
-  architecture.vmApiState.textContent = functionMode ? "Live API + fallback" : "Live API + ingest";
-  architecture.opsApiState.textContent = status?.gateway ?? "Ops APIs";
-  architecture.privateLbState.textContent = status?.loadBalancer ? "Private API route" : "VM API route";
-  architecture.vmApiOpsState.textContent = activeVmKey ? `Active ${observedVms.get(activeVmKey)?.name ?? "VM"}` : "Status + leaderboard";
+  architecture.vmAppState.textContent = activeVmKey ? `Active ${observedVms.get(activeVmKey)?.name ?? "VM"}` : "Status + live APIs";
+  architecture.vmApiState.textContent = functionMode ? "Cache writes + GenAI calls" : "Cache, GenAI + ingest";
+  architecture.privateLbState.textContent = "VM App route";
   architecture.cacheState.textContent = cacheStatus === "connected" ? "Live players" : cacheStatus;
   architecture.streamState.textContent = serviceConfigured(streamStatus) ? "Durable event hub" : streamStatus;
   architecture.adbState.textContent = serviceConfigured(adbStatus) ? "Curated analytics" : adbStatus;
@@ -263,15 +260,14 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   architecture.genaiState.textContent = "Flash Lite coach";
 
   setNodeLive(architecture.nodes.player, true);
-  setNodeLive(architecture.nodes.opsBrowser, true);
-  setNodeLive(architecture.nodes.opsApiGateway, !telemetry.offline);
+  setNodeLive(architecture.nodes.apiClient, !telemetry.offline);
   setNodeLive(architecture.nodes.publicLb, !telemetry.offline);
   setNodeLive(architecture.nodes.vmFleet, recentNodes > 0);
   setNodeLive(architecture.nodes.apiGateway, !telemetry.offline);
   setNodeLive(architecture.nodes.functions, functionMode);
+  setNodeLive(architecture.nodes.vmApp, recentNodes > 0);
   setNodeLive(architecture.nodes.vmApi, !functionMode);
   setNodeLive(architecture.nodes.privateLb, true);
-  setNodeLive(architecture.nodes.vmApiOps, recentNodes > 0);
   setNodeLive(architecture.nodes.cache, cacheStatus === "connected");
   setNodeLive(architecture.nodes.streaming, serviceConfigured(streamStatus) || eventRate > 0);
   setNodeLive(architecture.nodes.adb, serviceConfigured(adbStatus));
