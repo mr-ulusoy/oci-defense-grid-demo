@@ -11,6 +11,65 @@ const DEFAULT_GENAI_ENDPOINT = "https://inference.generativeai.eu-frankfurt-1.oc
 const DEFAULT_GENAI_MODEL =
   "ocid1.generativeaimodel.oc1.eu-frankfurt-1.amaaaaaask7dceyan6gecfjovk7wtgl3r65b5tmpuegfxojbp2mebjgtvhra";
 const DEFAULT_GENAI_TIMEOUT_MS = 8500;
+const COACH_REPLY_WORD_LIMIT = 45;
+
+const QUIZ_COACH_CONTEXT = {
+  "region-fault-domains": {
+    level: 1,
+    topic: "Regions and fault domains",
+    question: "Why does this demo use one OCI region with fault-domain-aware placement?",
+    correctConcept:
+      "The selected region keeps services close to the game traffic, while fault domains reduce the chance that one physical hardware failure affects every VM.",
+    fallbackHints: [
+      "Think about distance first, then hardware separation. A region keeps the stack together; fault domains keep VMs apart physically.",
+      "The region gives the demo a repeatable home. Fault domains help avoid every VM sharing the same hardware risk."
+    ]
+  },
+  "api-lb-route": {
+    level: 2,
+    topic: "API Gateway and Load Balancer",
+    question: "Which traffic path is correct in this demo?",
+    correctConcept:
+      "The browser loads the game through the public Load Balancer, while /api/* calls go through API Gateway.",
+    fallbackHints: [
+      "Separate the two doors: the game page enters through the public Load Balancer, API calls enter through API Gateway.",
+      "Load Balancer serves the playable app. API Gateway is the controlled front door for telemetry, leaderboard and coach calls."
+    ]
+  },
+  "compute-instance-pool": {
+    level: 3,
+    topic: "Compute VMs and instance pools",
+    question: "What does the instance pool demonstrate?",
+    correctConcept:
+      "An instance pool manages multiple VMs as one fleet, attaches them to the Load Balancer and can grow or shrink with autoscaling.",
+    fallbackHints: [
+      "Look for the fleet idea. Instance pools manage many Compute VMs together instead of treating each one manually.",
+      "The pool is what makes the VM layer repeatable: launch, attach to the Load Balancer and scale as one group."
+    ]
+  },
+  "functions-cache-streaming": {
+    level: 4,
+    topic: "Functions, OCI Cache and Streaming",
+    question: "Which service keeps live player state fast?",
+    correctConcept:
+      "OCI Cache keeps live player state fast; Functions processes events and Streaming buffers durable event flow.",
+    fallbackHints: [
+      "Live state should be fast and temporary. Durable event history belongs to Streaming and storage, not the live roster.",
+      "Cache is for quick reads like active players. Functions runs code, and Streaming keeps the event flow durable."
+    ]
+  },
+  "adb-object-storage": {
+    level: 5,
+    topic: "Autonomous Database and Object Storage",
+    question: "Where do curated analytics and raw events go?",
+    correctConcept:
+      "Autonomous Database stores curated game_events and highscores; Object Storage archives raw NDJSON events.",
+    fallbackHints: [
+      "Curated rows that you query belong in Autonomous Database. Raw replay/audit files belong in Object Storage.",
+      "Think SQL for analytics and leaderboard, object archive for raw event payloads."
+    ]
+  }
+};
 
 let sdkClientPromise;
 let sdkProviderPromise;
@@ -39,6 +98,44 @@ function deterministicInsight({ snapshot, analytics, vm }) {
   }
 
   return FALLBACK_INSIGHTS[Math.floor(Math.random() * FALLBACK_INSIGHTS.length)];
+}
+
+function fallbackCoachReply(questionId, attemptCount = 0) {
+  const context = QUIZ_COACH_CONTEXT[questionId];
+  if (!context) {
+    return null;
+  }
+
+  const hints = context.fallbackHints;
+  return hints[Math.max(0, Number(attemptCount ?? 0) - 1) % hints.length];
+}
+
+function trimWords(value, limit) {
+  const words = String(value ?? "")
+    .replace(/[`*_>#]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean);
+
+  return words.slice(0, limit).join(" ");
+}
+
+function buildCoachPrompt({ context, message, attemptCount }) {
+  return [
+    "You are OCI Guide, a friendly in-game learning coach for OCI Defense Grid.",
+    "Help the player reason about the current quiz. Do not reveal the exact answer or option letter.",
+    `Return one concise hint under ${COACH_REPLY_WORD_LIMIT} words. No markdown.`,
+    `Topic: ${context.topic}`,
+    `Question: ${context.question}`,
+    `Correct concept: ${context.correctConcept}`,
+    `Attempt count: ${Number(attemptCount ?? 0)}`,
+    `Player message: ${message || "I need a hint."}`
+  ].join("\n");
+}
+
+export function getCoachQuestion(questionId) {
+  return QUIZ_COACH_CONTEXT[questionId] ?? null;
 }
 
 function buildCopilotRequest(prompt) {
@@ -251,4 +348,33 @@ export async function createCopilotInsight(context) {
   }
 
   return deterministicInsight(context);
+}
+
+export async function createCoachReply({ level, questionId, message = "", attemptCount = 0 } = {}) {
+  const context = getCoachQuestion(questionId);
+  if (!context || Number(level) !== context.level) {
+    return null;
+  }
+
+  const prompt = buildCoachPrompt({ context, message, attemptCount });
+
+  try {
+    const timeoutMs = Number(process.env.OCI_GENAI_TIMEOUT_MS ?? DEFAULT_GENAI_TIMEOUT_MS);
+    const externalReply = await withTimeout(callExternalCopilot(prompt), timeoutMs);
+    if (externalReply) {
+      return {
+        questionId,
+        reply: trimWords(externalReply, COACH_REPLY_WORD_LIMIT),
+        source: "oci-genai"
+      };
+    }
+  } catch (error) {
+    console.warn("Coach external call failed, using deterministic fallback.", error.message);
+  }
+
+  return {
+    questionId,
+    reply: fallbackCoachReply(questionId, attemptCount),
+    source: "fallback"
+  };
 }

@@ -14,7 +14,8 @@ write_files:
         apiBase: "${api_base_url}",
         telemetryIntervalMs: 1400,
         copilotIntervalMs: 12000,
-        minAppNodes: ${min_app_nodes}
+        minAppNodes: ${min_app_nodes},
+        eventIngestRouteMode: "${event_ingest_mode}"
       };
   - path: /usr/local/sbin/oci-defense-firewall.sh
     permissions: "0755"
@@ -65,6 +66,7 @@ write_files:
       Environment=OCI_GENAI_BEARER_TOKEN=${genai_bearer_token}
       Environment=OCI_GENAI_MODEL=${genai_model}
       Environment=OCI_GENAI_COMPARTMENT_OCID=${genai_compartment}
+      Environment=EVENT_INGEST_ROUTE_MODE=${event_ingest_mode}
       Environment=REDIS_HOST=${redis_host}
       Environment=REDIS_PORT=${redis_port}
       Environment=REDIS_TLS=${redis_tls}

@@ -3,7 +3,7 @@ import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
 import { randomUUID } from "node:crypto";
-import { createCopilotInsight } from "./copilot.js";
+import { createCoachReply, createCopilotInsight } from "./copilot.js";
 import { startStress, stopStress, stressStatus } from "./demoStress.js";
 import { createStore } from "./store.js";
 import { systemMetrics } from "./systemMetrics.js";
@@ -75,6 +75,7 @@ function normalizeCallsign(value) {
 export function createApp({
   store = createStore(),
   createInsight = createCopilotInsight,
+  createCoach = createCoachReply,
   stressController = { start: startStress, stop: stopStress, status: stressStatus }
 } = {}) {
   const app = express();
@@ -95,6 +96,7 @@ export function createApp({
       vm: await vmStatus(),
       sinks: await store.status(),
       stress: stressController.status(),
+      eventIngestRouteMode: process.env.EVENT_INGEST_ROUTE_MODE ?? "vm-api",
       serverTime: new Date().toISOString()
     });
   });
@@ -168,6 +170,30 @@ export function createApp({
       createdAt: new Date().toISOString()
     });
     res.json({ insight });
+  });
+
+  app.post("/api/coach", async (req, res) => {
+    const message = String(req.body?.message ?? "").trim();
+    if (message.length > 300) {
+      res.status(400).json({ error: "Coach message must be 300 characters or fewer." });
+      return;
+    }
+
+    const reply = await createCoach({
+      runId: req.body?.runId,
+      sessionId: req.body?.sessionId,
+      level: req.body?.level,
+      questionId: req.body?.questionId,
+      message,
+      attemptCount: req.body?.attemptCount
+    });
+
+    if (!reply) {
+      res.status(400).json({ error: "Unknown quiz coach context." });
+      return;
+    }
+
+    res.json(reply);
   });
 
   return app;

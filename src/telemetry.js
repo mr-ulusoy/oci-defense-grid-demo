@@ -274,4 +274,32 @@ export class OciTelemetry {
       return "Local fallback: traffic pressure is stable. Keep shields ready for the next anomaly wave.";
     }
   }
+
+  async askCoach({ level, questionId, message, attemptCount = 0 }) {
+    const payload = {
+      runId: this.runId,
+      sessionId: this.sessionId,
+      level,
+      questionId,
+      message: String(message ?? "").slice(0, 300),
+      attemptCount
+    };
+
+    try {
+      const result = await fetch(`${this.apiBase}/coach`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }).then(readJson);
+      this.offline = false;
+      return result;
+    } catch {
+      this.offline = true;
+      return {
+        questionId,
+        reply: "Local fallback: reread the mission briefing and focus on what each OCI service does in the flow.",
+        source: "fallback"
+      };
+    }
+  }
 }

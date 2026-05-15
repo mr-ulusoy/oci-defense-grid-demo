@@ -229,6 +229,64 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   width: 100% !important;
 }
 
+.game-coach-panel {
+  background: rgba(5, 13, 21, 0.94);
+  border: 1px solid rgba(124, 200, 255, 0.42);
+  border-radius: 6px;
+  bottom: 40px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  display: grid;
+  gap: 6px;
+  left: 31%;
+  padding: 9px;
+  pointer-events: auto;
+  position: absolute;
+  right: 5%;
+  z-index: 20;
+}
+
+.game-coach-title {
+  color: var(--accent-2);
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.game-coach-reply {
+  color: var(--text);
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  min-height: 44px;
+}
+
+.game-coach-row {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.game-coach-row input {
+  background: #071017;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--text);
+  font: 12px monospace;
+  min-width: 0;
+  padding: 7px;
+}
+
+.game-coach-row button {
+  border-radius: 5px;
+  font: 700 12px monospace;
+  padding: 7px 9px;
+}
+
+.game-coach-panel.is-correct {
+  border-color: rgba(61, 220, 151, 0.6);
+}
+
 .ops-panel {
   background:
     linear-gradient(180deg, rgba(16, 24, 32, 0.96), rgba(10, 17, 22, 0.96)),
@@ -265,6 +323,139 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   color: var(--muted);
   font-size: 1rem;
   margin: 10px 0 0;
+}
+
+.live-architecture {
+  background: rgba(7, 16, 23, 0.58);
+  border: 1px solid rgba(124, 200, 255, 0.22);
+  border-radius: 8px;
+  margin-top: 16px;
+  padding: 12px;
+}
+
+.architecture-title {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.architecture-title span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.architecture-title strong {
+  color: var(--accent);
+  font-size: 0.78rem;
+  text-align: right;
+}
+
+.architecture-map {
+  display: grid;
+  gap: 8px;
+}
+
+.arch-row {
+  align-items: stretch;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.arch-row-entry,
+.arch-row-api {
+  grid-template-columns: minmax(78px, 1fr) 22px minmax(78px, 1fr) 22px minmax(78px, 1fr);
+}
+
+.arch-row-services {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.arch-node {
+  background: #0b151d;
+  border: 1px solid rgba(145, 168, 166, 0.22);
+  border-radius: 7px;
+  min-width: 0;
+  min-height: 54px;
+  padding: 8px;
+}
+
+.arch-node.is-live {
+  border-color: rgba(61, 220, 151, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(61, 220, 151, 0.18);
+}
+
+.arch-node span {
+  color: var(--muted);
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.arch-node strong {
+  color: var(--text);
+  display: block;
+  font-size: 0.78rem;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.arch-flow {
+  align-self: center;
+  background: linear-gradient(90deg, transparent, var(--accent-2), transparent);
+  border-radius: 999px;
+  height: 3px;
+  opacity: 0.48;
+  position: relative;
+}
+
+.arch-flow::after {
+  animation: arch-pulse 1.7s linear infinite;
+  background: var(--accent);
+  border-radius: 999px;
+  box-shadow: 0 0 10px rgba(61, 220, 151, 0.78);
+  content: "";
+  height: 7px;
+  left: 0;
+  position: absolute;
+  top: -2px;
+  width: 18px;
+}
+
+.arch-flow-dashed {
+  background:
+    repeating-linear-gradient(90deg, rgba(124, 200, 255, 0.65) 0 8px, transparent 8px 14px);
+}
+
+.architecture-map.flow-fast .arch-flow::after {
+  animation-duration: 0.85s;
+}
+
+.architecture-map.flow-idle .arch-flow::after {
+  animation-play-state: paused;
+  opacity: 0.42;
+}
+
+.architecture-map.mode-functions [data-flow="vm-api"] {
+  opacity: 0.24;
+}
+
+.architecture-map.mode-vm [data-flow="telemetry"] {
+  opacity: 0.32;
+}
+
+@keyframes arch-pulse {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(24px);
+  }
 }
 
 .metric-grid {
@@ -696,7 +887,32 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
     grid-template-columns: 1fr;
   }
 
+  .arch-row-entry,
+  .arch-row-api,
+  .arch-row-services {
+    grid-template-columns: 1fr;
+  }
+
+  .arch-flow {
+    height: 18px;
+    margin-left: 16px;
+    width: 3px;
+  }
+
+  .arch-flow::after {
+    animation-name: arch-pulse-mobile;
+  }
+
   .game-root {
     min-height: 0;
+  }
+}
+
+@keyframes arch-pulse-mobile {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(18px);
   }
 }

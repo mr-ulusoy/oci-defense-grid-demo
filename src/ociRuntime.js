@@ -48,6 +48,31 @@ const elements = {
   refreshLeaderboard: document.getElementById("refreshLeaderboard")
 };
 
+const architecture = {
+  map: document.getElementById("architectureMap"),
+  routeMode: document.getElementById("archRouteMode"),
+  vmState: document.getElementById("archVmState"),
+  apiState: document.getElementById("archApiState"),
+  functionState: document.getElementById("archFunctionState"),
+  cacheState: document.getElementById("archCacheState"),
+  streamState: document.getElementById("archStreamState"),
+  adbState: document.getElementById("archAdbState"),
+  objectState: document.getElementById("archObjectState"),
+  nodes: {
+    player: document.getElementById("archPlayer"),
+    publicLb: document.getElementById("archPublicLb"),
+    vmFleet: document.getElementById("archVmFleet"),
+    apiGateway: document.getElementById("archApiGateway"),
+    functions: document.getElementById("archFunctions"),
+    privateLb: document.getElementById("archPrivateLb"),
+    cache: document.getElementById("archCache"),
+    streaming: document.getElementById("archStreaming"),
+    adb: document.getElementById("archAdb"),
+    objectStorage: document.getElementById("archObjectStorage"),
+    genai: document.getElementById("archGenai")
+  }
+};
+
 const SCORE_EVENT_TYPES = [
   { key: "enemy_killed", label: "Kills" },
   { key: "player_hit", label: "Hits" },
@@ -90,6 +115,7 @@ function renderStatus(status) {
   elements.disk.textContent = diskIo
     ? `${formatThroughput(diskIo.readKbps)}/${formatThroughput(diskIo.writeKbps)}`
     : "--";
+  renderArchitecture(status);
 }
 
 function renderStress(stress = {}) {
@@ -187,6 +213,50 @@ function renderEventAnalytics(analytics = {}) {
   elements.eventRate1m.textContent = formatEventsPerMinute(analytics.windows?.last1m, 1);
   elements.eventRate5m.textContent = formatEventsPerMinute(analytics.windows?.last5m, 5);
   elements.eventRate15m.textContent = formatEventsPerMinute(analytics.windows?.last15m, 15);
+  renderArchitecture(telemetry.status, analytics);
+}
+
+function renderArchitecture(status = {}, eventAnalytics = {}) {
+  if (!isOpsView || !architecture.map) return;
+
+  const routeMode = status?.eventIngestRouteMode ?? window.OCI_DEFENSE_CONFIG?.eventIngestRouteMode ?? "vm-api";
+  const functionMode = routeMode === "oci-functions";
+  const eventRate = telemetry.eventRate();
+  const recentNodes = recentVmCount();
+  const cacheStatus = status?.sinks?.redisLivePlayers ?? "memory";
+  const streamStatus = status?.sinks?.streaming ?? "memory";
+  const objectStatus = status?.sinks?.objectStorage ?? "memory";
+  const adbStatus = eventAnalytics?.source === "autonomousDatabase" ? "ADB live" : (status?.sinks?.autonomousDatabase ?? "memory");
+
+  architecture.map.classList.toggle("mode-functions", functionMode);
+  architecture.map.classList.toggle("mode-vm", !functionMode);
+  architecture.map.classList.toggle("flow-fast", eventRate >= 2);
+  architecture.map.classList.toggle("flow-idle", eventRate <= 0.05);
+
+  architecture.routeMode.textContent = functionMode ? "Functions ingest" : "VM API fallback";
+  architecture.vmState.textContent = `Observed ${recentNodes || 1}`;
+  architecture.apiState.textContent = status?.gateway ?? "/api/*";
+  architecture.functionState.textContent = functionMode ? "Active events" : "Standby";
+  architecture.cacheState.textContent = cacheStatus;
+  architecture.streamState.textContent = streamStatus;
+  architecture.adbState.textContent = adbStatus;
+  architecture.objectState.textContent = objectStatus;
+
+  setNodeLive(architecture.nodes.player, true);
+  setNodeLive(architecture.nodes.publicLb, !telemetry.offline);
+  setNodeLive(architecture.nodes.vmFleet, recentNodes > 0);
+  setNodeLive(architecture.nodes.apiGateway, !telemetry.offline);
+  setNodeLive(architecture.nodes.functions, functionMode);
+  setNodeLive(architecture.nodes.privateLb, true);
+  setNodeLive(architecture.nodes.cache, cacheStatus === "connected");
+  setNodeLive(architecture.nodes.streaming, streamStatus === "connected" || eventRate > 0);
+  setNodeLive(architecture.nodes.adb, eventAnalytics?.source === "autonomousDatabase" || adbStatus === "connected");
+  setNodeLive(architecture.nodes.objectStorage, objectStatus === "connected");
+  setNodeLive(architecture.nodes.genai, true);
+}
+
+function setNodeLive(node, live) {
+  node?.classList.toggle("is-live", Boolean(live));
 }
 
 function eventChipsHtml(eventCounts = {}) {
@@ -337,6 +407,10 @@ export async function askCopilot(snapshot = {}) {
 
   elements.insight.textContent = "Analyzing live telemetry...";
   elements.insight.textContent = await telemetry.askCopilot(snapshot);
+}
+
+export async function askCoach(context = {}) {
+  return telemetry.askCoach(context);
 }
 
 export async function startStress() {

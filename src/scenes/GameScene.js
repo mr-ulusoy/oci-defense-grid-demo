@@ -1,4 +1,4 @@
-import { askCopilot, emitGameEvent, telemetry, updateHud } from "../ociRuntime.js";
+import { askCoach, askCopilot, emitGameEvent, telemetry, updateHud } from "../ociRuntime.js";
 
 const BRIEFINGS_BY_LEVEL = {
     1: {
@@ -64,6 +64,69 @@ const BRIEFINGS_BY_LEVEL = {
     }
 };
 
+const QUIZ_BY_LEVEL = {
+    1: {
+        id: 'region-fault-domains',
+        title: 'REGION CHECK',
+        prompt: 'Why does this demo use one OCI region with fault-domain-aware placement?',
+        options: [
+            'A region keeps services close, and fault domains reduce shared hardware failure risk.',
+            'A region is only a billing label, and fault domains are used for public DNS.',
+            'Fault domains replace the Load Balancer and route all traffic directly to one VM.'
+        ],
+        correctIndex: 0,
+        explanation: 'Correct. The selected region keeps the stack close to game traffic, while fault domains help spread VMs across separate physical hardware.'
+    },
+    2: {
+        id: 'api-lb-route',
+        title: 'ROUTING CHECK',
+        prompt: 'Which traffic path is correct in this demo?',
+        options: [
+            'The game loads through the public Load Balancer, while /api/* calls go through API Gateway.',
+            'All browser and API traffic bypasses API Gateway and talks directly to every VM.',
+            'Object Storage serves the live game and sends player controls to the Load Balancer.'
+        ],
+        correctIndex: 0,
+        explanation: 'Correct. Public LB is the game entry point; API Gateway is the controlled front door for telemetry, leaderboard and coach calls.'
+    },
+    3: {
+        id: 'compute-instance-pool',
+        title: 'COMPUTE CHECK',
+        prompt: 'What does the instance pool demonstrate?',
+        options: [
+            'Multiple VMs managed as one fleet, attached to the Load Balancer and able to scale.',
+            'One permanent VM that manually stores every raw event on local disk.',
+            'A database feature that replaces Compute when player traffic grows.'
+        ],
+        correctIndex: 0,
+        explanation: 'Correct. The pool treats multiple VMs as one fleet, so the demo can show health, failover and autoscaling.'
+    },
+    4: {
+        id: 'functions-cache-streaming',
+        title: 'EVENT FLOW CHECK',
+        prompt: 'Which service keeps live player state fast?',
+        options: [
+            'OCI Cache keeps live player state fast; Functions processes events and Streaming buffers event flow.',
+            'Streaming stores only the final high score, while Cache archives all raw payload files.',
+            'Functions is the long-term SQL database for leaderboard analytics.'
+        ],
+        correctIndex: 0,
+        explanation: 'Correct. Cache is the fast live-state layer, Functions handles event code, and Streaming keeps telemetry durable and decoupled.'
+    },
+    5: {
+        id: 'adb-object-storage',
+        title: 'DATA CHECK',
+        prompt: 'Where do curated analytics and raw events go?',
+        options: [
+            'Autonomous Database stores game_events and highscores; Object Storage archives raw NDJSON events.',
+            'Object Storage runs SQL analytics, while Autonomous Database stores only background images.',
+            'Both curated analytics and raw event archives are kept only in browser memory.'
+        ],
+        correctIndex: 0,
+        explanation: 'Correct. ADB is the queryable source of truth; Object Storage keeps durable raw event archives.'
+    }
+};
+
 export default class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
@@ -83,7 +146,7 @@ export default class GameScene extends Phaser.Scene {
         this.waveInProgress = false;
 
         // Player stats
-        this.lives = 3;
+        this.lives = data.lives ?? 3;
         this.maxHealth = 100;
         this.health = this.maxHealth;
         this.score = data.score || 0;
@@ -173,10 +236,8 @@ export default class GameScene extends Phaser.Scene {
         this.music = this.sound.add(musicKey, { loop: true, volume: 0.4 });
         this.music.play();
 
-        // Show level intro then start
-        this.showLevelIntro();
-        updateHud(this.snapshot());
-        this.sendTelemetry('heartbeat');
+        // Show the OCI briefing first, then start the level.
+        this.startLevelFlow();
     }
 
     isFinalLevel() {
@@ -185,6 +246,22 @@ export default class GameScene extends Phaser.Scene {
 
     usesFinalAssetStyle() {
         return this.level >= 4;
+    }
+
+    startLevelFlow() {
+        const beginGameplay = () => {
+            this.restoreStageAfterOverlay();
+            updateHud(this.snapshot());
+            this.sendTelemetry('heartbeat');
+            this.showLevelIntro();
+        };
+
+        if (BRIEFINGS_BY_LEVEL[this.level]) {
+            this.showEducationOverlay(this.level, beginGameplay);
+            return;
+        }
+
+        beginGameplay();
     }
 
     // ============== BACKGROUNDS ==============
@@ -354,7 +431,8 @@ export default class GameScene extends Phaser.Scene {
                         level: this.level + 1,
                         score: this.score,
                         weaponLevel: this.weaponLevel,
-                        callsign: this.callsign
+                        callsign: this.callsign,
+                        lives: this.lives
                     });
                 }
             }
@@ -1311,11 +1389,19 @@ export default class GameScene extends Phaser.Scene {
             this.healthBarBg,
             this.healthBar,
             this.healthBorder,
-            this.oracleLogo,
-            this.bossHealthContainer
+            this.oracleLogo
         ].forEach(item => {
             if (item) item.setVisible(visible);
         });
+
+        if (this.bossHealthContainer) {
+            this.bossHealthContainer.setVisible(
+                visible &&
+                this.bossActive &&
+                this.boss &&
+                this.boss.movementPhase === 'active'
+            );
+        }
     }
 
     clearStageForBriefing() {
@@ -1356,6 +1442,17 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
+    restoreStageAfterOverlay() {
+        this.setGameplayUiVisible(true);
+        this.educationOverlayActive = false;
+
+        if (this.player) {
+            this.player.setVisible(true);
+            this.player.setVelocity(0, 0);
+            if (this.player.body) this.player.body.enable = true;
+        }
+    }
+
     showEducationOverlay(level, onDone) {
         const briefing = BRIEFINGS_BY_LEVEL[level];
         if (!briefing) {
@@ -1368,6 +1465,7 @@ export default class GameScene extends Phaser.Scene {
 
         const overlay = this.add.container(0, 0).setDepth(1000).setAlpha(0);
         let finished = false;
+        let briefingReady = false;
         const blocker = this.add.rectangle(240, 320, 480, 640, 0x030814, 0.82)
             .setInteractive();
         const linearTextureFilter = Phaser.Textures?.FilterMode?.LINEAR;
@@ -1416,15 +1514,24 @@ export default class GameScene extends Phaser.Scene {
             lineSpacing: 5,
             wordWrap: { width: 288 }
         }).setMask(textMask);
-        const continueButton = this.add.rectangle(85, 612, 136, 34, 0xc74634, 0.95)
+        const replayButton = this.add.rectangle(154, 612, 116, 34, 0x12384a, 0.95)
             .setInteractive({ useHandCursor: true });
-        const continueText = this.add.text(85, 612, 'CONTINUE', {
+        const replayText = this.add.text(154, 612, 'REPLAY', {
+            fontFamily: 'monospace',
+            fontSize: '13px',
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(0.5);
+        const continueButton = this.add.rectangle(344, 612, 136, 34, 0x4a4a4a, 0.72)
+            .setInteractive({ useHandCursor: true });
+        const continueText = this.add.text(344, 612, 'CONTINUE', {
             fontFamily: 'monospace',
             fontSize: '14px',
             fill: '#ffffff',
             stroke: '#000000',
             strokeThickness: 3
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setAlpha(0.55);
 
         overlay.add([
             blocker,
@@ -1436,6 +1543,8 @@ export default class GameScene extends Phaser.Scene {
             nameplate,
             guideLabel,
             bodyText,
+            replayButton,
+            replayText,
             continueButton,
             continueText
         ]);
@@ -1446,17 +1555,35 @@ export default class GameScene extends Phaser.Scene {
             duration: 450,
             ease: 'Power2'
         });
-        const scrollTween = this.tweens.add({
-            targets: bodyText,
-            y: 274 - bodyText.height,
-            duration: briefing.durationMs,
-            ease: 'Linear'
-        });
+        let scrollTween = null;
+
+        const setContinueReady = (ready) => {
+            briefingReady = ready;
+            continueButton.setFillStyle(ready ? 0xc74634 : 0x4a4a4a, ready ? 0.95 : 0.72);
+            continueText.setAlpha(ready ? 1 : 0.55);
+        };
+
+        const startScroll = () => {
+            if (scrollTween) scrollTween.stop();
+            bodyText.setY(562);
+            setContinueReady(false);
+            scrollTween = this.tweens.add({
+                targets: bodyText,
+                y: 274 - bodyText.height,
+                duration: briefing.durationMs,
+                ease: 'Linear',
+                onComplete: () => setContinueReady(true)
+            });
+        };
+
+        startScroll();
 
         const finishBriefing = () => {
-            if (finished) return;
+            if (finished || !briefingReady) return;
             finished = true;
-            scrollTween.stop();
+            if (scrollTween) scrollTween.stop();
+            this.input.keyboard.off('keydown-SPACE', handleBriefingKey);
+            this.input.keyboard.off('keydown-ENTER', handleBriefingKey);
             this.tweens.add({
                 targets: overlay,
                 alpha: 0,
@@ -1470,11 +1597,261 @@ export default class GameScene extends Phaser.Scene {
             });
         };
 
+        const handleBriefingKey = () => finishBriefing();
+        continueButton.on('pointerover', () => {
+            if (briefingReady) continueButton.setFillStyle(0xf15d4a, 1);
+        });
+        continueButton.on('pointerout', () => {
+            continueButton.setFillStyle(briefingReady ? 0xc74634 : 0x4a4a4a, briefingReady ? 0.95 : 0.72);
+        });
+        continueButton.on('pointerdown', finishBriefing);
+        replayButton.on('pointerover', () => replayButton.setFillStyle(0x1c536d, 1));
+        replayButton.on('pointerout', () => replayButton.setFillStyle(0x12384a, 0.95));
+        replayButton.on('pointerdown', startScroll);
+        this.input.keyboard.on('keydown-SPACE', handleBriefingKey);
+        this.input.keyboard.on('keydown-ENTER', handleBriefingKey);
+    }
+
+    createCoachPanel(question, statusText) {
+        const root = document.getElementById('gameRoot');
+        if (!root) return null;
+
+        const panel = document.createElement('div');
+        panel.className = 'game-coach-panel';
+        panel.innerHTML = `
+            <div class="game-coach-title">OCI Guide</div>
+            <div class="game-coach-reply" data-coach-reply>Pick an answer, or ask for a hint.</div>
+            <div class="game-coach-row">
+                <input data-coach-input maxlength="300" placeholder="Ask for a hint..." />
+                <button type="button" data-coach-send>Ask</button>
+            </div>
+        `;
+        root.appendChild(panel);
+
+        const reply = panel.querySelector('[data-coach-reply]');
+        const input = panel.querySelector('[data-coach-input]');
+        const send = panel.querySelector('[data-coach-send]');
+        let busy = false;
+        let destroyed = false;
+        const keyboard = this.input?.keyboard;
+        let keyboardWasEnabled = keyboard?.enabled ?? true;
+        const stopGameInput = (event) => {
+            event.stopPropagation();
+        };
+        const pauseGameKeyboard = () => {
+            keyboardWasEnabled = keyboard?.enabled ?? true;
+            if (keyboard) keyboard.enabled = false;
+        };
+        const resumeGameKeyboard = () => {
+            if (keyboard) keyboard.enabled = keyboardWasEnabled;
+        };
+        const stopTypingFromReachingGame = (event) => {
+            event.stopPropagation();
+        };
+        const submitCoachQuestion = () => {
+            if (busy) return;
+            const message = input.value.trim() || 'Can you give me a hint?';
+            input.value = '';
+            void ask(message, this.quizAttemptCount);
+        };
+        const handleCoachSubmit = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            submitCoachQuestion();
+        };
+
+        const ask = async (message, attemptCount) => {
+            if (busy) return;
+            busy = true;
+            send.disabled = true;
+            reply.textContent = 'OCI Guide is thinking...';
+            statusText.setText('OCI GUIDE IS THINKING...');
+
+            const result = await askCoach({
+                level: this.level,
+                questionId: question.id,
+                message,
+                attemptCount
+            });
+            if (destroyed) return;
+            reply.textContent = result.reply;
+            statusText.setText(result.reply.toUpperCase());
+            busy = false;
+            send.disabled = false;
+            input.focus();
+        };
+
+        panel.addEventListener('pointerdown', stopGameInput);
+        panel.addEventListener('mousedown', stopGameInput);
+        panel.addEventListener('touchstart', stopGameInput, { passive: true });
+        input.addEventListener('focus', () => {
+            pauseGameKeyboard();
+        });
+        input.addEventListener('blur', () => {
+            resumeGameKeyboard();
+        });
+        send.addEventListener('pointerdown', handleCoachSubmit);
+        send.addEventListener('mousedown', handleCoachSubmit);
+        send.addEventListener('touchend', handleCoachSubmit);
+        send.addEventListener('click', handleCoachSubmit);
+        ['keydown', 'keyup', 'keypress'].forEach((eventName) => {
+            input.addEventListener(eventName, stopTypingFromReachingGame, true);
+            input.addEventListener(eventName, stopTypingFromReachingGame);
+        });
+        input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                submitCoachQuestion();
+            }
+        });
+
+        return {
+            element: panel,
+            ask,
+            destroy() {
+                destroyed = true;
+                resumeGameKeyboard();
+                panel.remove();
+            }
+        };
+    }
+
+    showQuizOverlay(level, onDone) {
+        const question = QUIZ_BY_LEVEL[level];
+        if (!question) {
+            onDone();
+            return;
+        }
+
+        this.educationOverlayActive = true;
+        this.quizAttemptCount = 0;
+        this.clearStageForBriefing();
+
+        const overlay = this.add.container(0, 0).setDepth(1010).setAlpha(0);
+        const blocker = this.add.rectangle(240, 320, 480, 640, 0x030814, 0.9).setInteractive();
+        const title = this.add.text(240, 36, question.title, {
+            fontFamily: 'monospace',
+            fontSize: '24px',
+            fill: '#ffffff',
+            stroke: '#062031',
+            strokeThickness: 5
+        }).setOrigin(0.5);
+        const subtitle = this.add.text(240, 66, 'UNLOCK NEXT LEVEL', {
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            fill: '#7cc8ff',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(0.5);
+        const prompt = this.add.text(48, 100, question.prompt, {
+            fontFamily: 'monospace',
+            fontSize: '15px',
+            fill: '#d9faff',
+            stroke: '#000000',
+            strokeThickness: 3,
+            lineSpacing: 4,
+            wordWrap: { width: 384 }
+        });
+        const guide = this.add.image(78, 470, 'briefing-storyteller').setDisplaySize(108, 108);
+        const statusText = this.add.text(150, 418, 'Choose the strongest OCI answer.', {
+            fontFamily: 'monospace',
+            fontSize: '11px',
+            fill: '#d9faff',
+            stroke: '#000000',
+            strokeThickness: 2,
+            lineSpacing: 3,
+            wordWrap: { width: 290 }
+        });
+        const continueButton = this.add.rectangle(330, 594, 176, 38, 0xc74634, 0.95)
+            .setInteractive({ useHandCursor: true })
+            .setVisible(false);
+        const continueText = this.add.text(330, 594, 'CONTINUE', {
+            fontFamily: 'monospace',
+            fontSize: '14px',
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(0.5).setVisible(false);
+
+        overlay.add([blocker, title, subtitle, prompt, guide, statusText, continueButton, continueText]);
+
+        let finished = false;
+        let correct = false;
+        let coachPanel = null;
+
+        question.options.forEach((option, index) => {
+            const y = 188 + index * 64;
+            const button = this.add.rectangle(240, y, 390, 50, 0x102432, 0.94)
+                .setStrokeStyle(1, 0x2e4450)
+                .setInteractive({ useHandCursor: true });
+            const label = this.add.text(66, y - 17, `${String.fromCharCode(65 + index)}. ${option}`, {
+                fontFamily: 'monospace',
+                fontSize: '11px',
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 2,
+                wordWrap: { width: 348 }
+            });
+
+            button.on('pointerover', () => {
+                if (!correct) button.setFillStyle(0x17384b, 1);
+            });
+            button.on('pointerout', () => {
+                if (!correct) button.setFillStyle(0x102432, 0.94);
+            });
+            button.on('pointerdown', () => {
+                if (correct) return;
+                this.quizAttemptCount++;
+
+                if (index === question.correctIndex) {
+                    correct = true;
+                    button.setFillStyle(0x1c6f4a, 1);
+                    button.setStrokeStyle(2, 0x3ddc97);
+                    statusText.setText(question.explanation);
+                    continueButton.setVisible(true);
+                    continueText.setVisible(true);
+                    coachPanel?.destroy();
+                    coachPanel = null;
+                    return;
+                }
+
+                button.setFillStyle(0x5a1e24, 1);
+                button.setStrokeStyle(2, 0xff6b6b);
+                statusText.setText('Not quite. Ask OCI Guide for a hint, then try again.');
+                coachPanel ??= this.createCoachPanel(question, statusText);
+                void coachPanel?.ask(`I chose ${String.fromCharCode(65 + index)}. Give me a hint without revealing the answer.`, this.quizAttemptCount);
+            });
+
+            overlay.add([button, label]);
+        });
+
+        const finishQuiz = () => {
+            if (finished || !correct) return;
+            finished = true;
+            coachPanel?.destroy();
+            this.tweens.add({
+                targets: overlay,
+                alpha: 0,
+                duration: 420,
+                ease: 'Power2',
+                onComplete: () => {
+                    overlay.destroy(true);
+                    this.educationOverlayActive = false;
+                    onDone();
+                }
+            });
+        };
+
         continueButton.on('pointerover', () => continueButton.setFillStyle(0xf15d4a, 1));
         continueButton.on('pointerout', () => continueButton.setFillStyle(0xc74634, 0.95));
-        continueButton.on('pointerdown', finishBriefing);
-        this.input.keyboard.once('keydown-SPACE', finishBriefing);
-        this.input.keyboard.once('keydown-ENTER', finishBriefing);
+        continueButton.on('pointerdown', finishQuiz);
+
+        this.tweens.add({
+            targets: overlay,
+            alpha: 1,
+            duration: 450,
+            ease: 'Power2'
+        });
     }
 
     goToNextStage(showLevelComplete = true) {
@@ -1492,7 +1869,8 @@ export default class GameScene extends Phaser.Scene {
                 level: this.level + 1,
                 score: this.score,
                 weaponLevel: this.weaponLevel,
-                callsign: this.callsign
+                callsign: this.callsign,
+                lives: this.lives
             });
         };
 
@@ -1515,8 +1893,8 @@ export default class GameScene extends Phaser.Scene {
             localStorage.setItem('bestLevel', this.level);
         }
 
-        if (BRIEFINGS_BY_LEVEL[this.level]) {
-            this.showEducationOverlay(this.level, () => this.goToNextStage(false));
+        if (QUIZ_BY_LEVEL[this.level]) {
+            this.showQuizOverlay(this.level, () => this.goToNextStage(false));
             return;
         }
 

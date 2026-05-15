@@ -33,6 +33,7 @@ test("status endpoint returns VM identity", async () => {
   assert.equal(typeof body.vm.metrics.ramPercent, "number");
   assert.equal(typeof body.vm.metrics.diskIo.readKbps, "number");
   assert.equal(typeof body.vm.metrics.diskIo.writeKbps, "number");
+  assert.equal(body.eventIngestRouteMode, "vm-api");
 });
 
 test("events endpoint accepts valid telemetry batch", async () => {
@@ -306,4 +307,62 @@ test("copilot endpoint accepts ops callers", async () => {
 
   assert.equal(response.status, 200);
   assert.equal(body.insight, "Ops insight");
+});
+
+test("coach endpoint accepts valid quiz context", async () => {
+  const app = createApp({
+    createCoach: async ({ questionId }) => ({
+      questionId,
+      reply: "Think about the path for game pages separately from API calls.",
+      source: "fallback"
+    })
+  });
+  const { response, body } = await request(app, "/api/coach", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      runId: "run-coach",
+      sessionId: "session-coach",
+      level: 2,
+      questionId: "api-lb-route",
+      message: "Can I get a hint?",
+      attemptCount: 1
+    })
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(body.questionId, "api-lb-route");
+  assert.equal(body.source, "fallback");
+});
+
+test("coach endpoint rejects unknown quiz context", async () => {
+  const app = createApp();
+  const { response, body } = await request(app, "/api/coach", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      level: 2,
+      questionId: "not-a-real-question",
+      message: "Help"
+    })
+  });
+
+  assert.equal(response.status, 400);
+  assert.equal(body.error, "Unknown quiz coach context.");
+});
+
+test("coach endpoint rejects overlong messages", async () => {
+  const app = createApp();
+  const { response, body } = await request(app, "/api/coach", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      level: 2,
+      questionId: "api-lb-route",
+      message: "x".repeat(301)
+    })
+  });
+
+  assert.equal(response.status, 400);
+  assert.equal(body.error, "Coach message must be 300 characters or fewer.");
 });

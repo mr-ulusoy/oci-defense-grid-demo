@@ -99,10 +99,12 @@ GET /api/analytics/events
 GET /api/stress
 POST /api/stress
 POST /api/copilot
+POST /api/coach
 ```
 
 `POST /api/copilot` is for the presenter/ops view only. The browser sends it only when `?ops=1` is active, and the API requires `"ops": true` in the JSON body.
 `POST /api/stress` follows the same ops-only pattern and starts short, bounded CPU load on VM API backends so autoscaling can be demonstrated without real player volume.
+`POST /api/coach` is the player-facing OCI Guide helper used during level-unlock quizzes. It accepts a known `level/questionId`, a short player message and returns a guarded hint from OCI GenAI or deterministic fallback.
 
 Telemetry events use this envelope:
 
@@ -300,15 +302,17 @@ instance_memory_gbs = 8
 
 The game now runs through 5 levels. Level 1 is space, level 2 is desert, level 3 is lava, level 4 is star-fighter overdrive, and level 5 is the new blue nebula final stage. Level 5 has been tuned down for a customer-demo finish: three waves, fewer heavy enemies and a calmer final boss.
 
-After each boss, an in-game OCI education briefing appears inside the game scene:
+Each level starts with an in-game OCI education briefing inside the game scene:
 
-| After level | Briefing | What it teaches |
+| Level | Briefing | What it teaches |
 | --- | --- | --- |
 | 1 | Regions and Fault Domains | The stack deploys into one selected OCI region through Terraform, with VCN public/private subnets and fault-domain-aware VM placement. |
 | 2 | API Gateway and Load Balancer | The browser loads the game through the public Load Balancer, while `/api/*` calls go through API Gateway. |
 | 3 | Compute VMs and Instance Pools | Flexible VM shapes, private app fleet, instance pools and autoscaling. |
 | 4 | Functions, Cache and Streaming | Serverless event handling, OCI Cache live state and durable streaming telemetry. |
 | 5 | ADB and Object Storage | Autonomous Database as source of truth and Object Storage as durable raw event archive. |
+
+Each level now starts with its briefing. After the boss, the player answers one quiz question to unlock the next level. Wrong answers open OCI Guide for a short AI/fallback hint; correct answers show an explanation and a Continue button.
 
 OCI Cache is enabled for the live player list:
 

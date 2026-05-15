@@ -47,6 +47,7 @@ locals {
     genai_bearer_token = var.oci_genai_bearer_token
     genai_model        = var.oci_genai_model
     genai_compartment  = coalesce(var.oci_genai_compartment_ocid, var.compartment_ocid)
+    event_ingest_mode  = local.function_ingest_enabled ? "oci-functions" : "vm-api"
     redis_host         = local.redis_host
     redis_port         = local.redis_port
     redis_tls          = local.redis_tls
@@ -571,6 +572,15 @@ resource "oci_apigateway_deployment" "demo" {
       backend {
         type = "HTTP_BACKEND"
         url  = "http://${local.api_lb_ip}:3000/api/copilot"
+      }
+    }
+
+    routes {
+      path    = "/api/coach"
+      methods = ["POST", "OPTIONS"]
+      backend {
+        type = "HTTP_BACKEND"
+        url  = "http://${local.api_lb_ip}:3000/api/coach"
       }
     }
   }

@@ -35,6 +35,71 @@
           <span class="eyebrow">Cloud Ops HUD</span>
           <h2>Region Defense</h2>
           <p>Live routing, telemetry and fleet state</p>
+
+          <section class="live-architecture" aria-label="Live OCI architecture">
+            <div class="architecture-title">
+              <span>Live Architecture</span>
+              <strong id="archRouteMode">VM API fallback</strong>
+            </div>
+            <div class="architecture-map" id="architectureMap">
+              <div class="arch-row arch-row-entry">
+                <div class="arch-node arch-player" id="archPlayer">
+                  <span>Player</span>
+                  <strong>Browser</strong>
+                </div>
+                <div class="arch-flow arch-flow-game" data-flow="game"></div>
+                <div class="arch-node" id="archPublicLb">
+                  <span>Public LB</span>
+                  <strong>Game entry</strong>
+                </div>
+                <div class="arch-flow arch-flow-game" data-flow="game"></div>
+                <div class="arch-node" id="archVmFleet">
+                  <span>VM Fleet</span>
+                  <strong id="archVmState">Observed 1</strong>
+                </div>
+              </div>
+
+              <div class="arch-row arch-row-api">
+                <div class="arch-node" id="archApiGateway">
+                  <span>API Gateway</span>
+                  <strong id="archApiState">/api/*</strong>
+                </div>
+                <div class="arch-flow arch-flow-api" data-flow="telemetry"></div>
+                <div class="arch-node" id="archFunctions">
+                  <span>Functions</span>
+                  <strong id="archFunctionState">Events</strong>
+                </div>
+                <div class="arch-flow arch-flow-api arch-flow-dashed" data-flow="vm-api"></div>
+                <div class="arch-node" id="archPrivateLb">
+                  <span>Private LB</span>
+                  <strong>VM API</strong>
+                </div>
+              </div>
+
+              <div class="arch-row arch-row-services">
+                <div class="arch-node" id="archCache">
+                  <span>OCI Cache</span>
+                  <strong id="archCacheState">Live players</strong>
+                </div>
+                <div class="arch-node" id="archStreaming">
+                  <span>Streaming</span>
+                  <strong id="archStreamState">Events</strong>
+                </div>
+                <div class="arch-node" id="archAdb">
+                  <span>ADB</span>
+                  <strong id="archAdbState">Analytics</strong>
+                </div>
+                <div class="arch-node" id="archObjectStorage">
+                  <span>Object Storage</span>
+                  <strong id="archObjectState">Raw archive</strong>
+                </div>
+                <div class="arch-node" id="archGenai">
+                  <span>GenAI</span>
+                  <strong>Coach/Ops</strong>
+                </div>
+              </div>
+            </div>
+          </section>
         </header>
 
         <section class="metric-grid">
