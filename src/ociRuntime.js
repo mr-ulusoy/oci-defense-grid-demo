@@ -251,7 +251,7 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   architecture.apiState.textContent = status?.gateway ?? "/api/*";
   architecture.functionState.textContent = functionMode ? "Events -> stream" : "Standby";
   architecture.vmAppState.textContent = activeVmKey ? `Active ${observedVms.get(activeVmKey)?.name ?? "VM"}` : "Status + live APIs";
-  architecture.vmApiState.textContent = functionMode ? "Cache writes + GenAI calls" : "Cache, GenAI + ingest";
+  architecture.vmApiState.textContent = "Writes Cache / Calls GenAI";
   architecture.privateLbState.textContent = "VM App route";
   architecture.cacheState.textContent = cacheStatus === "connected" ? "Live players" : cacheStatus;
   architecture.streamState.textContent = serviceConfigured(streamStatus) ? "Durable event hub" : streamStatus;
@@ -266,7 +266,7 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   setNodeLive(architecture.nodes.apiGateway, !telemetry.offline);
   setNodeLive(architecture.nodes.functions, functionMode);
   setNodeLive(architecture.nodes.vmApp, recentNodes > 0);
-  setNodeLive(architecture.nodes.vmApi, !functionMode);
+  setNodeLive(architecture.nodes.vmApi, recentNodes > 0);
   setNodeLive(architecture.nodes.privateLb, true);
   setNodeLive(architecture.nodes.cache, cacheStatus === "connected");
   setNodeLive(architecture.nodes.streaming, serviceConfigured(streamStatus) || eventRate > 0);

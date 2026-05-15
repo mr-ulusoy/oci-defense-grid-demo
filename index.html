@@ -79,7 +79,7 @@
                 <div class="arch-lane-label">API entry</div>
                 <div class="arch-node" id="archApiClient">
                   <span>Player + Ops APIs</span>
-                  <strong>/api/* calls</strong>
+                  <strong>Events, coach, ops</strong>
                 </div>
                 <div class="arch-flow arch-flow-status" data-flow="status"></div>
                 <div class="arch-node" id="archApiGateway">
@@ -125,17 +125,18 @@
                 <div class="arch-lane-label">Live state + AI</div>
                 <div class="arch-node" id="archVmApi">
                   <span>VM App</span>
-                  <strong id="archVmApiState">Writes + requests</strong>
+                  <strong id="archVmApiState">Writes Cache / Calls GenAI</strong>
                 </div>
-                <div class="arch-split arch-split-state" aria-hidden="true"></div>
-                <div class="arch-node" id="archCache">
-                  <span>OCI Cache</span>
-                  <strong id="archCacheState">Live players</strong>
-                </div>
-                <div class="arch-split arch-split-ai" aria-hidden="true"></div>
-                <div class="arch-node" id="archGenai">
-                  <span>OCI GenAI</span>
-                  <strong id="archGenaiState">Coach/Ops</strong>
+                <div class="arch-fanout" aria-hidden="true"></div>
+                <div class="arch-service-targets">
+                  <div class="arch-node" id="archCache">
+                    <span>OCI Cache</span>
+                    <strong id="archCacheState">Live players</strong>
+                  </div>
+                  <div class="arch-node" id="archGenai">
+                    <span>OCI GenAI</span>
+                    <strong id="archGenaiState">Coach/Ops</strong>
+                  </div>
                 </div>
               </div>
             </div>
