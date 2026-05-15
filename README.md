@@ -218,34 +218,42 @@ By default `function_image = ""`, so Terraform keeps `/api/events` routed to the
 
 The Function source in this repo accepts the same telemetry event types as the VM API, including `extra_life`.
 
-Previously shared image:
+Current tested image in Stockholm:
 
 ```hcl
-function_image = "arn.ocir.io/fr9qm01oq44x/oci-defense-grid/event-ingest:0.1.0"
+function_image = "ocir.eu-stockholm-1.oci.oraclecloud.com/fr9qm01oq44x/oci-defense-grid/event-ingest:0.1.1"
 ```
 
-If that OCIR image was built before the latest telemetry changes, rebuild and push a new private tag before routing `/api/events` to OCI Functions. Until then, keep the VM-backed `/api/events` fallback enabled if you need `extra_life` analytics.
+OCI Functions requires the image to be in the same region's OCIR as the Function. Keep one known-good source image, then publish it into the target demo region before running Terraform.
 
-Recommended tfvars:
+Recommended tfvars pattern:
 
 ```hcl
-function_image = "arn.ocir.io/fr9qm01oq44x/oci-defense-grid/event-ingest:<current-tag>"
+function_image = "ocir.<region>.oci.oraclecloud.com/<namespace>/oci-defense-grid/event-ingest:<tag>"
 ```
 
 The Function also uses `ADB_USER`, `ADB_PASSWORD`, `ADB_CONNECT_STRING`, `REDIS_HOST`, `REDIS_PORT` and `REDIS_TLS` from Terraform function config. Redis does not need IAM. ADB writes use the configured database credentials and the existing ADB network allow-list.
 
-Build example for a new image:
+Build example for a new source image:
 
 ```bash
 cd functions/event-ingest
-docker build -t <region-key>.ocir.io/<namespace>/oci-defense-grid/event-ingest:0.1.0 .
-docker push <region-key>.ocir.io/<namespace>/oci-defense-grid/event-ingest:0.1.0
+docker build -t fra.ocir.io/<namespace>/oci-defense-grid/event-ingest:0.1.1 .
+docker push fra.ocir.io/<namespace>/oci-defense-grid/event-ingest:0.1.1
 ```
 
-For Stockholm, the OCIR region key is typically `arn`, so the image becomes:
+Publish the same image to the region where the demo is deployed:
+
+```bash
+OCIR_NAMESPACE=<namespace> \
+OCIR_USERNAME='<namespace>/oracleidentitycloudservice/<user-email>' \
+scripts/publish-function-image.sh eu-stockholm-1 0.1.1
+```
+
+The script uses `ocir.<region>.oci.oraclecloud.com`, which is OCI's recommended registry-domain format. For Stockholm, the output is:
 
 ```text
-arn.ocir.io/<namespace>/oci-defense-grid/event-ingest:0.1.0
+ocir.eu-stockholm-1.oci.oraclecloud.com/<namespace>/oci-defense-grid/event-ingest:0.1.1
 ```
 
 ## Updating Running VMs
