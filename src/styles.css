@@ -615,45 +615,41 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.arch-fanout {
+.arch-group-flow {
   align-self: center;
-  background:
-    linear-gradient(90deg, rgba(255, 209, 102, 0.78), rgba(181, 139, 255, 0.78)) left 50% / 100% 3px no-repeat,
-    linear-gradient(rgba(255, 209, 102, 0.64), rgba(181, 139, 255, 0.64)) right 50% / 3px 48px no-repeat;
+  background: linear-gradient(90deg, transparent, rgba(61, 220, 151, 0.68), rgba(124, 200, 255, 0.68), transparent);
   border-radius: 999px;
-  height: 54px;
+  height: 6px;
   opacity: 0.82;
+  overflow: hidden;
   position: relative;
 }
 
-.arch-fanout-app {
-  height: 66px;
-}
-
-.arch-fanout::before,
-.arch-fanout::after {
-  content: "";
-  position: absolute;
-}
-
-.arch-fanout::before,
-.arch-fanout::after {
-  background: var(--warning);
+.arch-group-flow::before,
+.arch-group-flow::after {
+  animation: arch-pulse var(--arch-flow-speed) linear infinite;
+  background: var(--accent);
   border-radius: 999px;
-  box-shadow: 0 0 10px rgba(255, 209, 102, 0.7);
-  height: 8px;
-  left: 11px;
-  top: 23px;
-  width: 8px;
+  box-shadow: 0 0 10px rgba(61, 220, 151, 0.78);
+  content: "";
+  height: 10px;
+  left: 0;
+  position: absolute;
+  top: -2px;
+  width: 24px;
 }
 
-.arch-fanout::before {
-  animation: arch-fanout-cache var(--arch-flow-speed) linear infinite;
-}
-
-.arch-fanout::after {
-  animation: arch-fanout-ai var(--arch-flow-speed) linear infinite;
+.arch-group-flow::before {
   animation-delay: calc(var(--arch-flow-speed) * -0.5);
+  opacity: 0.42;
+}
+
+.arch-group-flow-ai {
+  background: linear-gradient(90deg, transparent, rgba(255, 209, 102, 0.62), rgba(181, 139, 255, 0.68), transparent);
+}
+
+.arch-group-flow-ai::before,
+.arch-group-flow-ai::after {
   background: #b58bff;
   box-shadow: 0 0 10px rgba(181, 139, 255, 0.72);
 }
@@ -687,52 +683,6 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   }
   to {
     transform: translateX(42px);
-  }
-}
-
-@keyframes arch-fanout-cache {
-  0% {
-    opacity: 0;
-    transform: translate(-12px, 0);
-  }
-  25% {
-    opacity: 1;
-    transform: translate(10px, 0);
-  }
-  50% {
-    opacity: 1;
-    transform: translate(28px, -20px);
-  }
-  75% {
-    opacity: 1;
-    transform: translate(40px, -20px);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(48px, -20px);
-  }
-}
-
-@keyframes arch-fanout-ai {
-  0% {
-    opacity: 0;
-    transform: translate(-12px, 0);
-  }
-  25% {
-    opacity: 1;
-    transform: translate(10px, 0);
-  }
-  50% {
-    opacity: 1;
-    transform: translate(28px, 20px);
-  }
-  75% {
-    opacity: 1;
-    transform: translate(40px, 20px);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(48px, 20px);
   }
 }
 
@@ -1198,7 +1148,17 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
     width: 3px;
   }
 
+  .arch-group-flow {
+    height: 18px;
+    margin-left: 16px;
+    width: 3px;
+  }
+
   .arch-flow::after {
+    animation-name: arch-pulse-mobile;
+  }
+
+  .arch-group-flow::after {
     animation-name: arch-pulse-mobile;
   }
 

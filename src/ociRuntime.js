@@ -254,17 +254,17 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   architecture.publicLbState.textContent = status?.loadBalancer ?? "Frontend route";
   architecture.vmState.textContent = `${recentNodes || 1} nodes observed`;
   architecture.apiState.textContent = status?.gateway ?? "/api/*";
-  architecture.functionState.textContent = functionMode ? "Validate + fan-out" : "Standby";
+  architecture.functionState.textContent = functionMode ? "Process events" : "Standby";
   architecture.vmAppState.textContent = activeVmKey ? `Active ${observedVms.get(activeVmKey)?.name ?? "VM"}` : "Status + live APIs";
-  architecture.vmApiState.textContent = "Cache + AI + ADB";
+  architecture.vmApiState.textContent = "Serves live APIs";
   architecture.privateLbState.textContent = "VM App route";
-  architecture.ingestCacheState.textContent = cacheStatus === "connected" ? "Live state write" : cacheStatus;
+  architecture.ingestCacheState.textContent = cacheStatus === "connected" ? "Live player state" : cacheStatus;
   architecture.cacheState.textContent = cacheStatus === "connected" ? "Live players" : cacheStatus;
-  architecture.streamState.textContent = serviceConfigured(streamStatus) ? "Durable event hub" : streamStatus;
-  architecture.adbState.textContent = serviceConfigured(adbStatus) ? "Curated analytics" : adbStatus;
+  architecture.streamState.textContent = serviceConfigured(streamStatus) ? "Durable event stream" : streamStatus;
+  architecture.adbState.textContent = serviceConfigured(adbStatus) ? "Queryable analytics" : adbStatus;
   architecture.appAdbState.textContent = serviceConfigured(adbStatus) ? "Leaderboard + analytics" : adbStatus;
-  architecture.objectState.textContent = serviceConfigured(objectStatus) ? "Raw NDJSON archive" : objectStatus;
-  architecture.genaiState.textContent = "Coach + Ops Copilot";
+  architecture.objectState.textContent = serviceConfigured(objectStatus) ? "Raw event files" : objectStatus;
+  architecture.genaiState.textContent = "Player Coach + Ops Copilot";
 
   setNodeLive(architecture.nodes.player, true);
   setNodeLive(architecture.nodes.apiClient, !telemetry.offline);
