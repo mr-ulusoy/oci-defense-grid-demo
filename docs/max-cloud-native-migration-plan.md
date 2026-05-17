@@ -47,6 +47,46 @@ This started in the VM App because it was the fastest way to build and debug the
 - API Gateway could route to the VM backend quickly.
 - We avoided early complexity around OCIR image builds, Functions config, IAM policies, dynamic groups and cold starts while gameplay, cache, ADB, GenAI and ops UI were still changing.
 
+## Problem Context
+
+The current hybrid design works, but it does not fully match the max cloud-native goal. The Compute VMs still own important application behavior:
+
+- API routing after API Gateway still depends on the private Load Balancer and VM App.
+- The VM App owns status, leaderboard, analytics and AI endpoints.
+- VM lifecycle, autoscaling, health checks and API behavior are coupled together.
+- A VM outage is still partly an API/backend concern, not only a static web-hosting concern.
+- The ops diagram has to explain both managed services and VM-hosted backend logic, which makes the story harder to present.
+
+For a max cloud-native demo, this is the architectural issue:
+
+```text
+Compute should demonstrate elastic game hosting.
+Functions and managed services should demonstrate application logic.
+```
+
+Moving API services to OCI Functions separates those responsibilities.
+
+## Why Move API Services To Functions
+
+Moving `/api/status`, `/api/leaderboard`, `/api/analytics/live`, `/api/coach` and `/api/copilot` to Functions gives the demo a cleaner OCI story:
+
+- VMs become disposable static game nodes behind the Public Load Balancer.
+- API Gateway becomes the single enterprise API entrypoint.
+- Functions become the cloud-native API/backend layer.
+- OCI Cache, Streaming, Autonomous AI DB, Object Storage and GenAI become the managed service backend.
+- VM scale-in/scale-out no longer changes where API logic runs.
+- Rebuilds are cleaner because API behavior is packaged in Function images/config instead of VM startup scripts.
+- The final ops architecture becomes easier to explain: game load goes to VMs, `/api/*` goes to serverless functions.
+
+The tradeoff is operational complexity:
+
+- Functions need image build/push into the target region's OCIR.
+- IAM policies and dynamic groups must be correct.
+- Cold starts can affect latency, especially for AI routes.
+- ADB and Cache connectivity must be tested from the Functions runtime.
+
+That is why the migration should move low-risk routes first and keep `coach/copilot` on the VM App until Function latency is proven acceptable.
+
 ## Keep VM Status Without VM API
 
 When the API moves away from the VM, keep frontend VM visibility with a generated static file:
