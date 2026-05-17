@@ -580,13 +580,13 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .arch-label-stream {
   color: var(--accent);
-  left: 72%;
-  top: 440px;
+  left: 54%;
+  top: 555px;
 }
 
 .arch-label-consumer {
   color: var(--accent);
-  left: 80%;
+  left: 77%;
   top: 645px;
 }
 
@@ -693,9 +693,9 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .arch-pos-streaming {
-  left: 72%;
-  top: 470px;
-  width: 12%;
+  left: 53%;
+  top: 585px;
+  width: 13.5%;
 }
 
 .arch-pos-consumer {
