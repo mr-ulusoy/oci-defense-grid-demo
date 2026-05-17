@@ -609,35 +609,19 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .arch-link-game {
-  marker-end: url(#archArrowGame);
   stroke: rgba(124, 200, 255, 0.86);
 }
 
 .arch-link-api {
-  marker-end: url(#archArrowApi);
   stroke: rgba(255, 209, 102, 0.88);
 }
 
 .arch-link-ai {
-  marker-end: url(#archArrowApi);
   stroke: rgba(181, 139, 255, 0.9);
 }
 
 .arch-link-events {
-  marker-end: url(#archArrowEvents);
   stroke: rgba(61, 220, 151, 0.9);
-}
-
-#archArrowGame path {
-  fill: rgba(124, 200, 255, 0.92);
-}
-
-#archArrowApi path {
-  fill: rgba(255, 209, 102, 0.94);
-}
-
-#archArrowEvents path {
-  fill: rgba(61, 220, 151, 0.94);
 }
 
 .architecture-map.flow-fast .arch-link {
@@ -655,7 +639,9 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .arch-pos-client {
   left: 2%;
+  min-height: 58px;
   top: 145px;
+  width: 13%;
 }
 
 .arch-pos-public-lb {
