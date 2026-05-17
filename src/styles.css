@@ -565,19 +565,19 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .arch-label-game {
   color: var(--accent-2);
   left: 34.5%;
-  top: 120px;
+  top: 128px;
 }
 
 .arch-label-api {
   color: var(--warning);
-  left: 34.5%;
-  top: 366px;
+  left: 35.5%;
+  top: 355px;
 }
 
 .arch-label-events {
   color: var(--accent);
-  left: 50%;
-  top: 434px;
+  left: 50.8%;
+  top: 424px;
 }
 
 .arch-label-stream {
@@ -588,8 +588,8 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .arch-label-consumer {
   color: var(--accent);
-  left: 80%;
-  top: 645px;
+  left: 85.2%;
+  top: 650px;
 }
 
 .arch-links {
