@@ -641,7 +641,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   left: 2%;
   min-height: 58px;
   top: 145px;
-  width: 13%;
+  width: 11%;
 }
 
 .arch-pos-public-lb {
@@ -665,7 +665,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .arch-pos-private-lb {
   left: 53%;
   top: 280px;
-  width: 17%;
+  width: 14%;
 }
 
 .arch-pos-vm-app {
@@ -677,7 +677,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .arch-pos-functions {
   left: 53%;
   top: 470px;
-  width: 16%;
+  width: 13.5%;
 }
 
 .arch-pos-genai {
@@ -687,9 +687,9 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .arch-pos-cache {
-  left: 84.5%;
+  left: 86.5%;
   top: 335px;
-  width: 14.5%;
+  width: 12.5%;
 }
 
 .arch-pos-streaming {
