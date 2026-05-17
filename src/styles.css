@@ -557,36 +557,38 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .arch-flow-label {
   pointer-events: none;
   position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
   z-index: 3;
 }
 
 .arch-label-game {
   color: var(--accent-2);
-  left: 26%;
+  left: 34.5%;
   top: 120px;
 }
 
 .arch-label-api {
   color: var(--warning);
-  left: 27%;
-  top: 390px;
+  left: 34.5%;
+  top: 366px;
 }
 
 .arch-label-events {
   color: var(--accent);
-  left: 46%;
-  top: 435px;
+  left: 50%;
+  top: 434px;
 }
 
 .arch-label-stream {
   color: var(--accent);
-  left: 54%;
+  left: 59.8%;
   top: 668px;
 }
 
 .arch-label-consumer {
   color: var(--accent);
-  left: 77%;
+  left: 80%;
   top: 645px;
 }
 
