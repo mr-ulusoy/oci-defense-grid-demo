@@ -57,31 +57,23 @@ const architecture = {
   apiState: document.getElementById("archApiState"),
   functionState: document.getElementById("archFunctionState"),
   vmAppState: document.getElementById("archVmAppState"),
-  vmApiState: document.getElementById("archVmApiState"),
   privateLbState: document.getElementById("archPrivateLbState"),
-  ingestCacheState: document.getElementById("archIngestCacheState"),
   cacheState: document.getElementById("archCacheState"),
   streamState: document.getElementById("archStreamState"),
   adbState: document.getElementById("archAdbState"),
-  appAdbState: document.getElementById("archAppAdbState"),
   objectState: document.getElementById("archObjectState"),
   genaiState: document.getElementById("archGenaiState"),
   nodes: {
     player: document.getElementById("archPlayer"),
-    apiClient: document.getElementById("archApiClient"),
     publicLb: document.getElementById("archPublicLb"),
     vmFleet: document.getElementById("archVmFleet"),
     apiGateway: document.getElementById("archApiGateway"),
-    eventApi: document.getElementById("archEventApi"),
     functions: document.getElementById("archFunctions"),
     vmApp: document.getElementById("archVmApp"),
-    vmApi: document.getElementById("archVmApi"),
     privateLb: document.getElementById("archPrivateLb"),
-    ingestCache: document.getElementById("archIngestCache"),
     cache: document.getElementById("archCache"),
     streaming: document.getElementById("archStreaming"),
     adb: document.getElementById("archAdb"),
-    appAdb: document.getElementById("archAppAdb"),
     objectStorage: document.getElementById("archObjectStorage"),
     genai: document.getElementById("archGenai")
   }
@@ -253,34 +245,26 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   architecture.eventRate.textContent = `${Number(eventRate).toFixed(1)} events/sec`;
   architecture.publicLbState.textContent = status?.loadBalancer ?? "Frontend route";
   architecture.vmState.textContent = `${recentNodes || 1} nodes observed`;
-  architecture.apiState.textContent = status?.gateway ?? "/api/*";
+  architecture.apiState.textContent = status?.gateway ?? "/api/* routing";
   architecture.functionState.textContent = functionMode ? "Process events" : "Standby";
-  architecture.vmAppState.textContent = activeVmKey ? `Active ${observedVms.get(activeVmKey)?.name ?? "VM"}` : "Status + live APIs";
-  architecture.vmApiState.textContent = "Serves live APIs";
+  architecture.vmAppState.textContent = activeVmKey ? `Active ${observedVms.get(activeVmKey)?.name ?? "VM"}` : "Node/Express APIs";
   architecture.privateLbState.textContent = "VM App route";
-  architecture.ingestCacheState.textContent = cacheStatus === "connected" ? "Live player state" : cacheStatus;
-  architecture.cacheState.textContent = cacheStatus === "connected" ? "Live players" : cacheStatus;
+  architecture.cacheState.textContent = cacheStatus === "connected" ? "Live player state" : cacheStatus;
   architecture.streamState.textContent = serviceConfigured(streamStatus) ? "Durable event stream" : streamStatus;
-  architecture.adbState.textContent = serviceConfigured(adbStatus) ? "Queryable analytics" : adbStatus;
-  architecture.appAdbState.textContent = serviceConfigured(adbStatus) ? "Leaderboard + analytics" : adbStatus;
+  architecture.adbState.textContent = serviceConfigured(adbStatus) ? "Leaderboard + analytics" : adbStatus;
   architecture.objectState.textContent = serviceConfigured(objectStatus) ? "Raw event files" : objectStatus;
   architecture.genaiState.textContent = "Player Coach + Ops Copilot";
 
   setNodeLive(architecture.nodes.player, true);
-  setNodeLive(architecture.nodes.apiClient, !telemetry.offline);
   setNodeLive(architecture.nodes.publicLb, !telemetry.offline);
   setNodeLive(architecture.nodes.vmFleet, recentNodes > 0);
   setNodeLive(architecture.nodes.apiGateway, !telemetry.offline);
-  setNodeLive(architecture.nodes.eventApi, !telemetry.offline);
   setNodeLive(architecture.nodes.functions, functionMode);
   setNodeLive(architecture.nodes.vmApp, recentNodes > 0);
-  setNodeLive(architecture.nodes.vmApi, recentNodes > 0);
   setNodeLive(architecture.nodes.privateLb, true);
-  setNodeLive(architecture.nodes.ingestCache, cacheStatus === "connected" && functionMode);
   setNodeLive(architecture.nodes.cache, cacheStatus === "connected");
   setNodeLive(architecture.nodes.streaming, serviceConfigured(streamStatus) || eventRate > 0);
   setNodeLive(architecture.nodes.adb, serviceConfigured(adbStatus));
-  setNodeLive(architecture.nodes.appAdb, serviceConfigured(adbStatus));
   setNodeLive(architecture.nodes.objectStorage, serviceConfigured(objectStatus));
   setNodeLive(architecture.nodes.genai, true);
 }

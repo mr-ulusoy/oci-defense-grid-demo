@@ -57,100 +57,86 @@
               </div>
             </div>
             <div class="architecture-map" id="architectureMap">
-              <div class="arch-lane arch-lane-game">
-                <div class="arch-lane-label">Game load</div>
-                <div class="arch-node arch-player" id="archPlayer">
-                  <span>Player Browser</span>
-                  <strong>Playable URL</strong>
-                </div>
-                <div class="arch-flow arch-flow-game" data-flow="game"></div>
-                <div class="arch-node" id="archPublicLb">
-                  <span>Public Load Balancer</span>
-                  <strong id="archPublicLbState">Frontend route</strong>
-                </div>
-                <div class="arch-flow arch-flow-game" data-flow="game"></div>
-                <div class="arch-node" id="archVmFleet">
-                  <span>VM Fleet / Nginx</span>
-                  <strong id="archVmState">Observed 1</strong>
-                </div>
+              <div class="arch-route-legend" aria-label="Traffic flow legend">
+                <span><i class="legend-game"></i>Game load</span>
+                <span><i class="legend-api"></i>APIs and AI</span>
+                <span><i class="legend-events"></i>Events and data</span>
               </div>
+              <svg class="arch-links" viewBox="0 0 1200 620" preserveAspectRatio="none" aria-hidden="true">
+                <defs>
+                  <marker id="archArrowGame" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+                    <path d="M 0 0 L 10 5 L 0 10 z"></path>
+                  </marker>
+                  <marker id="archArrowApi" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+                    <path d="M 0 0 L 10 5 L 0 10 z"></path>
+                  </marker>
+                  <marker id="archArrowEvents" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+                    <path d="M 0 0 L 10 5 L 0 10 z"></path>
+                  </marker>
+                </defs>
+                <path class="arch-link arch-link-game" d="M 205 135 C 260 70 290 70 320 70 L 500 70"></path>
+                <path class="arch-link arch-link-game" d="M 520 70 L 705 70"></path>
+                <path class="arch-link arch-link-api" d="M 205 165 C 265 245 285 285 320 305 L 500 305"></path>
+                <path class="arch-link arch-link-api" d="M 520 305 L 705 305"></path>
+                <path class="arch-link arch-link-api" d="M 725 305 L 895 305"></path>
+                <path class="arch-link arch-link-ai" d="M 1005 290 C 1040 235 1040 190 1018 150"></path>
+                <path class="arch-link arch-link-api" d="M 1005 335 C 1040 375 1040 410 1018 440"></path>
+                <path class="arch-link arch-link-events" d="M 500 335 C 570 410 620 455 700 500"></path>
+                <path class="arch-link arch-link-events" d="M 805 485 C 910 430 980 410 1035 405"></path>
+                <path class="arch-link arch-link-events" d="M 805 515 L 890 515"></path>
+                <path class="arch-link arch-link-events" d="M 805 535 C 900 570 965 575 1035 570"></path>
+              </svg>
+              <div class="arch-flow-label arch-label-game">Player opens the URL</div>
+              <div class="arch-flow-label arch-label-api">/api/status, /api/coach, /api/copilot</div>
+              <div class="arch-flow-label arch-label-events">/api/events telemetry</div>
 
-              <div class="arch-lane arch-lane-api-entry">
-                <div class="arch-lane-label">APIs + AI</div>
-                <div class="arch-node" id="archApiClient">
-                  <span>Player + Ops APIs</span>
-                  <strong>Coach, ops, status</strong>
-                </div>
-                <div class="arch-flow arch-flow-status" data-flow="status"></div>
-                <div class="arch-node" id="archApiGateway">
-                  <span>API Gateway</span>
-                  <strong id="archApiState">/api/*</strong>
-                </div>
-                <div class="arch-flow arch-flow-status" data-flow="status"></div>
-                <div class="arch-node" id="archPrivateLb">
-                  <span>Private Load Balancer</span>
-                  <strong id="archPrivateLbState">VM App route</strong>
-                </div>
-                <div class="arch-flow arch-flow-status" data-flow="status"></div>
-                <div class="arch-node" id="archVmApp">
-                  <span>VM App</span>
-                  <strong id="archVmAppState">Status + live APIs</strong>
-                </div>
+              <div class="arch-node arch-pos-client" id="archPlayer">
+                <span>Browser</span>
+                <strong>Player + Ops</strong>
               </div>
-
-              <div class="arch-lane arch-lane-telemetry">
-                <div class="arch-lane-label">Events + data</div>
-                <div class="arch-node" id="archEventApi">
-                  <span>API Gateway</span>
-                  <strong>/api/events</strong>
-                </div>
-                <div class="arch-flow arch-flow-api" data-flow="telemetry"></div>
-                <div class="arch-node" id="archFunctions">
-                  <span>OCI Functions</span>
-                  <strong id="archFunctionState">Process events</strong>
-                </div>
-                <div class="arch-group-flow" aria-hidden="true"></div>
-                <div class="arch-service-targets arch-service-targets-four">
-                  <div class="arch-node" id="archIngestCache">
-                    <span>OCI Cache</span>
-                    <strong id="archIngestCacheState">Live player state</strong>
-                  </div>
-                  <div class="arch-node arch-node-hub" id="archStreaming">
-                    <span>Streaming</span>
-                    <strong id="archStreamState">Durable hub</strong>
-                  </div>
-                  <div class="arch-node" id="archAdb">
-                    <span>ADB</span>
-                    <strong id="archAdbState">Curated events</strong>
-                  </div>
-                  <div class="arch-node" id="archObjectStorage">
-                    <span>Object Storage</span>
-                    <strong id="archObjectState">Raw archive</strong>
-                  </div>
-                </div>
+              <div class="arch-node arch-pos-public-lb" id="archPublicLb">
+                <span>Public Load Balancer</span>
+                <strong id="archPublicLbState">Frontend route</strong>
               </div>
-
-              <div class="arch-lane arch-lane-services">
-                <div class="arch-lane-label">VM App uses</div>
-                <div class="arch-node" id="archVmApi">
-                  <span>VM App</span>
-                  <strong id="archVmApiState">Serves live APIs</strong>
-                </div>
-                <div class="arch-group-flow arch-group-flow-ai" aria-hidden="true"></div>
-                <div class="arch-service-targets arch-service-targets-three">
-                  <div class="arch-node" id="archCache">
-                    <span>OCI Cache</span>
-                    <strong id="archCacheState">Live players</strong>
-                  </div>
-                  <div class="arch-node" id="archGenai">
-                    <span>OCI GenAI</span>
-                    <strong id="archGenaiState">Player Coach + Ops Copilot</strong>
-                  </div>
-                  <div class="arch-node" id="archAppAdb">
-                    <span>ADB</span>
-                    <strong id="archAppAdbState">Leaderboard + analytics</strong>
-                  </div>
-                </div>
+              <div class="arch-node arch-pos-vm-fleet" id="archVmFleet">
+                <span>VM Fleet / Nginx</span>
+                <strong id="archVmState">Observed 1</strong>
+              </div>
+              <div class="arch-node arch-pos-api-gateway" id="archApiGateway">
+                <span>API Gateway</span>
+                <strong id="archApiState">/api/* routing</strong>
+              </div>
+              <div class="arch-node arch-pos-private-lb" id="archPrivateLb">
+                <span>Private Load Balancer</span>
+                <strong id="archPrivateLbState">VM App route</strong>
+              </div>
+              <div class="arch-node arch-pos-vm-app" id="archVmApp">
+                <span>VM App</span>
+                <strong id="archVmAppState">Node/Express APIs</strong>
+              </div>
+              <div class="arch-node arch-pos-functions" id="archFunctions">
+                <span>OCI Functions</span>
+                <strong id="archFunctionState">Process events</strong>
+              </div>
+              <div class="arch-node arch-pos-genai" id="archGenai">
+                <span>OCI GenAI</span>
+                <strong id="archGenaiState">Player Coach + Ops Copilot</strong>
+              </div>
+              <div class="arch-node arch-pos-cache" id="archCache">
+                <span>OCI Cache</span>
+                <strong id="archCacheState">Live player state</strong>
+              </div>
+              <div class="arch-node arch-node-hub arch-pos-streaming" id="archStreaming">
+                <span>Streaming</span>
+                <strong id="archStreamState">Durable event stream</strong>
+              </div>
+              <div class="arch-node arch-pos-adb" id="archAdb">
+                <span>Autonomous DB</span>
+                <strong id="archAdbState">Leaderboard + analytics</strong>
+              </div>
+              <div class="arch-node arch-pos-object" id="archObjectStorage">
+                <span>Object Storage</span>
+                <strong id="archObjectState">Raw event files</strong>
               </div>
             </div>
           </section>

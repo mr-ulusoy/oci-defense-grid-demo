@@ -19,7 +19,7 @@ Current demo endpoints:
 - Presenter/ops URL: `http://207.127.95.12/?ops=1`
 
 The player view keeps the game clean for public visitors. The ops view adds the Cloud Ops HUD with live architecture flow, active VM, CPU, RAM, cores, disk throughput, LB/API status, latency, events/sec, live players, leaderboard level, gameplay event chips and AI insight.
-The live architecture panel shows three plain flows: game load, APIs + AI, and events + data. It avoids implementation jargon and shows AI in both places it is used: player quiz coaching and the ops copilot.
+The live architecture panel shows a single animated traffic map: game load, APIs + AI, and events + data. It avoids implementation jargon and shows AI in both places it is used: player quiz coaching and the ops copilot.
 The ops view also includes a bounded `Stress VMs` control for autoscaling demos.
 
 ## Local Run
