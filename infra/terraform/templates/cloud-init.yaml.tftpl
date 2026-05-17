@@ -69,6 +69,8 @@ write_files:
       Environment=OCI_GENAI_COMPARTMENT_OCID=${genai_compartment}
       Environment=OCI_GENAI_TIMEOUT_MS=25000
       Environment=EVENT_INGEST_ROUTE_MODE=${event_ingest_mode}
+      Environment=STREAM_CONSUMER_ENABLED=true
+      Environment=STREAM_CONSUMER_GROUP=oci-defense-grid-storage-writers
       Environment=REDIS_HOST=${redis_host}
       Environment=REDIS_PORT=${redis_port}
       Environment=REDIS_TLS=${redis_tls}

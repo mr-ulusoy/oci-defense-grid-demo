@@ -436,7 +436,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .architecture-map {
   --arch-flow-speed: 1.55s;
-  min-height: 620px;
+  min-height: 690px;
   position: relative;
 }
 
@@ -578,6 +578,18 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   top: 435px;
 }
 
+.arch-label-stream {
+  color: var(--accent);
+  left: 72%;
+  top: 440px;
+}
+
+.arch-label-consumer {
+  color: var(--accent);
+  left: 80%;
+  top: 645px;
+}
+
 .arch-links {
   height: 100%;
   inset: 0;
@@ -679,7 +691,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .arch-pos-functions {
   left: 53%;
   top: 470px;
-  width: 17%;
+  width: 16%;
 }
 
 .arch-pos-genai {
@@ -695,21 +707,27 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .arch-pos-streaming {
-  left: 70%;
+  left: 72%;
   top: 470px;
-  width: 13.5%;
+  width: 12%;
+}
+
+.arch-pos-consumer {
+  left: 72%;
+  top: 585px;
+  width: 12%;
 }
 
 .arch-pos-adb {
-  left: 84.5%;
+  left: 86.5%;
   top: 430px;
-  width: 14.5%;
+  width: 12.5%;
 }
 
 .arch-pos-object {
-  left: 84.5%;
-  top: 545px;
-  width: 14.5%;
+  left: 86.5%;
+  top: 585px;
+  width: 12.5%;
 }
 
 @keyframes arch-link-flow {

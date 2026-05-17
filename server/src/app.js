@@ -76,7 +76,8 @@ export function createApp({
   store = createStore(),
   createInsight = createCopilotInsight,
   createCoach = createCoachReply,
-  stressController = { start: startStress, stop: stopStress, status: stressStatus }
+  stressController = { start: startStress, stop: stopStress, status: stressStatus },
+  streamConsumer = { status: () => ({ enabled: false, status: "disabled" }) }
 } = {}) {
   const app = express();
 
@@ -95,6 +96,7 @@ export function createApp({
       loadBalancer: process.env.LOAD_BALANCER_NAME ?? "healthy",
       vm: await vmStatus(),
       sinks: await store.status(),
+      streamConsumer: streamConsumer.status(),
       stress: stressController.status(),
       eventIngestRouteMode: process.env.EVENT_INGEST_ROUTE_MODE ?? "vm-api",
       serverTime: new Date().toISOString()

@@ -197,13 +197,24 @@ export function createStore() {
     try {
       await ensureAutonomousSchema(connection);
       await connection.executeMany(
-        `insert into game_events (
-          id, run_id, session_id, event_type, level_no, score, cloud_action,
-          fps, latency_ms, client_ts, server_ts, vm_name, payload_json
-        ) values (
-          :id, :runId, :sessionId, :eventType, :eventLevel, :score, :cloudAction,
-          :fps, :latencyMs, :clientTs, systimestamp, :vmName, :payload
-        )`,
+        `merge into game_events target
+         using (
+           select :id id, :runId run_id, :sessionId session_id, :eventType event_type,
+                  :eventLevel level_no, :score score, :cloudAction cloud_action,
+                  :fps fps, :latencyMs latency_ms, :clientTs client_ts,
+                  :vmName vm_name, :payload payload_json
+           from dual
+         ) source
+         on (target.id = source.id)
+         when not matched then insert (
+           id, run_id, session_id, event_type, level_no, score, cloud_action,
+           fps, latency_ms, client_ts, server_ts, vm_name, payload_json
+         ) values (
+           source.id, source.run_id, source.session_id, source.event_type,
+           source.level_no, source.score, source.cloud_action, source.fps,
+           source.latency_ms, source.client_ts, systimestamp, source.vm_name,
+           source.payload_json
+         )`,
         batch.map((event) => ({
           id: event.id,
           runId: event.runId,
@@ -423,16 +434,34 @@ export function createStore() {
 
       const sinkResults = await Promise.allSettled([
         livePlayers.update(batch),
-        persistToAutonomousDb(batch),
-        publishEventsToStreaming(batch),
-        archiveEventsToObjectStorage(batch)
+        publishEventsToStreaming(batch)
       ]);
-      const sinkNames = ["Redis live players", "Autonomous Database", "Streaming", "Object Storage"];
+      const sinkNames = ["Redis live players", "Streaming"];
       for (const [index, result] of sinkResults.entries()) {
         if (result.status === "rejected") {
           console.warn(`${sinkNames[index]} sink failed.`, result.reason.message);
         }
       }
+    },
+
+    async persistConsumedEvents(batch) {
+      const sinkResults = await Promise.allSettled([
+        persistToAutonomousDb(batch),
+        archiveEventsToObjectStorage(batch)
+      ]);
+      const sinkNames = ["Autonomous Database", "Object Storage"];
+      for (const [index, result] of sinkResults.entries()) {
+        if (result.status === "rejected") {
+          console.warn(`${sinkNames[index]} consumer sink failed.`, result.reason.message);
+        }
+      }
+
+      return Object.fromEntries(
+        sinkResults.map((result, index) => [
+          index === 0 ? "autonomousDatabase" : "objectStorage",
+          result.status === "fulfilled" ? result.value : "failed"
+        ])
+      );
     },
 
     async leaderboard() {

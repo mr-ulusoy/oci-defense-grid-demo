@@ -242,7 +242,7 @@ async function updateRedisLivePlayers(batch) {
   return "connected";
 }
 
-async function persistToAutonomousDb(batch) {
+export async function persistToAutonomousDb(batch) {
   const connection = await createOracleConnection();
   if (!connection) {
     return "disabled";
@@ -334,7 +334,7 @@ async function publishEventsToStreaming(batch) {
   return "connected";
 }
 
-async function archiveEventsToObjectStorage(batch) {
+export async function archiveEventsToObjectStorage(batch) {
   const client = await getObjectClient();
   if (!client) {
     return "disabled";
@@ -361,11 +361,9 @@ export function createIngestSinks() {
     async recordEvents(batch) {
       const sinkResults = await Promise.allSettled([
         updateRedisLivePlayers(batch),
-        persistToAutonomousDb(batch),
-        publishEventsToStreaming(batch),
-        archiveEventsToObjectStorage(batch)
+        publishEventsToStreaming(batch)
       ]);
-      const sinkNames = ["redisLivePlayers", "autonomousDatabase", "streaming", "objectStorage"];
+      const sinkNames = ["redisLivePlayers", "streaming"];
       const statuses = {};
 
       for (const [index, result] of sinkResults.entries()) {
@@ -377,6 +375,9 @@ export function createIngestSinks() {
           statuses[name] = result.value;
         }
       }
+
+      statuses.autonomousDatabase = statuses.streaming === "connected" ? "via-stream-consumer" : "waiting-for-stream";
+      statuses.objectStorage = statuses.streaming === "connected" ? "via-stream-consumer" : "waiting-for-stream";
 
       return statuses;
     }

@@ -20,7 +20,7 @@ async function getAuthProvider() {
   return providerPromise;
 }
 
-async function getStreamClient() {
+export async function getStreamClient() {
   if (!process.env.OCI_STREAM_OCID || !process.env.OCI_STREAM_MESSAGE_ENDPOINT) {
     return null;
   }
