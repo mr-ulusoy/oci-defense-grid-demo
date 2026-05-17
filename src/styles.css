@@ -581,7 +581,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .arch-label-stream {
   color: var(--accent);
   left: 54%;
-  top: 555px;
+  top: 668px;
 }
 
 .arch-label-consumer {
@@ -706,7 +706,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .arch-pos-adb {
   left: 86.5%;
-  top: 430px;
+  top: 455px;
   width: 12.5%;
 }
 
