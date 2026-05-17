@@ -225,9 +225,16 @@
         <section class="insight-box">
           <div class="section-title">
             <span>OCI Generative AI</span>
-            <button type="button" id="askCopilot" title="Ask copilot">Ask</button>
+            <button type="button" id="askCopilot" data-copilot-mode="live" title="Ask copilot">Live</button>
+          </div>
+          <div class="copilot-actions" aria-label="Copilot analysis modes">
+            <button type="button" data-copilot-mode="leaderboard">Analyze leaderboard</button>
+            <button type="button" data-copilot-mode="players">Compare players</button>
+            <button type="button" data-copilot-mode="run">Latest run</button>
+            <button type="button" data-copilot-mode="demo_summary">Demo summary</button>
           </div>
           <p id="hudInsight">Waiting for live telemetry.</p>
+          <small id="copilotMeta">Copilot source: waiting</small>
         </section>
 
         <section class="leaderboard">
@@ -247,6 +254,7 @@
         apiBase: "/api",
         telemetryIntervalMs: 1400,
         copilotIntervalMs: 12000,
+        copilotAutoEnabled: false,
         minAppNodes: 2,
         ...(window.OCI_DEFENSE_CONFIG ?? {})
       };

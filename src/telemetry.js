@@ -2,6 +2,7 @@ const DEFAULT_CONFIG = {
   apiBase: "/api",
   telemetryIntervalMs: 1400,
   copilotIntervalMs: 12000,
+  copilotAutoEnabled: false,
   copilotEnabled: false
 };
 
@@ -248,16 +249,22 @@ export class OciTelemetry {
     };
   }
 
-  async askCopilot(snapshot) {
+  async askCopilot(snapshot, options = {}) {
     if (!this.config.copilotEnabled) {
-      return "Copilot is available in ops view only.";
+      return {
+        insight: "Copilot is available in ops view only.",
+        source: "disabled",
+        mode: options.mode ?? "live"
+      };
     }
 
     const payload = {
       runId: this.runId,
       sessionId: this.sessionId,
       ops: true,
-      snapshot
+      snapshot,
+      mode: options.mode ?? "live",
+      question: options.question
     };
 
     try {
@@ -268,10 +275,15 @@ export class OciTelemetry {
       }).then(readJson);
       this.offline = false;
       this.lastCopilotAt = Date.now();
-      return result.insight;
+      return result;
     } catch {
       this.offline = true;
-      return "Local fallback: traffic pressure is stable. Keep shields ready for the next anomaly wave.";
+      return {
+        insight: "Local fallback: traffic pressure is stable. Keep shields ready for the next anomaly wave.",
+        source: "local-fallback",
+        model: "browser",
+        mode: options.mode ?? "live"
+      };
     }
   }
 

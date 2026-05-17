@@ -104,7 +104,7 @@ POST /api/copilot
 POST /api/coach
 ```
 
-`POST /api/copilot` is for the presenter/ops view only. The browser sends it only when `?ops=1` is active, and the API requires `"ops": true` in the JSON body.
+`POST /api/copilot` is for the presenter/ops view only. The browser sends it only when `?ops=1` is active, and the API requires `"ops": true` in the JSON body. It supports analysis modes such as `live`, `leaderboard`, `players`, `run` and `demo_summary`, and returns `source`, `modelLabel` and `latencyMs` so presenters can see whether the answer came from OCI GenAI or deterministic fallback.
 `POST /api/stress` follows the same ops-only pattern and starts short, bounded CPU load on VM API backends so autoscaling can be demonstrated without real player volume.
 `POST /api/coach` is the player-facing OCI Guide helper used during level-unlock quizzes. It accepts a known `level/questionId`, a short player message and returns a guarded hint from OCI GenAI or deterministic fallback.
 
@@ -366,6 +366,11 @@ oci_genai_coach_model = "google.gemini-2.5-flash-lite"
 ```
 
 `oci_genai_model` is used for the ops copilot. `oci_genai_coach_model` is used for the player-facing OCI Guide during quiz hints, and defaults to Gemini 2.5 Flash-Lite for faster short answers.
+
+Recommended model split:
+
+- `/api/coach`: Gemini 2.5 Flash-Lite for fast player hints.
+- `/api/copilot`: Gemini 2.5 Pro for deeper ops analysis across leaderboard, live players, run events and ADB analytics.
 
 Local tests use an OCI security-token profile:
 

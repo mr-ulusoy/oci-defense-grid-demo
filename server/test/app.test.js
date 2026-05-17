@@ -307,6 +307,39 @@ test("copilot endpoint accepts ops callers", async () => {
 
   assert.equal(response.status, 200);
   assert.equal(body.insight, "Ops insight");
+  assert.equal(body.mode, "live");
+  assert.equal(body.source, "unknown");
+});
+
+test("copilot endpoint supports deep analysis modes", async () => {
+  let capturedContext;
+  const app = createApp({
+    createInsight: async (context) => {
+      capturedContext = context;
+      return {
+        insight: "Leaderboard analysis",
+        source: "oci-genai",
+        model: "google.gemini-2.5-pro",
+        modelLabel: "Gemini 2.5 Pro",
+        latencyMs: 42,
+        mode: context.mode
+      };
+    }
+  });
+  const { response, body } = await request(app, "/api/copilot", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ops: true, mode: "leaderboard", snapshot: { topScore: 1000 } })
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(body.insight, "Leaderboard analysis");
+  assert.equal(body.source, "oci-genai");
+  assert.equal(body.modelLabel, "Gemini 2.5 Pro");
+  assert.equal(body.latencyMs, 42);
+  assert.equal(body.mode, "leaderboard");
+  assert.equal(capturedContext.mode, "leaderboard");
+  assert.ok(Array.isArray(capturedContext.leaderboard));
 });
 
 test("coach endpoint accepts valid quiz context", async () => {

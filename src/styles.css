@@ -49,6 +49,11 @@ button:hover {
   border-color: var(--accent);
 }
 
+button:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -977,6 +982,26 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   text-align: right;
 }
 
+.copilot-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 12px;
+}
+
+.copilot-actions button,
+.section-title button {
+  min-height: 34px;
+}
+
+.copilot-actions button {
+  border-color: rgba(181, 139, 255, 0.32);
+  color: #d7c6ff;
+  font-size: 0.7rem;
+  overflow-wrap: anywhere;
+  padding: 8px;
+}
+
 .live-player-table {
   display: grid;
   gap: 6px;
@@ -1082,7 +1107,14 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .insight-box p {
   color: var(--text);
   line-height: 1.45;
-  margin: 0;
+  margin: 0 0 10px;
+}
+
+.insight-box small {
+  color: var(--muted);
+  display: block;
+  font-size: 0.7rem;
+  overflow-wrap: anywhere;
 }
 
 .leaderboard ol {

@@ -43,6 +43,8 @@ const elements = {
   eventRate15m: document.getElementById("eventRate15m"),
   leaderboard: document.getElementById("leaderboardList"),
   askCopilot: document.getElementById("askCopilot"),
+  copilotActions: document.querySelectorAll("[data-copilot-mode]"),
+  copilotMeta: document.getElementById("copilotMeta"),
   startStress: document.getElementById("startStress"),
   stopStress: document.getElementById("stopStress"),
   refreshLeaderboard: document.getElementById("refreshLeaderboard")
@@ -421,15 +423,52 @@ export function updateHud() {
   setConnection(telemetry.offline);
 }
 
-export async function askCopilot(snapshot = {}) {
+function copilotModeLabel(mode = "live") {
+  return {
+    live: "Live insight",
+    leaderboard: "Leaderboard analysis",
+    players: "Player comparison",
+    run: "Latest run analysis",
+    demo_summary: "Demo summary"
+  }[mode] ?? "Copilot analysis";
+}
+
+function shortModelName(model = "") {
+  const value = String(model || "");
+  if (!value) return "unknown model";
+  if (value.includes("flash-lite")) return "Gemini Flash Lite";
+  if (value.includes("gemini")) return value.replace(/^.*google\./, "Gemini ");
+  if (value.startsWith("ocid1.generativeaimodel")) return `model ...${value.slice(-6)}`;
+  return value;
+}
+
+function renderCopilotMeta(result = {}) {
+  if (!elements.copilotMeta) return;
+
+  const source = result.source ?? "unknown";
+  const model = result.modelLabel ?? shortModelName(result.model);
+  const latency = result.latencyMs == null ? "" : ` | ${Math.round(result.latencyMs)} ms`;
+  elements.copilotMeta.textContent = `${copilotModeLabel(result.mode)} | ${source} | ${model}${latency}`;
+}
+
+export async function askCopilot(snapshot = {}, mode = "live") {
   if (!isOpsView) return;
 
-  elements.insight.textContent = "Analyzing live telemetry...";
+  elements.insight.textContent = `${copilotModeLabel(mode)} is running...`;
+  renderCopilotMeta({ mode, source: "pending", model: "OCI GenAI" });
   architecture.nodes.genai?.classList.add("is-busy");
+  elements.copilotActions.forEach((button) => {
+    button.disabled = true;
+  });
   try {
-    elements.insight.textContent = await telemetry.askCopilot(snapshot);
+    const result = await telemetry.askCopilot(snapshot, { mode });
+    elements.insight.textContent = result.insight ?? "Copilot returned no insight.";
+    renderCopilotMeta(result);
   } finally {
     architecture.nodes.genai?.classList.remove("is-busy");
+    elements.copilotActions.forEach((button) => {
+      button.disabled = false;
+    });
   }
 }
 
@@ -493,7 +532,18 @@ export async function initOciRuntime() {
     renderLeaderboard(await telemetry.refreshLeaderboard());
     setConnection(telemetry.offline);
 
-    elements.askCopilot.addEventListener("click", () => askCopilot({ score: 0, level: 1 }));
+    elements.copilotActions.forEach((button) => {
+      button.addEventListener("click", () => {
+        askCopilot(
+          {
+            livePlayers: Number(elements.score.textContent),
+            topScore: Number(elements.level.textContent),
+            eventsPerSecond: telemetry.eventRate()
+          },
+          button.dataset.copilotMode ?? "live"
+        );
+      });
+    });
     if (elements.startStress && elements.startStress.dataset.stressBound !== "true") {
       elements.startStress.dataset.stressBound = "true";
       elements.startStress.addEventListener("click", () => startStress());
@@ -528,10 +578,15 @@ export async function initOciRuntime() {
   setInterval(() => {
     if (!isOpsView) return;
 
-    askCopilot({
-      score: Number(elements.score.textContent),
-      level: Number(elements.level.textContent),
-      eventsPerSecond: telemetry.eventRate()
-    });
+    if (window.OCI_DEFENSE_CONFIG.copilotAutoEnabled === true) {
+      askCopilot(
+        {
+          livePlayers: Number(elements.score.textContent),
+          topScore: Number(elements.level.textContent),
+          eventsPerSecond: telemetry.eventRate()
+        },
+        "live"
+      );
+    }
   }, window.OCI_DEFENSE_CONFIG.copilotIntervalMs);
 }

@@ -14,6 +14,7 @@ const DEFAULT_COACH_GENAI_MODEL = "google.gemini-2.5-flash-lite";
 const DEFAULT_GENAI_TIMEOUT_MS = 25000;
 const DEFAULT_COACH_GENAI_TIMEOUT_MS = 12000;
 const COACH_REPLY_WORD_LIMIT = 45;
+const COPILOT_REPLY_WORD_LIMIT = 120;
 
 const QUIZ_COACH_CONTEXT = {
   "region-fault-domains": {
@@ -84,16 +85,130 @@ function expandHomePath(filePath) {
   return `${os.homedir()}${filePath.slice(1)}`;
 }
 
-function deterministicInsight({ snapshot, analytics, vm }) {
+function topByScore(entries = [], limit = 5) {
+  return [...entries]
+    .sort((left, right) => Number(right.score ?? 0) - Number(left.score ?? 0))
+    .slice(0, limit);
+}
+
+function eventCount(entry, type) {
+  return Number(entry?.eventCounts?.[type] ?? 0);
+}
+
+function playerEfficiency(entry) {
+  const kills = eventCount(entry, "enemy_killed");
+  const hits = eventCount(entry, "player_hit");
+  return kills / Math.max(1, hits);
+}
+
+function bestEfficiency(entries = []) {
+  return topByScore(entries, 8).sort(
+    (left, right) => playerEfficiency(right) - playerEfficiency(left)
+  )[0];
+}
+
+function latestRun(entries = []) {
+  return [...entries]
+    .filter((entry) => entry.createdAt)
+    .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))[0];
+}
+
+function compactPlayer(entry) {
+  if (!entry) {
+    return null;
+  }
+
+  return {
+    callsign: entry.callsign,
+    score: Number(entry.score ?? 0),
+    level: Number(entry.level ?? 1),
+    runId: entry.runId,
+    vm: entry.vm,
+    createdAt: entry.createdAt,
+    eventCounts: {
+      kills: eventCount(entry, "enemy_killed"),
+      hits: eventCount(entry, "player_hit"),
+      powerups: eventCount(entry, "powerup"),
+      extraLives: eventCount(entry, "extra_life"),
+      bossPhases: eventCount(entry, "boss_phase"),
+      runEnd: eventCount(entry, "run_end")
+    }
+  };
+}
+
+function compactEventAnalytics(eventAnalytics = {}) {
+  return {
+    source: eventAnalytics.source,
+    windows: eventAnalytics.windows,
+    eventTypes: (eventAnalytics.eventTypes ?? []).slice(0, 8)
+  };
+}
+
+function buildCopilotContext(context = {}) {
+  const topLeaderboard = topByScore(context.leaderboard ?? [], 6);
+  const topLivePlayers = topByScore(context.livePlayers ?? [], 8);
+  const leaderboard = topLeaderboard.map(compactPlayer);
+  const livePlayers = topLivePlayers.map(compactPlayer);
+  const combined = [...(context.livePlayers ?? []), ...(context.leaderboard ?? [])];
+
+  return {
+    mode: context.mode ?? "live",
+    question: String(context.question ?? "").slice(0, 240),
+    snapshot: context.snapshot ?? {},
+    vm: context.vm,
+    routeMode: context.routeMode,
+    sinks: context.sinks,
+    streamConsumer: context.streamConsumer,
+    liveAnalytics: context.analytics,
+    eventAnalytics: compactEventAnalytics(context.eventAnalytics),
+    leaderboard,
+    livePlayers,
+    leaders: {
+      topScore: compactPlayer(topLeaderboard[0]),
+      bestEfficiency: compactPlayer(bestEfficiency(combined)),
+      latestRun: compactPlayer(latestRun(context.leaderboard ?? []))
+    }
+  };
+}
+
+function deterministicInsight(context = {}) {
+  const mode = context.mode ?? "live";
+  const leaderboard = topByScore(context.leaderboard ?? [], 6);
+  const livePlayers = topByScore(context.livePlayers ?? [], 8);
+  const combined = [...livePlayers, ...leaderboard];
+  const topPlayer = leaderboard[0] ?? livePlayers[0];
+  const efficient = bestEfficiency(combined);
+  const latest = latestRun(leaderboard) ?? topPlayer;
+  const analytics = context.analytics ?? {};
+  const snapshot = context.snapshot ?? {};
+  const eventAnalytics = context.eventAnalytics ?? {};
   const eps = Number(analytics?.eventsPerSecond ?? snapshot?.eventsPerSecond ?? 0);
-  const score = Number(snapshot?.score ?? 0);
-  const level = Number(snapshot?.level ?? 1);
+  const score = Number(snapshot.score ?? topPlayer?.score ?? 0);
+  const level = Number(snapshot.level ?? topPlayer?.level ?? 1);
+  const vm = context.vm ?? {};
+
+  if (mode === "leaderboard" && topPlayer) {
+    return `${topPlayer.callsign} leads with ${topPlayer.score} points at level ${topPlayer.level}. ${efficient?.callsign ?? topPlayer.callsign} has the strongest kill-to-hit profile, useful for showing player efficiency from ADB analytics.`;
+  }
+
+  if (mode === "players" && livePlayers.length > 0) {
+    return `${livePlayers.length} players are active. ${livePlayers[0].callsign} is currently strongest, while Cache keeps live state shared across VM routes for the ops view.`;
+  }
+
+  if (mode === "run" && latest) {
+    return `${latest.callsign}'s latest completed run reached level ${latest.level} with ${latest.score} points. Event chips show kills, hits, powerups and boss phases for a quick run review.`;
+  }
+
+  if (mode === "demo_summary") {
+    const events = Number(eventAnalytics.windows?.last15m ?? analytics.totalRecentEvents ?? 0);
+    return `Demo story: VMs serve the game, API Gateway controls calls, Streaming carries ${events} recent events, ADB ranks runs, Object Storage archives raw telemetry and GenAI explains patterns.`;
+  }
 
   if (eps > 4) {
     return `High telemetry rate detected at level ${level}. API Gateway should throttle bursts while Streaming buffers the event flow.`;
   }
   if (score > 5000) {
-    return `Defense score is strong on ${vm.name}. Keep routing balanced and use the leaderboard view to show Autonomous Database updates.`;
+    return `Defense score is strong on ${vm.name ?? "the active VM"}. Keep routing balanced and use the leaderboard view to show Autonomous Database updates.`;
   }
   if (level >= 3) {
     return `Anomaly level ${level} is active. Watch VM latency and call out Load Balancer failover readiness.`;
@@ -146,6 +261,23 @@ function getCopilotModel() {
 
 function getCoachModel() {
   return process.env.OCI_GENAI_COACH_MODEL || DEFAULT_COACH_GENAI_MODEL;
+}
+
+function modelLabel(model) {
+  const value = String(model ?? "");
+  if (value === DEFAULT_GENAI_MODEL) {
+    return "Gemini 2.5 Pro";
+  }
+  if (value.includes("gemini-2.5-flash-lite")) {
+    return "Gemini 2.5 Flash-Lite";
+  }
+  if (value.includes("gemini-2.5-flash")) {
+    return "Gemini 2.5 Flash";
+  }
+  if (value.includes("gemini-2.5-pro")) {
+    return "Gemini 2.5 Pro";
+  }
+  return value.startsWith("ocid1.generativeaimodel") ? `OCI model ...${value.slice(-6)}` : value;
 }
 
 function buildCopilotRequest(prompt, model = getCopilotModel(), maxTokens = 80) {
@@ -215,6 +347,25 @@ function buildSdkChatRequest(prompt, model = getCopilotModel(), maxTokens = 1200
       }
     }
   };
+}
+
+function buildAnalysisPrompt(context) {
+  const mode = context.mode ?? "live";
+  const intent = {
+    live: "Give the presenter a concise current-state insight.",
+    leaderboard: "Analyze who is performing best and why, using score, level and event counts.",
+    players: "Compare active players and call out live performance patterns.",
+    run: "Analyze the latest or selected run, including strengths, damage, progression and useful demo talking points.",
+    demo_summary: "Summarize what the current telemetry proves about the OCI architecture."
+  }[mode] ?? "Analyze the OCI Defense Grid demo state.";
+
+  return [
+    "You are the OCI Defense Grid ops copilot for a customer demo.",
+    intent,
+    `Return ${mode === "live" ? "one or two" : "three"} customer-facing sentences under ${COPILOT_REPLY_WORD_LIMIT} words total.`,
+    "Mention concrete player or service signals when present. No markdown.",
+    `Context JSON: ${JSON.stringify(buildCopilotContext(context))}`
+  ].join("\n");
 }
 
 function extractCopilotText(payload) {
@@ -340,29 +491,44 @@ function withTimeout(promise, timeoutMs) {
 }
 
 export async function createCopilotInsight(context) {
-  const prompt = [
-    "You are the OCI Defense Grid live demo copilot.",
-    "Return one complete customer-facing sentence under 22 words. No markdown.",
-    `Context: ${JSON.stringify(context)}`
-  ].join("\n");
+  const mode = context?.mode ?? "live";
+  const model = getCopilotModel();
+  const prompt = buildAnalysisPrompt(context);
+  const started = Date.now();
 
   try {
     const timeoutMs = Number(process.env.OCI_GENAI_TIMEOUT_MS ?? DEFAULT_GENAI_TIMEOUT_MS);
     const externalInsight = await withTimeout(
       callExternalCopilot(prompt, {
-        model: getCopilotModel(),
-        maxTokens: 80
+        model,
+        maxTokens: mode === "live" ? 180 : 420
       }),
       timeoutMs
     );
     if (externalInsight) {
-      return externalInsight.trim().slice(0, 280);
+      return {
+        insight: trimWords(externalInsight, COPILOT_REPLY_WORD_LIMIT),
+        source: "oci-genai",
+        model,
+        modelLabel: modelLabel(model),
+        latencyMs: Date.now() - started,
+        mode,
+        generatedAt: new Date().toISOString()
+      };
     }
   } catch (error) {
     console.warn("Copilot external call failed, using deterministic fallback.", error.message);
   }
 
-  return deterministicInsight(context);
+  return {
+    insight: deterministicInsight(context),
+    source: "fallback",
+    model: "deterministic",
+    modelLabel: "Deterministic fallback",
+    latencyMs: Date.now() - started,
+    mode,
+    generatedAt: new Date().toISOString()
+  };
 }
 
 export async function createCoachReply({ level, questionId, message = "", attemptCount = 0 } = {}) {

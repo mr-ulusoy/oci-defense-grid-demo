@@ -17,6 +17,7 @@ const VALID_EVENTS = new Set([
   "run_end",
   "heartbeat"
 ]);
+const COPILOT_MODES = new Set(["live", "leaderboard", "players", "run", "demo_summary"]);
 
 function vmIdentity() {
   return {
@@ -161,17 +162,39 @@ export function createApp({
       return;
     }
 
-    const insight = await createInsight({
+    const requestedMode = String(req.body?.mode ?? "live");
+    const mode = COPILOT_MODES.has(requestedMode) ? requestedMode : "live";
+    const [analytics, eventAnalytics, leaderboard, livePlayers, sinks] = await Promise.all([
+      store.liveAnalytics(req.body?.runId),
+      store.eventAnalytics(),
+      store.leaderboard(),
+      store.livePlayers(),
+      store.status()
+    ]);
+    const result = await createInsight({
+      mode,
+      question: req.body?.question,
       snapshot: req.body?.snapshot ?? {},
-      analytics: await store.liveAnalytics(req.body?.runId),
+      analytics,
+      eventAnalytics,
+      leaderboard,
+      livePlayers,
+      sinks,
+      streamConsumer: streamConsumer.status(),
+      routeMode: process.env.EVENT_INGEST_ROUTE_MODE ?? "vm-api",
       vm: vmIdentity()
     });
+    const insight = typeof result === "string" ? result : result.insight;
     await store.recordInsight({
       runId: req.body?.runId ?? "unknown",
       insight,
       createdAt: new Date().toISOString()
     });
-    res.json({ insight });
+    res.json(
+      typeof result === "string"
+        ? { insight, source: "unknown", mode }
+        : { ...result, mode: result.mode ?? mode }
+    );
   });
 
   app.post("/api/coach", async (req, res) => {
