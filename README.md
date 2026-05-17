@@ -53,7 +53,7 @@ Game API calls
         -> OCI Functions event ingest, when function_image is configured
         -> VM-backed Node API fallback, when function_image is empty
         -> OCI Streaming durable event stream
-           -> VM App stream consumer
+           -> background consumer/processor, hidden in the ops diagram
               -> Autonomous Database game_events/high_scores
               -> Object Storage raw NDJSON archive
      -> other /api routes
@@ -74,15 +74,15 @@ See the full wireframe in [docs/oci-defense-grid-wireframe.md](docs/oci-defense-
 
 | OCI service | How it is used |
 | --- | --- |
-| Compute Instance Pool | Runs the Phaser static game through Nginx, the Node/Express API on each VM, and the Streaming consumer worker. |
+| Compute Instance Pool | Runs the Phaser static game through Nginx, the Node/Express API on each VM, and currently the background Streaming consumer worker. |
 | Public Load Balancer | Public entrypoint for the game and health-checked VM failover. |
 | API Gateway | Fronts all `/api/*` calls for routing, CORS and enterprise API control. |
 | Private Load Balancer | Routes API Gateway traffic to the VM-backed Express API. |
 | Autoscaling | Scales the instance pool from 2 to 4 VMs based on CPU. |
 | OCI Cache | Stores short-lived live player snapshots shared across all app VMs. |
-| Streaming | Durable backbone for gameplay telemetry events between ingest and downstream consumers. |
-| Object Storage | Receives raw NDJSON event archives from the Streaming consumer. |
-| Autonomous Database | Receives curated `game_events` rows from the Streaming consumer for SQL analytics and the ops Event Analytics panel. |
+| Streaming | Durable backbone for gameplay telemetry events. The ops diagram shows Streaming delivering to data services; technically a background consumer/processor reads the stream. |
+| Object Storage | Receives raw NDJSON event archives written by the Streaming consumer/processor. |
+| Autonomous Database | Receives curated `game_events` rows from the Streaming consumer/processor for SQL analytics and the ops Event Analytics panel. |
 | OCI Generative AI | Gemini copilot insight in the ops HUD via the OCI SDK. |
 | IAM Dynamic Group and Policies | Manually created prerequisites that let app VMs and Functions call Streaming, Object Storage and GenAI, and let API Gateway invoke Functions. |
 | OCI Functions | Optional serverless event-ingest path for `POST /api/events`, validating telemetry, updating OCI Cache live state and publishing to Streaming. |
@@ -219,7 +219,7 @@ Browser POST /api/events
      -> OCI Function event-ingest
         -> OCI Cache live player state
         -> OCI Streaming
-           -> VM App stream consumer
+           -> background consumer/processor, not shown as a separate ops diagram box
               -> Autonomous Database game_events/high_scores
               -> Object Storage raw NDJSON archive
 ```
@@ -242,7 +242,7 @@ Recommended tfvars pattern:
 function_image = "ocir.<region>.oci.oraclecloud.com/<namespace>/oci-defense-grid/event-ingest:<tag>"
 ```
 
-The Function uses `OCI_STREAM_OCID`, `OCI_STREAM_MESSAGE_ENDPOINT`, `REDIS_HOST`, `REDIS_PORT` and `REDIS_TLS` from Terraform function config. Redis does not need IAM. ADB/Object Storage writes happen in the VM App stream consumer, not in the ingest Function.
+The Function uses `OCI_STREAM_OCID`, `OCI_STREAM_MESSAGE_ENDPOINT`, `REDIS_HOST`, `REDIS_PORT` and `REDIS_TLS` from Terraform function config. Redis does not need IAM. ADB/Object Storage writes happen in the background Streaming consumer/processor, not in the ingest Function.
 
 Build example for a new source image:
 
@@ -402,7 +402,7 @@ Then connect to the Autonomous Database and run:
 @server/schema.sql
 ```
 
-Set these VM/API environment variables so the Streaming consumer can persist curated events and highscores to ADB:
+Set these VM/API environment variables so the current Streaming consumer/processor can persist curated events and highscores to ADB:
 
 ```bash
 ADB_USER=ADMIN
@@ -441,8 +441,8 @@ The customer-facing demo checks are:
 - Compute uses an instance pool with autoscaling enabled.
 - Ops HUD lists active players from OCI Cache across both VM backends.
 - Leaderboard shows score, level reached and event chips including extra lives.
-- Gameplay events appear in Streaming first, then the VM App stream consumer writes Object Storage raw files.
-- Autonomous Database receives `game_events` from the VM App stream consumer.
+- Gameplay events appear in Streaming first, then a background consumer/processor writes Object Storage raw files.
+- Autonomous Database receives `game_events` from the background consumer/processor.
 - Ops HUD Event Analytics reads from Autonomous Database and falls back to memory locally.
 - Ops HUD updates score, active VM, CPU, RAM, cores, disk throughput, latency, events/sec and copilot insight.
 - `/api/copilot` returns `403` without the ops flag and `200` for ops callers.

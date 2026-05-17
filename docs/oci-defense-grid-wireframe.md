@@ -18,7 +18,6 @@ flowchart LR
     pool["Instance Pool<br/>2 initial VMs, autoscale to 4"]
     vm1["VM-1<br/>Nginx static game<br/>Node/Express API"]
     vm2["VM-2<br/>Nginx static game<br/>Node/Express API"]
-    consumers["VM App stream consumer group<br/>runs on the VM fleet"]
     autoscale["Autoscaling<br/>CPU policy"]
   end
 
@@ -57,9 +56,8 @@ flowchart LR
   vm1 --> cache
   vm2 --> cache
   cache --> ops
-  stream -- "consumer reads events" --> consumers
-  consumers -- "writes raw events" --> bucket
-  consumers -- "writes curated rows" --> adb
+  stream -- "background consumer/processor writes raw events" --> bucket
+  stream -- "background consumer/processor writes curated rows" --> adb
   adb --> ops
 
   vm1 --> genai
@@ -89,15 +87,15 @@ flowchart TB
 
 | OCI service | Role in the demo |
 | --- | --- |
-| Compute Instance Pool | Runs the static Phaser game, Node/Express API and Streaming consumer workers on multiple VMs. |
+| Compute Instance Pool | Runs the static Phaser game and Node/Express API on multiple VMs. In the current implementation, it also runs the background Streaming consumer worker until that processor is moved to a managed runtime. |
 | Public Load Balancer | Front door for the game; demonstrates backend health and failover. |
 | API Gateway | Enterprise API entrypoint for all `/api/*` browser calls. |
 | Private Load Balancer | Routes API Gateway traffic to the VM-backed Express API. |
 | Autoscaling | Shows how the VM pool can scale from 2 to 4 instances under CPU pressure. |
 | OCI Cache | Keeps live player snapshots shared across all active VM API backends. |
-| Streaming | Durable backbone between event ingest and downstream consumer workers. |
-| Object Storage | Stores raw event archives written by the Streaming consumer as NDJSON for replay and audit. |
-| Autonomous Database | Stores curated `game_events` rows written by the Streaming consumer for SQL analytics and the ops Event Analytics panel. |
+| Streaming | Durable backbone between event ingest and downstream persistence. The ops HUD shows Streaming delivering to data services; the technical implementation uses a background consumer/processor to perform the writes. |
+| Object Storage | Stores raw event archives written by the Streaming consumer/processor as NDJSON for replay and audit. |
+| Autonomous Database | Stores curated `game_events` rows written by the Streaming consumer/processor for SQL analytics and the ops Event Analytics panel. |
 | Generative AI | Gemini copilot insight in the ops HUD via OCI GenAI SDK. |
 | IAM Dynamic Group and Policies | Manually managed prerequisites. `dg_cengiz` matches app VMs and Functions; `Game-Demo` grants Streaming/Object Storage/GenAI; `oci-defense-grid-apigw-functions` lets API Gateway invoke Functions. |
 | OCI Functions | Optional event-ingest backend for `POST /api/events`, used when `function_image` points to an OCIR image. |

@@ -60,7 +60,6 @@ const architecture = {
   privateLbState: document.getElementById("archPrivateLbState"),
   cacheState: document.getElementById("archCacheState"),
   streamState: document.getElementById("archStreamState"),
-  consumerState: document.getElementById("archConsumerState"),
   adbState: document.getElementById("archAdbState"),
   objectState: document.getElementById("archObjectState"),
   genaiState: document.getElementById("archGenaiState"),
@@ -74,7 +73,6 @@ const architecture = {
     privateLb: document.getElementById("archPrivateLb"),
     cache: document.getElementById("archCache"),
     streaming: document.getElementById("archStreaming"),
-    consumer: document.getElementById("archConsumer"),
     adb: document.getElementById("archAdb"),
     objectStorage: document.getElementById("archObjectStorage"),
     genai: document.getElementById("archGenai")
@@ -233,7 +231,6 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   const recentNodes = recentVmCount();
   const cacheStatus = status?.sinks?.redisLivePlayers ?? "memory";
   const streamStatus = status?.sinks?.streaming ?? "memory";
-  const consumerStatus = status?.streamConsumer?.status ?? "disabled";
   const objectStatus = status?.sinks?.objectStorage ?? "memory";
   const adbStatus = eventAnalytics?.source === "autonomousDatabase" ? "ADB live" : (status?.sinks?.autonomousDatabase ?? "memory");
   const flowSpeed = eventRate >= 4 ? "0.55s" : eventRate >= 2 ? "0.78s" : eventRate > 0.05 ? "1.25s" : "2.4s";
@@ -254,7 +251,6 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   architecture.privateLbState.textContent = "VM App route";
   architecture.cacheState.textContent = cacheStatus === "connected" ? "Live player state" : cacheStatus;
   architecture.streamState.textContent = serviceConfigured(streamStatus) ? "Durable event stream" : streamStatus;
-  architecture.consumerState.textContent = consumerStatus === "running" ? "Writes ADB/Object" : consumerStatus;
   architecture.adbState.textContent = serviceConfigured(adbStatus) ? "Leaderboard + analytics" : adbStatus;
   architecture.objectState.textContent = serviceConfigured(objectStatus) ? "Raw event files" : objectStatus;
   architecture.genaiState.textContent = "Player Coach + Ops Copilot";
@@ -268,7 +264,6 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   setNodeLive(architecture.nodes.privateLb, true);
   setNodeLive(architecture.nodes.cache, cacheStatus === "connected");
   setNodeLive(architecture.nodes.streaming, serviceConfigured(streamStatus) || eventRate > 0);
-  setNodeLive(architecture.nodes.consumer, consumerStatus === "running");
   setNodeLive(architecture.nodes.adb, serviceConfigured(adbStatus));
   setNodeLive(architecture.nodes.objectStorage, serviceConfigured(objectStatus));
   setNodeLive(architecture.nodes.genai, true);

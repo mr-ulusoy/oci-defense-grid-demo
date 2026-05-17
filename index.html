@@ -72,16 +72,14 @@
                 <path class="arch-link arch-link-api" d="M 1005 330 C 1018 342 1027 356 1038 366"></path>
                 <path class="arch-link arch-link-events" d="M 500 335 C 560 405 615 455 636 505"></path>
                 <path class="arch-link arch-link-events" d="M 717 545 L 717 585"></path>
-                <path class="arch-link arch-link-events" d="M 800 623 L 864 623"></path>
+                <path class="arch-link arch-link-events" d="M 800 623 C 910 625 1000 575 1038 493"></path>
                 <path class="arch-link arch-link-events" d="M 800 500 C 900 438 970 405 1038 392"></path>
-                <path class="arch-link arch-link-events" d="M 1008 610 C 1030 590 1038 545 1038 493"></path>
-                <path class="arch-link arch-link-events" d="M 1008 623 L 1038 623"></path>
+                <path class="arch-link arch-link-events" d="M 800 623 L 1038 623"></path>
               </svg>
               <div class="arch-flow-label arch-label-game">Player opens the URL</div>
               <div class="arch-flow-label arch-label-api">/api/status, /api/coach, /api/copilot</div>
               <div class="arch-flow-label arch-label-events">/api/events -> Functions</div>
               <div class="arch-flow-label arch-label-stream">Streaming buffers events</div>
-              <div class="arch-flow-label arch-label-consumer">Consumer writes DB + files</div>
 
               <div class="arch-node arch-pos-client" id="archPlayer">
                 <span>Browser</span>
@@ -122,10 +120,6 @@
               <div class="arch-node arch-node-hub arch-pos-streaming" id="archStreaming">
                 <span>Streaming</span>
                 <strong id="archStreamState">Durable event stream</strong>
-              </div>
-              <div class="arch-node arch-pos-consumer" id="archConsumer">
-                <span>VM Stream Consumer</span>
-                <strong id="archConsumerState">Writes ADB/Object</strong>
               </div>
               <div class="arch-node arch-pos-adb" id="archAdb">
                 <span>Autonomous AI DB</span>
