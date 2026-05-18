@@ -395,7 +395,7 @@ export default class GameScene extends Phaser.Scene {
 
     createPlayer() {
         const playerConfig = this.usesFinalAssetStyle()
-            ? { key: 'final-ship-1', anim: 'final-ship-idle', scale: 2.35, size: [18, 24] }
+            ? { key: 'final-ship-1', anim: 'final-ship-idle', scale: 2.35, size: [24, 30] }
             : { key: 'ship', anim: 'ship-idle', scale: 2.55, size: [10, 17] };
 
         this.player = this.physics.add.sprite(240, this.scale.height - 90, playerConfig.key);
@@ -867,13 +867,19 @@ export default class GameScene extends Phaser.Scene {
         enemy.health = 2 + Math.floor(overdrive / 2) + (this.usesFinalAssetStyle() ? 1 : 0);
         if (this.isFinalLevel()) enemy.health = 2;
         enemy.points = 200 + overdrive * 50 + (this.usesFinalAssetStyle() ? 125 : 0);
-        enemy.canShoot = true;
+        enemy.canShoot = this.isFinalLevel()
+            ? Math.random() < 0.55
+            : (this.level === 4 ? Math.random() < 0.68 : true);
         enemy.lastShot = 0;
         let minDelay = Math.max(420, (this.level >= 3 ? 700 : 800 - this.level * 100) - overdrive * 60);
         let maxDelay = Math.max(minDelay + 220, (this.level >= 3 ? 1400 : 1500 - this.level * 150) - overdrive * 90);
+        if (this.level === 4) {
+            minDelay += 360;
+            maxDelay += 420;
+        }
         if (this.isFinalLevel()) {
-            minDelay += 260;
-            maxDelay += 320;
+            minDelay += 520;
+            maxDelay += 620;
         }
         enemy.shootDelay = Phaser.Math.Between(minDelay, maxDelay);
         enemy.setVelocityY(Phaser.Math.Between(80 + overdrive * 8, 140 + overdrive * 14));
@@ -910,12 +916,15 @@ export default class GameScene extends Phaser.Scene {
         if (this.level === 4) enemy.health = 7;
         if (this.isFinalLevel()) enemy.health = 5;
         enemy.points = 500 + overdrive * 150 + (this.usesFinalAssetStyle() ? 250 : 0);
-        enemy.canShoot = true;
+        enemy.canShoot = this.isFinalLevel()
+            ? Math.random() < 0.7
+            : (this.level === 4 ? Math.random() < 0.82 : true);
         enemy.lastShot = 0;
         enemy.shootDelay = this.level >= 3
             ? Phaser.Math.Between(Math.max(420, 700 - overdrive * 80), Math.max(760, 1200 - overdrive * 100))
             : Phaser.Math.Between(500, 1000);
-        if (this.isFinalLevel()) enemy.shootDelay += 360;
+        if (this.level === 4) enemy.shootDelay += 480;
+        if (this.isFinalLevel()) enemy.shootDelay += 620;
         enemy.setVelocityY(Phaser.Math.Between(50 + overdrive * 8, 90 + overdrive * 12));
         enemy.trackPlayer = true;
 
@@ -976,7 +985,7 @@ export default class GameScene extends Phaser.Scene {
         bullet.setScale(this.usesFinalAssetStyle() ? 2.25 : 2);
         if (this.usesFinalAssetStyle()) {
             bullet.play('final-enemy-bullet-spin');
-            bullet.body.setSize(8, 8);
+            bullet.body.setSize(14, 14);
         } else {
             bullet.setTint(0xff0000);
         }
@@ -1158,8 +1167,8 @@ export default class GameScene extends Phaser.Scene {
                 this.boss.shootPattern = 0;
             }
         }
-        if (bossType === 4 && bossTier >= this.maxLevel) {
-            shootDelay += 260;
+        if (bossType === 4) {
+            shootDelay += bossTier >= this.maxLevel ? 480 : 360;
         }
 
         if (time > this.boss.lastShot + shootDelay) {
@@ -1278,19 +1287,19 @@ export default class GameScene extends Phaser.Scene {
             const createFinalBossBullet = (x, y, velocityX, velocityY) => {
                 const bullet = this.enemyBullets.create(x, y, 'final-enemy-bullet-1');
                 bullet.setScale(2.35);
-                bullet.body.setSize(8, 8);
+                bullet.body.setSize(14, 14);
                 bullet.play('final-enemy-bullet-spin');
                 bullet.setVelocity(velocityX, velocityY);
                 return bullet;
             };
 
             if (this.boss.shootPattern === 0) {
-                const spread = bossTier >= this.maxLevel ? 2 : 3;
+                const spread = bossTier >= this.maxLevel ? 1 : 2;
                 for (let i = -spread; i <= spread; i++) {
                     createFinalBossBullet(this.boss.x + i * 24, this.boss.y + 50, i * 46, 190 + Math.abs(i) * 8);
                 }
             } else if (this.boss.shootPattern === 1) {
-                const spread = bossTier >= this.maxLevel ? 1 : 2;
+                const spread = 1;
                 for (let i = -spread; i <= spread; i++) {
                     const x = this.boss.x + i * 52;
                     const y = this.boss.y + 42;
@@ -1298,7 +1307,7 @@ export default class GameScene extends Phaser.Scene {
                     createFinalBossBullet(x, y, Math.cos(angle) * 215, Math.sin(angle) * 215);
                 }
             } else {
-                const bulletCount = bossTier >= this.maxLevel ? 8 : 14;
+                const bulletCount = bossTier >= this.maxLevel ? 6 : 8;
                 for (let i = 0; i < bulletCount; i++) {
                     const angle = (this.boss.phaseTime * (bossTier >= this.maxLevel ? 0.018 : 0.028)) + (i * Math.PI * 2 / bulletCount);
                     createFinalBossBullet(
