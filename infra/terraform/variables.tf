@@ -294,7 +294,7 @@ variable "create_autonomous_database" {
 }
 
 variable "function_image" {
-  description = "Optional OCIR image for the OCI Functions event-ingest function. Leave empty to keep POST /api/events on the VM-backed API."
+  description = "Optional OCIR image for the OCI Functions cloud API function. Leave empty to keep /api/events and read APIs on the VM-backed API."
   type        = string
   default     = ""
 }

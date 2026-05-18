@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createIngestHandler, normalizeCallsign, normalizeEvent, parsePayload } from "../lib/handler.js";
 
-function createHttpContext(method = "POST") {
+function createHttpContext(method = "POST", path = "/api/events", queryParameters = {}) {
   return {
     httpGateway: {
       method,
+      path,
+      queryParameters,
       statusCode: 200,
       headers: {},
       setResponseHeader(key, value) {
@@ -101,4 +103,51 @@ test("ingest handler rejects invalid telemetry", async () => {
 
   assert.equal(ctx.httpGateway.statusCode, 400);
   assert.match(response.error, /No valid telemetry/);
+});
+
+test("function handler serves leaderboard read route", async () => {
+  const handler = createIngestHandler({
+    recordEvents: {
+      leaderboard: async () => [{ callsign: "ADA", score: 42, runId: "run-1" }]
+    }
+  });
+  const ctx = createHttpContext("GET", "/api/leaderboard");
+  const response = await handler({}, ctx);
+
+  assert.equal(ctx.httpGateway.statusCode, 200);
+  assert.equal(response.entries[0].callsign, "ADA");
+});
+
+test("function handler serves live player read route", async () => {
+  const handler = createIngestHandler({
+    recordEvents: {
+      livePlayers: async () => [{ callsign: "OPS", eventsPerSecond: 1.2 }]
+    }
+  });
+  const ctx = createHttpContext("GET", "/api/players/live");
+  const response = await handler({}, ctx);
+
+  assert.equal(ctx.httpGateway.statusCode, 200);
+  assert.equal(response.players[0].callsign, "OPS");
+});
+
+test("function handler serves analytics read routes", async () => {
+  const handler = createIngestHandler({
+    recordEvents: {
+      liveAnalytics: async (runId) => ({ runId, eventsPerSecond: 2, totalRecentEvents: 60 }),
+      eventAnalytics: async () => ({
+        source: "autonomousDatabase",
+        windows: { last1m: 2, last5m: 3, last15m: 4 },
+        eventTypes: []
+      })
+    }
+  });
+
+  const liveCtx = createHttpContext("GET", "/api/analytics/live", { runId: "run-demo" });
+  const liveResponse = await handler({}, liveCtx);
+  const eventCtx = createHttpContext("GET", "/api/analytics/events");
+  const eventResponse = await handler({}, eventCtx);
+
+  assert.equal(liveResponse.runId, "run-demo");
+  assert.equal(eventResponse.source, "autonomousDatabase");
 });

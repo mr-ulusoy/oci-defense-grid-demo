@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 const DEFAULT_TTL_SECONDS = 60;
 const EVENT_WINDOW_MS = 10000;
+const EVENT_TYPES = ["enemy_killed", "player_hit", "powerup", "extra_life", "boss_phase", "run_end", "heartbeat"];
 let providerPromise;
 let streamClientPromise;
 let objectClientPromise;
@@ -30,6 +31,15 @@ function playerEventsKey(sessionId) {
 
 function playerIndexKey() {
   return `${redisPrefix()}:players`;
+}
+
+function parseSnapshot(raw) {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
 function redisSocketOptions() {
@@ -152,6 +162,29 @@ async function createOracleConnection() {
   });
 }
 
+async function oracleObjectOptions() {
+  return { outFormat: (await import("oracledb")).default.OUT_FORMAT_OBJECT };
+}
+
+function toNumber(value) {
+  return Number(value ?? 0);
+}
+
+function emptyEventCounts() {
+  return Object.fromEntries(EVENT_TYPES.map((type) => [type, 0]));
+}
+
+function normalizeTypeCounts(rows) {
+  const counts = new Map(EVENT_TYPES.map((type) => [type, 0]));
+  for (const row of rows ?? []) {
+    counts.set(String(row.EVENT_TYPE), toNumber(row.EVENT_COUNT));
+  }
+
+  return [...counts.entries()]
+    .map(([type, count]) => ({ type, count }))
+    .sort((left, right) => Number(right.count) - Number(left.count) || left.type.localeCompare(right.type));
+}
+
 async function ignoreAlreadyExists(operation) {
   try {
     await operation();
@@ -240,6 +273,215 @@ async function updateRedisLivePlayers(batch) {
   multi.zRemRangeByScore(playerIndexKey(), 0, cutoff);
   await multi.exec();
   return "connected";
+}
+
+async function listRedisLivePlayers() {
+  const client = await getRedisClient();
+  if (!client) {
+    return [];
+  }
+
+  const ttl = ttlSeconds();
+  const cutoff = Date.now() - ttl * 1000;
+  await client.zRemRangeByScore(playerIndexKey(), 0, cutoff);
+
+  const sessionIds = await client.zRangeByScore(playerIndexKey(), cutoff, "+inf");
+  if (sessionIds.length === 0) {
+    return [];
+  }
+
+  const snapshots = (await client.mGet(sessionIds.map(playerKey))).map(parseSnapshot).filter(Boolean);
+  const eventCounts = await Promise.all(
+    snapshots.map((player) => client.zCount(playerEventsKey(player.sessionId), Date.now() - EVENT_WINDOW_MS, "+inf"))
+  );
+
+  return snapshots
+    .map((player, index) => ({
+      ...player,
+      eventsPerSecond: Number((eventCounts[index] / 10).toFixed(1))
+    }))
+    .sort((left, right) => right.score - left.score || Date.parse(right.lastSeen) - Date.parse(left.lastSeen));
+}
+
+async function eventCountsByRunFromAutonomousDb(runIds) {
+  const uniqueRunIds = [...new Set(runIds.filter(Boolean))].slice(0, 20);
+  if (uniqueRunIds.length === 0) {
+    return new Map();
+  }
+
+  const connection = await createOracleConnection();
+  if (!connection) {
+    return new Map(uniqueRunIds.map((runId) => [runId, emptyEventCounts()]));
+  }
+
+  try {
+    await ensureAutonomousSchema(connection);
+    const options = await oracleObjectOptions();
+    const binds = Object.fromEntries(uniqueRunIds.map((runId, index) => [`run${index}`, runId]));
+    const placeholders = uniqueRunIds.map((_, index) => `:run${index}`).join(", ");
+    const result = await connection.execute(
+      `select run_id, event_type, count(*) as event_count
+       from game_events
+       where run_id in (${placeholders})
+       group by run_id, event_type`,
+      binds,
+      options
+    );
+    const counts = new Map(uniqueRunIds.map((runId) => [runId, emptyEventCounts()]));
+
+    for (const row of result.rows ?? []) {
+      const runCounts = counts.get(row.RUN_ID) ?? emptyEventCounts();
+      runCounts[row.EVENT_TYPE] = toNumber(row.EVENT_COUNT);
+      counts.set(row.RUN_ID, runCounts);
+    }
+
+    return counts;
+  } finally {
+    await connection.close();
+  }
+}
+
+async function addEventCountsByRun(items) {
+  const runIds = items.map((item) => item.runId).filter(Boolean);
+  const countsByRun = await eventCountsByRunFromAutonomousDb(runIds);
+
+  return items.map((item) => ({
+    ...item,
+    eventCounts: countsByRun.get(item.runId) ?? emptyEventCounts()
+  }));
+}
+
+async function leaderboardFromAutonomousDb() {
+  const connection = await createOracleConnection();
+  if (!connection) {
+    return [];
+  }
+
+  try {
+    await ensureAutonomousSchema(connection);
+    const result = await connection.execute(
+      `select callsign, score, run_id, level_no, vm_name,
+              to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.FF3"Z"') created_at
+       from high_scores
+       order by score desc, created_at asc
+       fetch first 10 rows only`,
+      [],
+      await oracleObjectOptions()
+    );
+
+    return addEventCountsByRun(
+      (result.rows ?? []).map((row) => ({
+        callsign: row.CALLSIGN,
+        score: Number(row.SCORE),
+        runId: row.RUN_ID,
+        level: Number(row.LEVEL_NO),
+        vm: row.VM_NAME,
+        createdAt: row.CREATED_AT
+      }))
+    );
+  } finally {
+    await connection.close();
+  }
+}
+
+async function liveAnalyticsFromAutonomousDb(runId) {
+  const connection = await createOracleConnection();
+  if (!connection) {
+    return {
+      source: "disabled",
+      runId: runId ?? "all",
+      eventsPerSecond: 0,
+      totalRecentEvents: 0,
+      actions: {},
+      latestInsight: null
+    };
+  }
+
+  try {
+    await ensureAutonomousSchema(connection);
+    const options = await oracleObjectOptions();
+    const scopedRun = runId ? "and run_id = :runId" : "";
+    const binds = runId ? { runId } : {};
+    const totalResult = await connection.execute(
+      `select count(*) as total_recent_events
+       from game_events
+       where server_ts >= systimestamp - interval '30' second ${scopedRun}`,
+      binds,
+      options
+    );
+    const actionResult = await connection.execute(
+      `select cloud_action, count(*) as action_count
+       from game_events
+       where server_ts >= systimestamp - interval '30' second ${scopedRun}
+       group by cloud_action`,
+      binds,
+      options
+    );
+    const total = toNumber(totalResult.rows?.[0]?.TOTAL_RECENT_EVENTS);
+    const actions = Object.fromEntries(
+      (actionResult.rows ?? []).map((row) => [row.CLOUD_ACTION, toNumber(row.ACTION_COUNT)])
+    );
+
+    return {
+      source: "autonomousDatabase",
+      runId: runId ?? "all",
+      eventsPerSecond: total / 30,
+      totalRecentEvents: total,
+      actions,
+      latestInsight: null
+    };
+  } finally {
+    await connection.close();
+  }
+}
+
+async function eventAnalyticsFromAutonomousDb() {
+  const connection = await createOracleConnection();
+  if (!connection) {
+    return {
+      source: "disabled",
+      generatedAt: new Date().toISOString(),
+      windows: { last1m: 0, last5m: 0, last15m: 0 },
+      eventTypes: normalizeTypeCounts([])
+    };
+  }
+
+  try {
+    await ensureAutonomousSchema(connection);
+    const options = await oracleObjectOptions();
+    const windowResult = await connection.execute(
+      `select
+         sum(case when server_ts >= systimestamp - interval '1' minute then 1 else 0 end) as last_1m,
+         sum(case when server_ts >= systimestamp - interval '5' minute then 1 else 0 end) as last_5m,
+         count(*) as last_15m
+       from game_events
+       where server_ts >= systimestamp - interval '15' minute`,
+      [],
+      options
+    );
+    const typeResult = await connection.execute(
+      `select event_type, count(*) as event_count
+       from game_events
+       where server_ts >= systimestamp - interval '15' minute
+       group by event_type
+       order by count(*) desc, event_type asc`,
+      [],
+      options
+    );
+    const windows = windowResult.rows?.[0] ?? {};
+    return {
+      source: "autonomousDatabase",
+      generatedAt: new Date().toISOString(),
+      windows: {
+        last1m: toNumber(windows.LAST_1M),
+        last5m: toNumber(windows.LAST_5M),
+        last15m: toNumber(windows.LAST_15M)
+      },
+      eventTypes: normalizeTypeCounts(typeResult.rows)
+    };
+  } finally {
+    await connection.close();
+  }
 }
 
 export async function persistToAutonomousDb(batch) {
@@ -380,6 +622,22 @@ export function createIngestSinks() {
       statuses.objectStorage = statuses.streaming === "connected" ? "via-stream-consumer" : "waiting-for-stream";
 
       return statuses;
+    },
+
+    async leaderboard() {
+      return leaderboardFromAutonomousDb();
+    },
+
+    async livePlayers() {
+      return addEventCountsByRun(await listRedisLivePlayers());
+    },
+
+    async liveAnalytics(runId) {
+      return liveAnalyticsFromAutonomousDb(runId);
+    },
+
+    async eventAnalytics() {
+      return eventAnalyticsFromAutonomousDb();
     }
   };
 }

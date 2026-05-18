@@ -6,6 +6,54 @@ function httpGatewayContext(ctx) {
   return ctx?.httpGateway ?? ctx?.protocol ?? null;
 }
 
+function requestPath(ctx) {
+  const http = httpGatewayContext(ctx);
+  const candidates = [
+    http?.path,
+    http?.requestPath,
+    http?.requestUri,
+    http?.requestURI,
+    http?.requestUrl,
+    http?.requestURL,
+    ctx?.path
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    try {
+      return new globalThis.URL(String(candidate), "https://function.local").pathname;
+    } catch {
+      const path = String(candidate).split("?")[0];
+      if (path.startsWith("/")) {
+        return path;
+      }
+    }
+  }
+
+  return "/api/events";
+}
+
+function queryParam(ctx, key) {
+  const http = httpGatewayContext(ctx);
+  const containers = [http?.queryParameters, http?.query, ctx?.queryParameters, ctx?.query].filter(Boolean);
+  for (const container of containers) {
+    const value = container[key];
+    if (value != null) {
+      return Array.isArray(value) ? value[0] : value;
+    }
+  }
+
+  const candidates = [http?.requestUrl, http?.requestURL, http?.requestUri, http?.requestURI, ctx?.url].filter(Boolean);
+  for (const candidate of candidates) {
+    try {
+      return new globalThis.URL(String(candidate), "https://function.local").searchParams.get(key);
+    } catch {
+      // Ignore malformed URLs from local tests or platform variants.
+    }
+  }
+
+  return null;
+}
+
 function setJsonResponse(http) {
   http?.setResponseHeader?.("Content-Type", "application/json");
   http?.setHeader?.("Content-Type", "application/json");
@@ -91,8 +139,9 @@ export function normalizeEvent(event, vm = functionIdentity()) {
 }
 
 export function createIngestHandler({ recordEvents, identity = functionIdentity } = {}) {
+  const readApi = typeof recordEvents === "function" ? { recordEvents } : (recordEvents ?? {});
   const writeEvents =
-    recordEvents ??
+    readApi.recordEvents ??
     (async () => ({
       memory: "enabled"
     }));
@@ -104,6 +153,43 @@ export function createIngestHandler({ recordEvents, identity = functionIdentity 
     if (http?.method === "OPTIONS") {
       setStatus(http, 204);
       return {};
+    }
+
+    const method = String(http?.method ?? "POST").toUpperCase();
+    const path = requestPath(ctx);
+
+    if (method === "GET") {
+      try {
+        if (path === "/api/leaderboard") {
+          return { entries: (await readApi.leaderboard?.()) ?? [] };
+        }
+        if (path === "/api/players/live") {
+          return { players: (await readApi.livePlayers?.()) ?? [] };
+        }
+        if (path === "/api/analytics/live") {
+          return (await readApi.liveAnalytics?.(queryParam(ctx, "runId"))) ?? {
+            runId: queryParam(ctx, "runId") ?? "all",
+            eventsPerSecond: 0,
+            totalRecentEvents: 0,
+            actions: {},
+            latestInsight: null
+          };
+        }
+        if (path === "/api/analytics/events") {
+          return (await readApi.eventAnalytics?.()) ?? {
+            source: "function",
+            windows: { last1m: 0, last5m: 0, last15m: 0 },
+            eventTypes: []
+          };
+        }
+      } catch (error) {
+        console.warn(`Function read route failed for ${path}.`, error.message);
+        setStatus(http, 500);
+        return { error: "Function read route failed." };
+      }
+
+      setStatus(http, 404);
+      return { error: "Unknown function route." };
     }
 
     let payload;

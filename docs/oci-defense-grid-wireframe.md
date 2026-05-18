@@ -11,7 +11,7 @@ flowchart LR
 
   webLb["OCI Load Balancer<br/>Public web entrypoint"]
   apiGw["OCI API Gateway<br/>/api/* routing, CORS, throttling"]
-  fn["OCI Functions<br/>event-ingest for POST /api/events"]
+  fn["OCI Functions<br/>event ingest + read APIs"]
   apiLb["OCI Load Balancer<br/>Private API backend set"]
 
   subgraph compute["OCI Compute"]
@@ -45,12 +45,13 @@ flowchart LR
 
   player -- "POST/GET /api/*" --> apiGw
   ops -- "status, analytics, copilot" --> apiGw
-  apiGw -- "POST /api/events when function_image is set" --> fn
-  apiGw -- "other /api routes and fallback /api/events" --> apiLb --> vm1
+  apiGw -- "events, leaderboard, live players, analytics when function_image is set" --> fn
+  apiGw -- "status, stress, coach, copilot and fallback APIs" --> apiLb --> vm1
   apiLb --> vm2
 
   fn --> stream
   fn --> cache
+  fn --> adb
   vm1 --> stream
   vm2 --> stream
   vm1 --> cache
@@ -98,7 +99,7 @@ flowchart TB
 | Autonomous Database | Stores curated `game_events` rows written by the Streaming consumer/processor for SQL analytics and the ops Event Analytics panel. |
 | Generative AI | GPT-OSS ops copilot insight and Flash-Lite player hints via OCI GenAI SDK. |
 | IAM Dynamic Group and Policies | Manually managed prerequisites. `dg_cengiz` matches app VMs and Functions; `Game-Demo` grants Streaming/Object Storage/GenAI; `oci-defense-grid-apigw-functions` lets API Gateway invoke Functions. |
-| OCI Functions | Optional event-ingest backend for `POST /api/events`, used when `function_image` points to an OCIR image. |
+| OCI Functions | Optional cloud API backend for `POST /api/events`, leaderboard, live players and analytics reads when `function_image` points to an OCIR image. |
 
 ## Current GenAI Path
 

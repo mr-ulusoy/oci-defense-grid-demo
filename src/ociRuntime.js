@@ -243,12 +243,12 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   architecture.map.classList.toggle("flow-idle", eventRate <= 0.05);
   architecture.map.style.setProperty("--arch-flow-speed", flowSpeed);
 
-  architecture.routeMode.textContent = functionMode ? "Functions ingest" : "VM API fallback";
+  architecture.routeMode.textContent = functionMode ? "Functions ingest + reads" : "VM API fallback";
   architecture.eventRate.textContent = `${Number(eventRate).toFixed(1)} events/sec`;
   architecture.publicLbState.textContent = status?.loadBalancer ?? "Frontend route";
   architecture.vmState.textContent = `${recentNodes || 1} nodes observed`;
   architecture.apiState.textContent = status?.gateway ?? "/api/* routing";
-  architecture.functionState.textContent = functionMode ? "Cache + stream" : "Standby";
+  architecture.functionState.textContent = functionMode ? "Events + read APIs" : "Standby";
   architecture.vmAppState.textContent = activeVmKey ? `Active ${observedVms.get(activeVmKey)?.name ?? "VM"}` : "Node/Express APIs";
   architecture.privateLbState.textContent = "VM App route";
   architecture.cacheState.textContent = cacheStatus === "connected" ? "Live player state" : cacheStatus;

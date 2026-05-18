@@ -522,39 +522,37 @@ resource "oci_apigateway_deployment" "demo" {
       }
     }
 
-    routes {
-      path    = "/api/leaderboard"
-      methods = ["GET"]
-      backend {
-        type = "HTTP_BACKEND"
-        url  = "http://${local.api_lb_ip}:3000/api/leaderboard"
+    dynamic "routes" {
+      for_each = local.function_ingest_enabled ? [] : [
+        "/api/leaderboard",
+        "/api/players/live",
+        "/api/analytics/live",
+        "/api/analytics/events"
+      ]
+      content {
+        path    = routes.value
+        methods = ["GET"]
+        backend {
+          type = "HTTP_BACKEND"
+          url  = "http://${local.api_lb_ip}:3000${routes.value}"
+        }
       }
     }
 
-    routes {
-      path    = "/api/players/live"
-      methods = ["GET"]
-      backend {
-        type = "HTTP_BACKEND"
-        url  = "http://${local.api_lb_ip}:3000/api/players/live"
-      }
-    }
-
-    routes {
-      path    = "/api/analytics/live"
-      methods = ["GET"]
-      backend {
-        type = "HTTP_BACKEND"
-        url  = "http://${local.api_lb_ip}:3000/api/analytics/live"
-      }
-    }
-
-    routes {
-      path    = "/api/analytics/events"
-      methods = ["GET"]
-      backend {
-        type = "HTTP_BACKEND"
-        url  = "http://${local.api_lb_ip}:3000/api/analytics/events"
+    dynamic "routes" {
+      for_each = local.function_ingest_enabled ? [
+        "/api/leaderboard",
+        "/api/players/live",
+        "/api/analytics/live",
+        "/api/analytics/events"
+      ] : []
+      content {
+        path    = routes.value
+        methods = ["GET"]
+        backend {
+          type        = "ORACLE_FUNCTIONS_BACKEND"
+          function_id = oci_functions_function.optional_ingest[0].id
+        }
       }
     }
 
@@ -636,11 +634,14 @@ resource "oci_functions_function" "optional_ingest" {
   application_id     = oci_functions_application.demo.id
   display_name       = "${local.name_prefix}-event-ingest"
   image              = var.function_image
-  memory_in_mbs      = 256
+  memory_in_mbs      = 512
   timeout_in_seconds = 30
 
   config = {
     LIVE_PLAYER_TTL_SECONDS     = tostring(var.live_player_ttl_seconds)
+    ADB_CONNECT_STRING          = local.adb_app_connect_string
+    ADB_PASSWORD                = var.adb_password
+    ADB_USER                    = var.adb_user
     OCI_REGION                  = var.region
     OCI_STREAM_MESSAGE_ENDPOINT = oci_streaming_stream.events.messages_endpoint
     OCI_STREAM_OCID             = oci_streaming_stream.events.id

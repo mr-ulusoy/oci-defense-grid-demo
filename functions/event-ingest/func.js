@@ -6,6 +6,6 @@ const sinks = createIngestSinks();
 
 fdk.handle(
   createIngestHandler({
-    recordEvents: sinks.recordEvents
+    recordEvents: sinks
   })
 );

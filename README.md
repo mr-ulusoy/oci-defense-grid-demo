@@ -56,10 +56,13 @@ Game API calls
            -> background consumer/processor, hidden in the ops diagram
               -> Autonomous Database game_events/high_scores
               -> Object Storage raw NDJSON archive
-     -> other /api routes
+     -> GET /api/leaderboard, /api/players/live, /api/analytics/*
+        -> OCI Functions read APIs, when function_image is configured
+           -> OCI Cache live player state
+           -> Autonomous Database leaderboard and analytics
+     -> status, stress, coach and copilot routes
         -> private OCI Load Balancer
            -> Compute Instance Pool VM App
-              -> OCI Cache live player state
               -> OCI Generative AI ops copilot or deterministic fallback
 ```
 
@@ -79,13 +82,13 @@ See the full wireframe in [docs/oci-defense-grid-wireframe.md](docs/oci-defense-
 | API Gateway | Fronts all `/api/*` calls for routing, CORS and enterprise API control. |
 | Private Load Balancer | Routes API Gateway traffic to the VM-backed Express API. |
 | Autoscaling | Scales the instance pool from 2 to 4 VMs based on CPU. |
-| OCI Cache | Stores short-lived live player snapshots shared across all app VMs. |
+| OCI Cache | Stores short-lived live player snapshots shared across Functions and app VMs. |
 | Streaming | Durable backbone for gameplay telemetry events. The ops diagram shows Streaming delivering to data services; technically a background consumer/processor reads the stream. |
 | Object Storage | Receives raw NDJSON event archives written by the Streaming consumer/processor. |
 | Autonomous Database | Receives curated `game_events` rows from the Streaming consumer/processor for SQL analytics and the ops Event Analytics panel. |
 | OCI Generative AI | GPT-OSS ops copilot insight and Flash-Lite player hints via the OCI SDK. |
 | IAM Dynamic Group and Policies | Manually created prerequisites that let app VMs and Functions call Streaming, Object Storage and GenAI, and let API Gateway invoke Functions. |
-| OCI Functions | Optional serverless event-ingest path for `POST /api/events`, validating telemetry, updating OCI Cache live state and publishing to Streaming. |
+| OCI Functions | Optional serverless cloud API path for `POST /api/events`, `GET /api/leaderboard`, `GET /api/players/live`, `GET /api/analytics/live` and `GET /api/analytics/events`. |
 
 ## Runtime API
 
@@ -211,27 +214,33 @@ If you rebuild in the same tenancy, keep the manual IAM resources above. If you 
 
 ## OCI Functions Event Ingest
 
-`functions/event-ingest` is the serverless telemetry ingest function. It is designed to take load off the VMs during demo spikes:
+`functions/event-ingest` is the serverless cloud API function. It is designed to take event ingest and read-heavy data APIs off the VMs during demo spikes:
 
 ```text
 Browser POST /api/events
   -> API Gateway
-     -> OCI Function event-ingest
+     -> OCI Function cloud API
         -> OCI Cache live player state
         -> OCI Streaming
            -> background consumer/processor, not shown as a separate ops diagram box
               -> Autonomous Database game_events/high_scores
               -> Object Storage raw NDJSON archive
+
+Browser GET /api/leaderboard, /api/players/live, /api/analytics/*
+  -> API Gateway
+     -> OCI Function cloud API
+        -> OCI Cache live player state
+        -> Autonomous Database leaderboard and analytics
 ```
 
-By default `function_image = ""`, so Terraform keeps `/api/events` routed to the VM-backed API. To switch the route to OCI Functions, point Terraform at an existing OCIR image and make sure the manual IAM prerequisites above are in place.
+By default `function_image = ""`, so Terraform keeps `/api/events` and read APIs routed to the VM-backed API. To switch those routes to OCI Functions, point Terraform at an existing OCIR image and make sure the manual IAM prerequisites above are in place.
 
-The Function source in this repo accepts the same telemetry event types as the VM API, including `extra_life`.
+The Function source in this repo accepts the same telemetry event types as the VM API, including `extra_life`, and can also serve leaderboard, live player and analytics reads.
 
 Current tested image in Stockholm:
 
 ```hcl
-function_image = "ocir.eu-stockholm-1.oci.oraclecloud.com/fr9qm01oq44x/oci-defense-grid/event-ingest:0.1.1"
+function_image = "ocir.eu-stockholm-1.oci.oraclecloud.com/fr9qm01oq44x/oci-defense-grid/event-ingest:0.1.2"
 ```
 
 OCI Functions requires the image to be in the same region's OCIR as the Function. Keep one known-good source image, then publish it into the target demo region before running Terraform.
@@ -242,7 +251,7 @@ Recommended tfvars pattern:
 function_image = "ocir.<region>.oci.oraclecloud.com/<namespace>/oci-defense-grid/event-ingest:<tag>"
 ```
 
-The Function uses `OCI_STREAM_OCID`, `OCI_STREAM_MESSAGE_ENDPOINT`, `REDIS_HOST`, `REDIS_PORT` and `REDIS_TLS` from Terraform function config. Redis does not need IAM. ADB/Object Storage writes happen in the background Streaming consumer/processor, not in the ingest Function.
+The Function uses `OCI_STREAM_OCID`, `OCI_STREAM_MESSAGE_ENDPOINT`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_TLS`, `ADB_USER`, `ADB_PASSWORD` and `ADB_CONNECT_STRING` from Terraform function config. Redis does not need IAM. ADB/Object Storage writes still happen in the background Streaming consumer/processor; the Function reads ADB for leaderboard and analytics.
 
 Build example for a new source image:
 
@@ -428,7 +437,7 @@ When ADB is not configured locally, the same endpoint falls back to the in-memor
 
 ## OCI Functions
 
-`functions/event-ingest` is the deployed serverless ingest path when `function_image` points at an OCIR image. If `function_image = ""`, API Gateway keeps `/api/events` on the VM API fallback.
+`functions/event-ingest` is the deployed serverless cloud API path when `function_image` points at an OCIR image. If `function_image = ""`, API Gateway keeps `/api/events`, leaderboard, live players and analytics on the VM API fallback.
 
 ## Verification
 
