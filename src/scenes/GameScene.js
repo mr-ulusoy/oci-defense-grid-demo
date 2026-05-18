@@ -1518,10 +1518,10 @@ export default class GameScene extends Phaser.Scene {
             strokeThickness: 3
         }).setOrigin(0.5);
 
-        const guide = this.add.image(82, 486 + extraY, briefing.guideKey)
-            .setDisplaySize(144, 144);
-        const nameplate = this.add.rectangle(82, 574 + extraY, 148, 32, 0x06111c, 0.8);
-        const guideLabel = this.add.text(82, 574 + extraY, 'OCI GUIDE', {
+        const guide = this.add.image(82, 478 + extraY, briefing.guideKey)
+            .setDisplaySize(164, 164);
+        const nameplate = this.add.rectangle(82, 580 + extraY, 158, 32, 0x06111c, 0.8);
+        const guideLabel = this.add.text(82, 580 + extraY, 'OCI GUIDE', {
             fontFamily: 'monospace',
             fontSize: '13px',
             fill: '#ffffff',
@@ -1822,7 +1822,7 @@ export default class GameScene extends Phaser.Scene {
         const guideY = tallLayout
             ? Math.min(answerY + 112, height - 198)
             : Math.min(answerY + 84, height - 116);
-        const guide = this.add.image(80, guideY, 'briefing-storyteller').setDisplaySize(150, 150);
+        const guide = this.add.image(82, guideY, 'briefing-storyteller').setDisplaySize(170, 170);
         const statusText = this.add.text(158, answerY, 'Choose the strongest OCI answer.', {
             fontFamily: 'monospace',
             fontSize: '14px',
