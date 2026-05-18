@@ -96,7 +96,7 @@ flowchart TB
 | Streaming | Durable backbone between event ingest and downstream persistence. The ops HUD shows Streaming delivering to data services; the technical implementation uses a background consumer/processor to perform the writes. |
 | Object Storage | Stores raw event archives written by the Streaming consumer/processor as NDJSON for replay and audit. |
 | Autonomous Database | Stores curated `game_events` rows written by the Streaming consumer/processor for SQL analytics and the ops Event Analytics panel. |
-| Generative AI | Gemini copilot insight in the ops HUD via OCI GenAI SDK. |
+| Generative AI | GPT-OSS ops copilot insight and Flash-Lite player hints via OCI GenAI SDK. |
 | IAM Dynamic Group and Policies | Manually managed prerequisites. `dg_cengiz` matches app VMs and Functions; `Game-Demo` grants Streaming/Object Storage/GenAI; `oci-defense-grid-apigw-functions` lets API Gateway invoke Functions. |
 | OCI Functions | Optional event-ingest backend for `POST /api/events`, used when `function_image` points to an OCIR image. |
 

@@ -212,7 +212,7 @@ variable "oci_genai_bearer_token" {
 variable "oci_genai_model" {
   description = "OCI Generative AI model ID used by the demo copilot."
   type        = string
-  default     = "ocid1.generativeaimodel.oc1.eu-frankfurt-1.amaaaaaask7dceyan6gecfjovk7wtgl3r65b5tmpuegfxojbp2mebjgtvhra"
+  default     = "openai.gpt-oss-120b"
 }
 
 variable "oci_genai_coach_model" {

@@ -60,7 +60,7 @@ Game API calls
         -> private OCI Load Balancer
            -> Compute Instance Pool VM App
               -> OCI Cache live player state
-              -> OCI Generative AI Gemini copilot or deterministic fallback
+              -> OCI Generative AI ops copilot or deterministic fallback
 ```
 
 OCI Cache is used for the live player roster in the presenter view. Every VM writes the latest player heartbeat/event into the same managed cache, so the ops HUD can list active players even while API Gateway and the private Load Balancer bounce between backend VMs.
@@ -83,7 +83,7 @@ See the full wireframe in [docs/oci-defense-grid-wireframe.md](docs/oci-defense-
 | Streaming | Durable backbone for gameplay telemetry events. The ops diagram shows Streaming delivering to data services; technically a background consumer/processor reads the stream. |
 | Object Storage | Receives raw NDJSON event archives written by the Streaming consumer/processor. |
 | Autonomous Database | Receives curated `game_events` rows from the Streaming consumer/processor for SQL analytics and the ops Event Analytics panel. |
-| OCI Generative AI | Gemini copilot insight in the ops HUD via the OCI SDK. |
+| OCI Generative AI | GPT-OSS ops copilot insight and Flash-Lite player hints via the OCI SDK. |
 | IAM Dynamic Group and Policies | Manually created prerequisites that let app VMs and Functions call Streaming, Object Storage and GenAI, and let API Gateway invoke Functions. |
 | OCI Functions | Optional serverless event-ingest path for `POST /api/events`, validating telemetry, updating OCI Cache live state and publishing to Streaming. |
 
@@ -288,7 +288,7 @@ REDIS_PORT=6379
 REDIS_TLS=true
 EVENT_INGEST_ROUTE_MODE=oci-functions
 OCI_GENAI_ENDPOINT=<GenAI inference endpoint>
-OCI_GENAI_MODEL=<GenAI model OCID>
+OCI_GENAI_MODEL=openai.gpt-oss-120b
 OCI_GENAI_COACH_MODEL=google.gemini-2.5-flash-lite
 OCI_GENAI_COMPARTMENT_OCID=<compartment OCID>
 OCI_GENAI_TIMEOUT_MS=25000
@@ -357,11 +357,11 @@ The copilot supports two modes:
 - Native OCI SDK mode for Gemini and OCI model OCIDs.
 - OpenAI-compatible bearer-token mode when `oci_genai_endpoint` points to `/chat/completions` or `/responses`.
 
-The current Gemini path uses native SDK mode:
+The current native SDK path uses GPT-OSS for ops analysis and Flash-Lite for player hints:
 
 ```hcl
 oci_genai_endpoint = "https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com"
-oci_genai_model    = "ocid1.generativeaimodel.oc1.eu-frankfurt-1.amaaaaaask7dceyan6gecfjovk7wtgl3r65b5tmpuegfxojbp2mebjgtvhra"
+oci_genai_model    = "openai.gpt-oss-120b"
 oci_genai_coach_model = "google.gemini-2.5-flash-lite"
 ```
 
@@ -370,7 +370,7 @@ oci_genai_coach_model = "google.gemini-2.5-flash-lite"
 Recommended model split:
 
 - `/api/coach`: Gemini 2.5 Flash-Lite for fast player hints.
-- `/api/copilot`: Gemini 2.5 Pro for deeper ops analysis across leaderboard, live players, run events and ADB analytics.
+- `/api/copilot`: OpenAI GPT-OSS 120B for deeper ops analysis across leaderboard, live players, run events and ADB analytics, with Gemini 2.5 Flash-Lite as the fast timeout fallback.
 
 Local tests use an OCI security-token profile:
 
@@ -451,5 +451,5 @@ The customer-facing demo checks are:
 - Ops HUD Event Analytics reads from Autonomous Database and falls back to memory locally.
 - Ops HUD updates score, active VM, CPU, RAM, cores, disk throughput, latency, events/sec and copilot insight.
 - `/api/copilot` returns `403` without the ops flag and `200` for ops callers.
-- Ops copilot returns a Gemini insight when GenAI auth/policy is configured, otherwise a deterministic fallback.
+- Ops copilot returns an OCI GenAI insight when GenAI auth/policy is configured, otherwise a deterministic fallback.
 - The game remains playable when one instance is removed from the pool or fails health checks.

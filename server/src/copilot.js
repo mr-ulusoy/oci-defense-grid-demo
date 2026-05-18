@@ -8,8 +8,7 @@ const FALLBACK_INSIGHTS = [
 ];
 
 const DEFAULT_GENAI_ENDPOINT = "https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com";
-const DEFAULT_GENAI_MODEL =
-  "ocid1.generativeaimodel.oc1.eu-frankfurt-1.amaaaaaask7dceyan6gecfjovk7wtgl3r65b5tmpuegfxojbp2mebjgtvhra";
+const DEFAULT_GENAI_MODEL = "openai.gpt-oss-120b";
 const DEFAULT_COACH_GENAI_MODEL = "google.gemini-2.5-flash-lite";
 const DEFAULT_GENAI_TIMEOUT_MS = 25000;
 const DEFAULT_COACH_GENAI_TIMEOUT_MS = 12000;
@@ -272,7 +271,10 @@ function getCoachModel() {
 function modelLabel(model) {
   const value = String(model ?? "");
   if (value === DEFAULT_GENAI_MODEL) {
-    return "Gemini 2.5 Pro";
+    return "OpenAI GPT-OSS 120B";
+  }
+  if (value.includes("gpt-oss-120b")) {
+    return "OpenAI GPT-OSS 120B";
   }
   if (value.includes("gemini-2.5-flash-lite")) {
     return "Gemini 2.5 Flash-Lite";

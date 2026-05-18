@@ -436,6 +436,7 @@ function copilotModeLabel(mode = "live") {
 function shortModelName(model = "") {
   const value = String(model || "");
   if (!value) return "unknown model";
+  if (value.includes("gpt-oss-120b")) return "OpenAI GPT-OSS 120B";
   if (value.includes("flash-lite")) return "Gemini Flash Lite";
   if (value.includes("gemini")) return value.replace(/^.*google\./, "Gemini ");
   if (value.startsWith("ocid1.generativeaimodel")) return `model ...${value.slice(-6)}`;
@@ -446,8 +447,8 @@ function copilotSourceLabel(source = "unknown", model = "unknown model") {
   return {
     pending: "OCI GenAI running",
     "oci-genai": `OCI GenAI: ${model}`,
-    "oci-genai-fast": `OCI GenAI: ${model} after Pro timed out`,
-    "oci-genai-fast-fallback": `OCI GenAI: ${model} after Pro timed out`,
+    "oci-genai-fast": `OCI GenAI: ${model} after primary timed out`,
+    "oci-genai-fast-fallback": `OCI GenAI: ${model} after primary timed out`,
     fallback: "No AI: local fallback",
     "local-fallback": "No API: browser fallback",
     disabled: "Disabled",
