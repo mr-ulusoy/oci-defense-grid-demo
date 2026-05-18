@@ -1266,7 +1266,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
     border-color: rgba(124, 200, 255, 0.45);
     gap: 10px;
     grid-template-columns: 1fr;
-    margin: 14px 0 0;
+    margin: 0;
     max-width: 380px;
     padding: 12px;
     width: 100%;
