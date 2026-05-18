@@ -239,6 +239,11 @@ function trimWords(value, limit) {
   return words.slice(0, limit).join(" ");
 }
 
+function completeInsight(value) {
+  const text = String(value ?? "").trim();
+  return text.length >= 40 && /[.!?]$/.test(text);
+}
+
 function buildCoachPrompt({ context, message, attemptCount }) {
   return [
     "You are OCI Guide, a friendly in-game learning coach for OCI Defense Grid.",
@@ -496,10 +501,10 @@ export async function createCopilotInsight(context) {
   const model = getCopilotModel();
   const prompt = buildAnalysisPrompt(context);
   const started = Date.now();
+  const configuredTimeoutMs = Number(process.env.OCI_GENAI_TIMEOUT_MS ?? DEFAULT_GENAI_TIMEOUT_MS);
+  const timeoutMs = Math.min(configuredTimeoutMs, COPILOT_GATEWAY_SAFE_TIMEOUT_MS);
 
   try {
-    const configuredTimeoutMs = Number(process.env.OCI_GENAI_TIMEOUT_MS ?? DEFAULT_GENAI_TIMEOUT_MS);
-    const timeoutMs = Math.min(configuredTimeoutMs, COPILOT_GATEWAY_SAFE_TIMEOUT_MS);
     const externalInsight = await withTimeout(
       callExternalCopilot(prompt, {
         model,
@@ -508,8 +513,12 @@ export async function createCopilotInsight(context) {
       timeoutMs
     );
     if (externalInsight) {
+      const insight = trimWords(externalInsight, COPILOT_REPLY_WORD_LIMIT);
+      if (!completeInsight(insight)) {
+        throw new Error("OCI GenAI returned an incomplete copilot sentence");
+      }
       return {
-        insight: trimWords(externalInsight, COPILOT_REPLY_WORD_LIMIT),
+        insight,
         source: "oci-genai",
         model,
         modelLabel: modelLabel(model),
@@ -519,7 +528,37 @@ export async function createCopilotInsight(context) {
       };
     }
   } catch (error) {
-    console.warn("Copilot external call failed, using deterministic fallback.", error.message);
+    console.warn("Copilot primary GenAI call failed, trying fast model.", error.message);
+  }
+
+  const fastModel = getCoachModel();
+  if (fastModel && fastModel !== model) {
+    try {
+      const externalInsight = await withTimeout(
+        callExternalCopilot(prompt, {
+          model: fastModel,
+          maxTokens: 360
+        }),
+        Math.min(5000, timeoutMs)
+      );
+      if (externalInsight) {
+        const insight = trimWords(externalInsight, COPILOT_REPLY_WORD_LIMIT);
+        if (!completeInsight(insight)) {
+          throw new Error("Fast GenAI model returned an incomplete copilot sentence");
+        }
+        return {
+          insight,
+          source: "oci-genai-fast-fallback",
+          model: fastModel,
+          modelLabel: modelLabel(fastModel),
+          latencyMs: Date.now() - started,
+          mode,
+          generatedAt: new Date().toISOString()
+        };
+      }
+    } catch (error) {
+      console.warn("Copilot fast GenAI call failed, using deterministic fallback.", error.message);
+    }
   }
 
   return {
