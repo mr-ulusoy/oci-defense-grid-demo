@@ -119,7 +119,7 @@ export function loadInitialAssets(scene) {
     loadImage(scene, 'stars', 'assets/backgrounds/parallax-space-stars.png');
     loadImage(scene, 'far-planets', 'assets/backgrounds/parallax-space-far-planets.png');
 
-    loadImage(scene, 'briefing-storyteller', 'assets/briefings/storyteller.png');
+    loadImage(scene, 'briefing-storyteller', 'assets/briefings/storyteller2.webp');
     loadImage(scene, 'briefing-region', 'assets/briefings/region.png');
 }
 

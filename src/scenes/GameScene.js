@@ -1782,16 +1782,6 @@ export default class GameScene extends Phaser.Scene {
         const titleY = tallLayout ? 48 : 36;
         const subtitleY = tallLayout ? 82 : 66;
         const promptY = tallLayout ? 128 : 100;
-        const optionStartY = tallLayout ? 266 : 210;
-        const optionGap = tallLayout ? 90 : 76;
-        const optionHeight = tallLayout ? 78 : 64;
-        const optionLabelOffsetY = tallLayout ? 29 : 24;
-        const answerY = tallLayout
-            ? Math.min(optionStartY + optionGap * 3 + 74, height - 300)
-            : Math.min(424 + extraY * 0.55, height - 220);
-        const guideY = tallLayout
-            ? Math.min(answerY + 112, height - 198)
-            : Math.min(answerY + 92, height - 160);
         const continueY = Math.min(594 + extraY, height - 46);
         const blocker = this.add.rectangle(240, height / 2, 480, height, 0x030814, 0.9).setInteractive();
         const title = this.add.text(240, titleY, question.title, {
@@ -1818,6 +1808,20 @@ export default class GameScene extends Phaser.Scene {
             lineSpacing: 5,
             wordWrap: { width: 384 }
         });
+        const optionGap = tallLayout ? 90 : 84;
+        const optionHeight = tallLayout ? 78 : 70;
+        const optionLabelOffsetY = tallLayout ? 29 : 27;
+        const promptBottom = prompt.y + prompt.height;
+        const optionStartY = tallLayout
+            ? 266
+            : Math.max(260, promptBottom + optionHeight / 2 + 28);
+        const lastOptionY = optionStartY + optionGap * (question.options.length - 1);
+        const answerY = tallLayout
+            ? Math.min(optionStartY + optionGap * 3 + 74, height - 300)
+            : Math.min(lastOptionY + optionHeight / 2 + 58, height - 120);
+        const guideY = tallLayout
+            ? Math.min(answerY + 112, height - 198)
+            : Math.min(answerY + 84, height - 116);
         const guide = this.add.image(78, guideY, 'briefing-storyteller').setDisplaySize(124, 124);
         const statusText = this.add.text(132, answerY, 'Choose the strongest OCI answer.', {
             fontFamily: 'monospace',
