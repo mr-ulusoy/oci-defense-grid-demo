@@ -1518,10 +1518,10 @@ export default class GameScene extends Phaser.Scene {
             strokeThickness: 3
         }).setOrigin(0.5);
 
-        const guide = this.add.image(84, 496 + extraY, briefing.guideKey)
-            .setDisplaySize(116, 116);
-        const nameplate = this.add.rectangle(85, 566 + extraY, 136, 30, 0x06111c, 0.8);
-        const guideLabel = this.add.text(85, 566 + extraY, 'OCI GUIDE', {
+        const guide = this.add.image(82, 486 + extraY, briefing.guideKey)
+            .setDisplaySize(144, 144);
+        const nameplate = this.add.rectangle(82, 574 + extraY, 148, 32, 0x06111c, 0.8);
+        const guideLabel = this.add.text(82, 574 + extraY, 'OCI GUIDE', {
             fontFamily: 'monospace',
             fontSize: '13px',
             fill: '#ffffff',
@@ -1822,15 +1822,15 @@ export default class GameScene extends Phaser.Scene {
         const guideY = tallLayout
             ? Math.min(answerY + 112, height - 198)
             : Math.min(answerY + 84, height - 116);
-        const guide = this.add.image(78, guideY, 'briefing-storyteller').setDisplaySize(124, 124);
-        const statusText = this.add.text(132, answerY, 'Choose the strongest OCI answer.', {
+        const guide = this.add.image(80, guideY, 'briefing-storyteller').setDisplaySize(150, 150);
+        const statusText = this.add.text(158, answerY, 'Choose the strongest OCI answer.', {
             fontFamily: 'monospace',
             fontSize: '14px',
             fill: '#d9faff',
             stroke: '#000000',
             strokeThickness: 3,
             lineSpacing: 5,
-            wordWrap: { width: 326 }
+            wordWrap: { width: 290 }
         });
         const continueButton = this.add.rectangle(330, continueY, 176, 42, 0xc74634, 0.95)
             .setInteractive({ useHandCursor: true })
