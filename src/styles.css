@@ -1254,11 +1254,11 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
   .mobile-register-guide {
     display: block;
-    height: min(40dvh, 320px);
+    height: min(45dvh, 360px);
     margin-top: 8px;
     object-fit: contain;
     object-position: center bottom;
-    width: min(82vw, 340px);
+    width: min(88vw, 380px);
   }
 
   body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar {
