@@ -640,7 +640,7 @@ resource "oci_functions_function" "optional_ingest" {
   config = {
     LIVE_PLAYER_TTL_SECONDS     = tostring(var.live_player_ttl_seconds)
     ADB_CONNECT_STRING          = local.adb_app_connect_string
-    ADB_PASSWORD                = var.adb_password
+    ADB_PASSWORD                = var.adb_admin_password
     ADB_USER                    = var.adb_user
     OCI_REGION                  = var.region
     OCI_STREAM_MESSAGE_ENDPOINT = oci_streaming_stream.events.messages_endpoint
