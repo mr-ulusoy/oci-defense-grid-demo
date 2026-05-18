@@ -289,6 +289,7 @@ export default class MenuScene extends Phaser.Scene {
         if (!this.callsignInput || !this.startButton) return;
 
         this.callsignInput.value = this.callsign;
+        this.startButton.textContent = this.isMobileRegisterFlow() ? 'Register' : 'Start';
 
         this.inputHandler = () => {
             this.callsign = this.normalizeCallsign(this.callsignInput.value);
@@ -298,11 +299,11 @@ export default class MenuScene extends Phaser.Scene {
             this.pilotBar?.classList.remove('needs-name');
         };
 
-        this.launchHandler = () => this.launch();
+        this.launchHandler = () => this.handlePilotAction();
         this.inputKeyHandler = (event) => {
             if (event.key === 'Enter') {
                 event.preventDefault();
-                this.launch();
+                this.handlePilotAction();
             }
         };
 
@@ -330,6 +331,58 @@ export default class MenuScene extends Phaser.Scene {
         this.callsignInput?.select();
     }
 
+    isMobileRegisterFlow() {
+        return window.matchMedia?.('(max-width: 820px), (pointer: coarse)')?.matches === true;
+    }
+
+    syncCallsignFromInput() {
+        if (!this.callsignInput) return;
+        this.callsign = this.normalizeCallsign(this.callsignInput.value);
+        this.callsignInput.value = this.callsign;
+        this.saveCallsign();
+        this.callsignLabel?.setText(this.callsignText());
+    }
+
+    showCallsignRequired() {
+        this.pilotBar?.classList.add('needs-name');
+        this.focusCallsignInput();
+        this.callsignLabel?.setFill('#ff6b6b');
+        if (this.callsignLabel) {
+            this.tweens.add({
+                targets: this.callsignLabel,
+                scale: { from: 1.12, to: 1 },
+                duration: 240,
+                ease: 'Back.easeOut',
+                onComplete: () => this.callsignLabel?.setFill('#7cc8ff')
+            });
+        }
+    }
+
+    handlePilotAction() {
+        if (this.isMobileRegisterFlow() && !document.body.classList.contains('game-active')) {
+            this.registerPilot();
+            return;
+        }
+
+        this.launch();
+    }
+
+    registerPilot() {
+        this.syncCallsignFromInput();
+
+        if (!this.callsign) {
+            this.showCallsignRequired();
+            return;
+        }
+
+        this.pilotBar?.classList.remove('needs-name');
+        this.callsignInput?.blur();
+        this.requestMobileFullscreen();
+        document.body.classList.add('game-active');
+        window.OCI_DEFENSE_LAYOUT_CHANGED?.();
+        this.cameras.main.flash(420, 255, 255, 255);
+    }
+
     requestMobileFullscreen() {
         const isSmallTouchScreen =
             window.matchMedia?.('(max-width: 820px), (pointer: coarse)')?.matches === true;
@@ -343,24 +396,10 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     launch() {
-        if (this.callsignInput) {
-            this.callsign = this.normalizeCallsign(this.callsignInput.value);
-            this.callsignInput.value = this.callsign;
-            this.saveCallsign();
-            this.callsignLabel.setText(this.callsignText());
-        }
+        this.syncCallsignFromInput();
 
         if (!this.callsign) {
-            this.pilotBar?.classList.add('needs-name');
-            this.focusCallsignInput();
-            this.callsignLabel.setFill('#ff6b6b');
-            this.tweens.add({
-                targets: this.callsignLabel,
-                scale: { from: 1.12, to: 1 },
-                duration: 240,
-                ease: 'Back.easeOut',
-                onComplete: () => this.callsignLabel.setFill('#7cc8ff')
-            });
+            this.showCallsignRequired();
             return;
         }
 

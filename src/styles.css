@@ -178,6 +178,10 @@ body.game-active .app-shell:not(.ops-visible) .pilot-bar {
   min-height: 76px;
 }
 
+.mobile-register-hero {
+  display: none;
+}
+
 .eyebrow {
   color: var(--accent-2);
   display: block;
@@ -1182,18 +1186,115 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 @media (max-width: 560px) {
+  body:not(.game-active) .app-shell:not(.ops-visible) {
+    min-height: 100dvh;
+  }
+
   .game-stage,
   .ops-panel {
     padding: 12px;
   }
 
-  .top-strip {
-    align-items: flex-start;
-    flex-direction: column;
+  body:not(.game-active) .app-shell:not(.ops-visible) .game-stage {
+    align-items: center;
+    background:
+      linear-gradient(rgba(3, 8, 20, 0.56), rgba(3, 8, 20, 0.72)),
+      url("/assets/backgrounds/parallax-space-stars.png") center / 520px auto repeat,
+      #030814;
+    justify-content: center;
+    min-height: 100dvh;
+    padding:
+      max(18px, env(safe-area-inset-top))
+      20px
+      max(18px, env(safe-area-inset-bottom));
   }
 
-  .pilot-bar {
+  body:not(.game-active) .app-shell:not(.ops-visible) .top-strip,
+  body:not(.game-active) .app-shell:not(.ops-visible) .game-root {
+    display: none;
+  }
+
+  body:not(.game-active) .app-shell:not(.ops-visible) .mobile-register-hero {
+    align-items: center;
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+
+  .mobile-register-logo {
+    display: block;
+    height: 46px;
+    object-fit: contain;
+    width: 72px;
+  }
+
+  .mobile-register-hero span {
+    color: #ff3f2f;
+    display: block;
+    font-family: monospace;
+    font-size: clamp(1rem, 5vw, 1.35rem);
+    font-weight: 800;
+    line-height: 1.15;
+    text-shadow: 0 2px 0 #3a0500;
+  }
+
+  .mobile-register-hero strong {
+    color: var(--accent);
+    display: block;
+    font-family: monospace;
+    font-size: clamp(2.25rem, 12vw, 3.35rem);
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 0.98;
+    text-transform: uppercase;
+    text-shadow: 0 4px 0 #001f18;
+  }
+
+  .mobile-register-guide {
+    display: block;
+    height: min(34dvh, 250px);
+    margin-top: 8px;
+    object-fit: contain;
+    object-position: center bottom;
+    width: min(70vw, 280px);
+  }
+
+  body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar {
+    background: rgba(5, 13, 21, 0.78);
+    border-color: rgba(124, 200, 255, 0.45);
+    gap: 10px;
     grid-template-columns: 1fr;
+    margin: 14px 0 0;
+    max-width: 380px;
+    padding: 12px;
+    width: 100%;
+  }
+
+  body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar label {
+    color: #d9faff;
+    font-family: monospace;
+    font-size: 0.95rem;
+  }
+
+  body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar input {
+    font: 700 16px monospace;
+    min-height: 46px;
+    text-align: center;
+  }
+
+  body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar button {
+    background: #c74634;
+    border-color: #ff7a66;
+    color: #ffffff;
+    font: 900 1.05rem monospace;
+    min-height: 48px;
+    text-transform: uppercase;
+  }
+
+  body.game-active .app-shell:not(.ops-visible) .mobile-register-hero {
+    display: none;
   }
 
   .metric-grid {
