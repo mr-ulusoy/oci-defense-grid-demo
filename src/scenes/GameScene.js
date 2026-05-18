@@ -745,6 +745,9 @@ export default class GameScene extends Phaser.Scene {
         if (this.level === 2) enemyCount += 4;
         if (this.level >= 3) enemyCount += 6;
         if (this.usesFinalAssetStyle()) enemyCount += 8;
+        if (this.level === 4) {
+            enemyCount = Math.max(32, Math.floor(enemyCount * 0.72));
+        }
         if (this.isFinalLevel()) {
             enemyCount = Math.max(18, Math.floor(enemyCount * 0.38));
         }
@@ -757,6 +760,7 @@ export default class GameScene extends Phaser.Scene {
         let spawnDelay = Math.max(150, 800 - (this.level * 80) - (this.wave * 40) - overdrive * 35);
         if (this.level >= 3) spawnDelay = Math.max(140, spawnDelay - 50);
         if (this.usesFinalAssetStyle()) spawnDelay = Math.max(105, spawnDelay - 35);
+        if (this.level === 4) spawnDelay = Math.max(290, spawnDelay + 95);
         if (this.isFinalLevel()) spawnDelay = Math.max(330, spawnDelay + 230);
 
         this.enemySpawnTimer = this.time.addEvent({
@@ -778,6 +782,10 @@ export default class GameScene extends Phaser.Scene {
         const overdrive = Math.max(0, this.level - 3);
         let bigChance = Math.min(0.08 + (this.level * 0.06) + (this.wave * 0.03) + overdrive * 0.03, 0.42);
         let mediumChance = Math.min(0.25 + (this.level * 0.08) + (this.wave * 0.04) + overdrive * 0.04, 0.62);
+        if (this.level === 4) {
+            bigChance = Math.min(0.12 + this.wave * 0.02, 0.2);
+            mediumChance = Math.min(0.3 + this.wave * 0.025, 0.42);
+        }
         if (this.isFinalLevel()) {
             bigChance = Math.min(0.06 + this.wave * 0.015, 0.12);
             mediumChance = Math.min(0.18 + this.wave * 0.02, 0.28);
@@ -899,6 +907,7 @@ export default class GameScene extends Phaser.Scene {
         enemy.enemyType = 'big';
         const overdrive = Math.max(0, this.level - 3);
         enemy.health = 3 + this.level + overdrive + (this.usesFinalAssetStyle() ? 2 : 0);
+        if (this.level === 4) enemy.health = 7;
         if (this.isFinalLevel()) enemy.health = 5;
         enemy.points = 500 + overdrive * 150 + (this.usesFinalAssetStyle() ? 250 : 0);
         enemy.canShoot = true;
