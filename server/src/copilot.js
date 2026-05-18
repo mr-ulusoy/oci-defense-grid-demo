@@ -501,7 +501,7 @@ export async function createCopilotInsight(context) {
     const externalInsight = await withTimeout(
       callExternalCopilot(prompt, {
         model,
-        maxTokens: mode === "live" ? 180 : 420
+        maxTokens: mode === "live" ? 1200 : 6000
       }),
       timeoutMs
     );
