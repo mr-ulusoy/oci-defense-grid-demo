@@ -746,7 +746,7 @@ export default class GameScene extends Phaser.Scene {
         if (this.level >= 3) enemyCount += 6;
         if (this.usesFinalAssetStyle()) enemyCount += 8;
         if (this.isFinalLevel()) {
-            enemyCount = Math.max(24, Math.floor(enemyCount * 0.58));
+            enemyCount = Math.max(18, Math.floor(enemyCount * 0.38));
         }
         this.spawnWaveEnemies(enemyCount);
     }
@@ -757,7 +757,7 @@ export default class GameScene extends Phaser.Scene {
         let spawnDelay = Math.max(150, 800 - (this.level * 80) - (this.wave * 40) - overdrive * 35);
         if (this.level >= 3) spawnDelay = Math.max(140, spawnDelay - 50);
         if (this.usesFinalAssetStyle()) spawnDelay = Math.max(105, spawnDelay - 35);
-        if (this.isFinalLevel()) spawnDelay = Math.max(220, spawnDelay + 135);
+        if (this.isFinalLevel()) spawnDelay = Math.max(330, spawnDelay + 230);
 
         this.enemySpawnTimer = this.time.addEvent({
             delay: spawnDelay,
@@ -779,8 +779,8 @@ export default class GameScene extends Phaser.Scene {
         let bigChance = Math.min(0.08 + (this.level * 0.06) + (this.wave * 0.03) + overdrive * 0.03, 0.42);
         let mediumChance = Math.min(0.25 + (this.level * 0.08) + (this.wave * 0.04) + overdrive * 0.04, 0.62);
         if (this.isFinalLevel()) {
-            bigChance = Math.min(0.12 + this.wave * 0.02, 0.2);
-            mediumChance = Math.min(0.28 + this.wave * 0.025, 0.4);
+            bigChance = Math.min(0.06 + this.wave * 0.015, 0.12);
+            mediumChance = Math.min(0.18 + this.wave * 0.02, 0.28);
         }
 
         if (rand < bigChance) {
@@ -788,7 +788,9 @@ export default class GameScene extends Phaser.Scene {
         } else if (rand < bigChance + mediumChance) {
             this.createMediumEnemy(x);
         } else {
-            const congaChance = Math.min(0.25 + overdrive * 0.06, 0.45);
+            const congaChance = this.isFinalLevel()
+                ? 0.08
+                : Math.min(0.25 + overdrive * 0.06, 0.45);
             if (this.level >= 2 && Math.random() < congaChance) {
                 this.spawnCongaLine(x);
             } else {
@@ -798,9 +800,14 @@ export default class GameScene extends Phaser.Scene {
     }
 
     spawnCongaLine(x) {
-        const count = Phaser.Math.Between(3, Math.min(7, 4 + Math.max(0, this.level - 3)));
+        const count = this.isFinalLevel()
+            ? Phaser.Math.Between(2, 3)
+            : Phaser.Math.Between(3, Math.min(7, 4 + Math.max(0, this.level - 3)));
+        const delay = this.isFinalLevel()
+            ? 170
+            : Math.max(85, 150 - Math.max(0, this.level - 3) * 15);
         for (let i = 0; i < count; i++) {
-            this.time.delayedCall(i * Math.max(85, 150 - Math.max(0, this.level - 3) * 15), () => {
+            this.time.delayedCall(i * delay, () => {
                 if (!this.isDead && !this.bossActive) {
                     this.createSmallEnemy(x + Phaser.Math.Between(-20, 20));
                 }
