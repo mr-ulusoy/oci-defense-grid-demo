@@ -983,10 +983,13 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .copilot-actions {
-  display: flex;
+  align-items: center;
+  display: inline-flex;
   flex-wrap: wrap;
   gap: 6px;
+  justify-content: flex-start;
   margin-bottom: 10px;
+  max-width: 100%;
 }
 
 .copilot-actions button,
@@ -995,12 +998,19 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .copilot-actions button {
+  background: rgba(181, 139, 255, 0.08);
   border-color: rgba(181, 139, 255, 0.32);
+  border-radius: 999px;
   color: #d7c6ff;
   flex: 0 0 auto;
   font-size: 0.66rem;
-  overflow-wrap: anywhere;
-  padding: 5px 9px;
+  line-height: 1;
+  min-height: 26px;
+  min-width: 0;
+  overflow-wrap: normal;
+  padding: 4px 8px;
+  white-space: nowrap;
+  width: auto !important;
 }
 
 .section-title button {

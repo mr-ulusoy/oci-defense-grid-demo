@@ -444,11 +444,12 @@ function shortModelName(model = "") {
 
 function copilotSourceLabel(source = "unknown", model = "unknown model") {
   return {
-    pending: "AI running",
-    "oci-genai": model,
-    "oci-genai-fast-fallback": `${model} (Pro timed out)`,
-    fallback: "Local fallback",
-    "local-fallback": "Browser fallback",
+    pending: "OCI GenAI running",
+    "oci-genai": `OCI GenAI: ${model}`,
+    "oci-genai-fast": `OCI GenAI: ${model} after Pro timed out`,
+    "oci-genai-fast-fallback": `OCI GenAI: ${model} after Pro timed out`,
+    fallback: "No AI: local fallback",
+    "local-fallback": "No API: browser fallback",
     disabled: "Disabled",
     unknown: "Unknown source"
   }[source] ?? source;

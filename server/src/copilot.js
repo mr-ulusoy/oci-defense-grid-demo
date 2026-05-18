@@ -548,7 +548,7 @@ export async function createCopilotInsight(context) {
         }
         return {
           insight,
-          source: "oci-genai-fast-fallback",
+          source: "oci-genai-fast",
           model: fastModel,
           modelLabel: modelLabel(fastModel),
           latencyMs: Date.now() - started,
