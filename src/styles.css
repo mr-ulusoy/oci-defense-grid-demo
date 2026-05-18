@@ -983,23 +983,29 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .copilot-actions {
-  display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 
 .copilot-actions button,
 .section-title button {
-  min-height: 34px;
+  min-height: 30px;
 }
 
 .copilot-actions button {
   border-color: rgba(181, 139, 255, 0.32);
   color: #d7c6ff;
-  font-size: 0.7rem;
+  flex: 0 0 auto;
+  font-size: 0.66rem;
   overflow-wrap: anywhere;
-  padding: 8px;
+  padding: 5px 9px;
+}
+
+.section-title button {
+  font-size: 0.74rem;
+  padding: 5px 10px;
 }
 
 .live-player-table {

@@ -442,13 +442,26 @@ function shortModelName(model = "") {
   return value;
 }
 
+function copilotSourceLabel(source = "unknown", model = "unknown model") {
+  return {
+    pending: "AI running",
+    "oci-genai": model,
+    "oci-genai-fast-fallback": `${model} (Pro timed out)`,
+    fallback: "Local fallback",
+    "local-fallback": "Browser fallback",
+    disabled: "Disabled",
+    unknown: "Unknown source"
+  }[source] ?? source;
+}
+
 function renderCopilotMeta(result = {}) {
   if (!elements.copilotMeta) return;
 
   const source = result.source ?? "unknown";
   const model = result.modelLabel ?? shortModelName(result.model);
-  const latency = result.latencyMs == null ? "" : ` | ${Math.round(result.latencyMs)} ms`;
-  elements.copilotMeta.textContent = `${copilotModeLabel(result.mode)} | ${source} | ${model}${latency}`;
+  const sourceLabel = copilotSourceLabel(source, model);
+  const latency = result.latencyMs == null ? "" : ` | ${(Number(result.latencyMs) / 1000).toFixed(1)}s`;
+  elements.copilotMeta.textContent = `${copilotModeLabel(result.mode)} | ${sourceLabel}${latency}`;
 }
 
 export async function askCopilot(snapshot = {}, mode = "live") {
