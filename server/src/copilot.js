@@ -13,6 +13,7 @@ const DEFAULT_GENAI_MODEL =
 const DEFAULT_COACH_GENAI_MODEL = "google.gemini-2.5-flash-lite";
 const DEFAULT_GENAI_TIMEOUT_MS = 25000;
 const DEFAULT_COACH_GENAI_TIMEOUT_MS = 12000;
+const COPILOT_GATEWAY_SAFE_TIMEOUT_MS = 7600;
 const COACH_REPLY_WORD_LIMIT = 45;
 const COPILOT_REPLY_WORD_LIMIT = 120;
 
@@ -497,11 +498,12 @@ export async function createCopilotInsight(context) {
   const started = Date.now();
 
   try {
-    const timeoutMs = Number(process.env.OCI_GENAI_TIMEOUT_MS ?? DEFAULT_GENAI_TIMEOUT_MS);
+    const configuredTimeoutMs = Number(process.env.OCI_GENAI_TIMEOUT_MS ?? DEFAULT_GENAI_TIMEOUT_MS);
+    const timeoutMs = Math.min(configuredTimeoutMs, COPILOT_GATEWAY_SAFE_TIMEOUT_MS);
     const externalInsight = await withTimeout(
       callExternalCopilot(prompt, {
         model,
-        maxTokens: mode === "live" ? 600 : 1200
+        maxTokens: mode === "live" ? 300 : 600
       }),
       timeoutMs
     );
