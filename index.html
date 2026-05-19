@@ -84,7 +84,7 @@
                 <path class="arch-link arch-link-events" d="M 800 623 L 1038 623"></path>
               </svg>
               <div class="arch-flow-label arch-label-game">Player opens the URL</div>
-              <div class="arch-flow-label arch-label-api">/api/status, /api/coach, /api/copilot</div>
+              <div class="arch-flow-label arch-label-api">/api/status, /api/coach, AI calls</div>
               <div class="arch-flow-label arch-label-events">/api/events + data APIs -> Functions</div>
               <div class="arch-flow-label arch-label-stream">Streaming buffers events</div>
 
@@ -118,7 +118,7 @@
               </div>
               <div class="arch-node arch-pos-genai" id="archGenai">
                 <span>OCI GenAI</span>
-                <strong id="archGenaiState">Player Coach + Ops Copilot</strong>
+                <strong id="archGenaiState">Player Coach + Ops AI</strong>
               </div>
               <div class="arch-node arch-pos-cache" id="archCache">
                 <span>OCI Cache</span>
@@ -230,26 +230,21 @@
         </section>
 
         <section class="insight-box ai-panel">
-          <div class="ai-panel-header">
-            <div class="ai-panel-title">
-              <span class="ai-panel-icon">AI</span>
-              <div>
-                <span>OCI Generative AI</span>
-                <strong>Copilot analysis</strong>
-              </div>
+          <div class="ai-panel-hero">
+            <div class="ai-panel-copy">
+              <span class="ai-panel-eyebrow"><i></i>OCI Generative AI</span>
+              <h3>Leaderboard &amp; Performance Insight</h3>
             </div>
-            <button type="button" id="askCopilot" data-copilot-mode="live" title="Ask copilot">Live</button>
-          </div>
-          <div class="copilot-actions" aria-label="Copilot analysis modes">
-            <button type="button" data-copilot-mode="leaderboard" title="Analyze top players and score efficiency">Leaders</button>
-            <button type="button" data-copilot-mode="players" title="Compare active players">Players</button>
-            <button type="button" data-copilot-mode="run" title="Analyze the latest completed run">Latest Run</button>
-            <button type="button" data-copilot-mode="demo_summary" title="Summarize the OCI demo story">Demo</button>
+            <div class="copilot-actions" aria-label="Generative AI analysis modes">
+              <button class="is-active" type="button" data-copilot-mode="leaderboard" data-icon="♕" title="Analyze top players and score efficiency">Leaders</button>
+              <button type="button" data-copilot-mode="players" data-icon="◎" title="Compare active players">Players</button>
+              <button type="button" data-copilot-mode="run" data-icon="▷" title="Analyze the latest completed run">Run</button>
+              <button type="button" data-copilot-mode="demo_summary" data-icon="▣" title="Summarize the OCI demo story">Demo</button>
+            </div>
           </div>
           <div class="ai-output">
-            <span>Current insight</span>
             <p id="hudInsight">Waiting for live telemetry.</p>
-            <small id="copilotMeta">Copilot source: waiting</small>
+            <small id="copilotMeta">AI source: waiting</small>
           </div>
         </section>
 

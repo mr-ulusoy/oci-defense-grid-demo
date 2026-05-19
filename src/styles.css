@@ -1074,83 +1074,67 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .insight-box.ai-panel {
   background:
-    radial-gradient(circle at 6% 0, rgba(181, 139, 255, 0.16), transparent 32%),
-    radial-gradient(circle at 92% 8%, rgba(61, 220, 151, 0.12), transparent 24%),
-    linear-gradient(180deg, rgba(19, 31, 45, 0.98), rgba(10, 19, 27, 0.98));
-  border-color: rgba(124, 200, 255, 0.24);
-  border-radius: 12px;
+    radial-gradient(circle at 8% 0, rgba(255, 140, 26, 0.12), transparent 26%),
+    radial-gradient(circle at 78% 2%, rgba(181, 139, 255, 0.14), transparent 28%),
+    linear-gradient(180deg, rgba(11, 17, 29, 0.98), rgba(5, 10, 18, 0.98));
+  border-color: rgba(124, 200, 255, 0.18);
+  border-radius: 14px;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.03),
-    0 14px 34px rgba(0, 0, 0, 0.2);
+    0 20px 42px rgba(0, 0, 0, 0.24);
   overflow: hidden;
-  padding: 16px;
+  padding: 20px;
   position: relative;
 }
 
 .insight-box.ai-panel::before {
-  background: linear-gradient(90deg, transparent, rgba(181, 139, 255, 0.58), rgba(61, 220, 151, 0.46), transparent);
+  background: linear-gradient(90deg, rgba(255, 140, 26, 0.52), rgba(181, 139, 255, 0.7), transparent);
   content: "";
   height: 1px;
-  inset: 0 18px auto;
-  opacity: 0.8;
+  inset: 0 24px auto;
+  opacity: 0.9;
   position: absolute;
 }
 
-.ai-panel-header {
-  align-items: center;
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-  margin-bottom: 12px;
+.ai-panel-hero {
+  align-items: start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(280px, 1fr) minmax(280px, auto);
+  margin-bottom: 16px;
 }
 
-.ai-panel-title {
-  align-items: center;
-  display: flex;
-  gap: 12px;
+.ai-panel-copy {
   min-width: 0;
 }
 
-.ai-panel-icon {
+.ai-panel-eyebrow {
   align-items: center;
-  background: linear-gradient(135deg, rgba(181, 139, 255, 0.95), rgba(61, 220, 151, 0.86));
-  border-radius: 10px;
-  color: #041017;
-  display: flex;
-  flex: 0 0 auto;
-  font-size: 0.78rem;
-  font-weight: 1000;
-  height: 36px;
-  justify-content: center;
-  letter-spacing: 0;
-  width: 36px;
-}
-
-.ai-panel-title span:not(.ai-panel-icon) {
-  color: var(--muted);
-  display: block;
-  font-size: 0.72rem;
-  font-weight: 800;
+  color: #ff8c1a;
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 950;
+  gap: 9px;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 
-.ai-panel-title strong {
-  color: var(--text);
-  display: block;
-  font-size: 1rem;
-  line-height: 1.25;
-  margin-top: 2px;
+.ai-panel-eyebrow i {
+  background: #ff8c1a;
+  border-radius: 999px;
+  box-shadow: 0 0 16px rgba(255, 140, 26, 0.45);
+  display: inline-block;
+  height: 9px;
+  width: 9px;
 }
 
-.ai-panel-header button {
-  background: rgba(61, 220, 151, 0.1);
-  border-color: rgba(61, 220, 151, 0.34);
-  border-radius: 999px;
-  color: var(--accent);
-  font-size: 0.72rem;
-  font-weight: 900;
-  min-height: 30px;
-  padding: 5px 11px;
+.ai-panel-copy h3 {
+  color: var(--text);
+  font-size: clamp(2.25rem, 4vw, 4.1rem);
+  font-weight: 950;
+  letter-spacing: 0;
+  line-height: 1.05;
+  margin: 14px 0 0;
 }
 
 .section-title {
@@ -1170,16 +1154,16 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .copilot-actions {
   align-items: center;
-  background: rgba(5, 13, 21, 0.44);
-  border: 1px solid rgba(124, 200, 255, 0.12);
-  border-radius: 999px;
-  display: inline-flex;
+  display: grid;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(116px, 1fr));
   justify-content: flex-start;
-  margin-bottom: 12px;
+  justify-self: end;
+  margin-bottom: 0;
   max-width: 100%;
-  padding: 4px;
+  min-width: min(100%, 420px);
+  padding: 0;
 }
 
 .copilot-actions button,
@@ -1188,26 +1172,52 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .copilot-actions button {
-  background: transparent;
-  border-color: transparent;
-  border-radius: 999px;
-  color: #d7c6ff;
+  align-items: center;
+  background: rgba(24, 34, 51, 0.94);
+  border-color: rgba(124, 200, 255, 0.08);
+  border-radius: 10px;
+  color: #aab7cc;
+  display: inline-flex;
   flex: 0 0 auto;
-  font-size: 0.68rem;
+  font-size: 0.95rem;
   font-weight: 900;
+  gap: 9px;
+  justify-content: center;
   line-height: 1;
-  min-height: 28px;
+  min-height: 54px;
   min-width: 0;
   overflow-wrap: normal;
-  padding: 5px 10px;
+  padding: 13px 18px;
   white-space: nowrap;
   width: auto !important;
 }
 
+.copilot-actions button::before {
+  color: currentColor;
+  content: attr(data-icon);
+  font-size: 1.15rem;
+  line-height: 1;
+  opacity: 0.95;
+}
+
+.copilot-actions button[data-copilot-mode="demo_summary"] {
+  grid-column: 1 / 2;
+}
+
 .copilot-actions button:hover,
 .copilot-actions button:focus-visible {
-  background: rgba(181, 139, 255, 0.14);
-  border-color: rgba(181, 139, 255, 0.36);
+  background: rgba(181, 139, 255, 0.16);
+  border-color: rgba(181, 139, 255, 0.38);
+  color: #d9ccff;
+}
+
+.copilot-actions button.is-active {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  border-color: rgba(181, 139, 255, 0.82);
+  box-shadow:
+    0 12px 28px rgba(124, 58, 237, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  color: #ffffff;
 }
 
 .copilot-actions button:disabled {
@@ -1323,21 +1333,11 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .ai-output {
   background:
-    linear-gradient(180deg, rgba(7, 16, 23, 0.62), rgba(5, 13, 21, 0.78));
+    linear-gradient(180deg, rgba(7, 16, 23, 0.54), rgba(5, 13, 21, 0.74));
   border: 1px solid rgba(124, 200, 255, 0.15);
   border-radius: 10px;
   min-height: 96px;
   padding: 13px;
-}
-
-.ai-output > span {
-  color: var(--accent-2);
-  display: block;
-  font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0;
-  margin-bottom: 8px;
-  text-transform: uppercase;
 }
 
 .insight-box p {

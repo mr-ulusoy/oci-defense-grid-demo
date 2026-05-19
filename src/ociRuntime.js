@@ -255,7 +255,7 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   architecture.streamState.textContent = serviceConfigured(streamStatus) ? "Durable event stream" : streamStatus;
   architecture.adbState.textContent = serviceConfigured(adbStatus) ? "Leaderboard + analytics" : adbStatus;
   architecture.objectState.textContent = serviceConfigured(objectStatus) ? "Raw event files" : objectStatus;
-  architecture.genaiState.textContent = "Player Coach + Ops Copilot";
+  architecture.genaiState.textContent = "Player Coach + Ops AI";
 
   setNodeLive(architecture.nodes.player, true);
   setNodeLive(architecture.nodes.publicLb, !telemetry.offline);
@@ -571,7 +571,7 @@ function copilotModeLabel(mode = "live") {
     players: "Player comparison",
     run: "Latest run analysis",
     demo_summary: "Demo summary"
-  }[mode] ?? "Copilot analysis";
+  }[mode] ?? "AI analysis";
 }
 
 function shortModelName(model = "") {
@@ -614,11 +614,12 @@ export async function askCopilot(snapshot = {}, mode = "live") {
   renderCopilotMeta({ mode, source: "pending", model: "OCI GenAI" });
   architecture.nodes.genai?.classList.add("is-busy");
   elements.copilotActions.forEach((button) => {
+    button.classList.toggle("is-active", (button.dataset.copilotMode ?? "live") === mode);
     button.disabled = true;
   });
   try {
     const result = await telemetry.askCopilot(snapshot, { mode });
-    elements.insight.textContent = result.insight ?? "Copilot returned no insight.";
+    elements.insight.textContent = result.insight ?? "AI returned no insight.";
     renderCopilotMeta(result);
   } finally {
     architecture.nodes.genai?.classList.remove("is-busy");
