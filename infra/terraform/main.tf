@@ -575,6 +575,18 @@ resource "oci_apigateway_deployment" "demo" {
     }
 
     routes {
+      path    = "/api/leaderboard/insights"
+      methods = ["POST", "OPTIONS"]
+      backend {
+        type                       = "HTTP_BACKEND"
+        url                        = "http://${local.api_lb_ip}:3000/api/leaderboard/insights"
+        connect_timeout_in_seconds = 60
+        read_timeout_in_seconds    = 30
+        send_timeout_in_seconds    = 30
+      }
+    }
+
+    routes {
       path    = "/api/coach"
       methods = ["POST", "OPTIONS"]
       backend {
