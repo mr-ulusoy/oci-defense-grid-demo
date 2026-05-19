@@ -14,7 +14,7 @@ const DEFAULT_GENAI_TIMEOUT_MS = 25000;
 const DEFAULT_COACH_GENAI_TIMEOUT_MS = 12000;
 const COPILOT_GATEWAY_SAFE_TIMEOUT_MS = 7600;
 const COACH_REPLY_WORD_LIMIT = 45;
-const COPILOT_REPLY_WORD_LIMIT = 120;
+const COPILOT_REPLY_WORD_LIMIT = 220;
 
 const QUIZ_COACH_CONTEXT = {
   "region-fault-domains": {
@@ -188,20 +188,23 @@ function deterministicInsight(context = {}) {
   const vm = context.vm ?? {};
 
   if (mode === "leaderboard" && topPlayer) {
-    return `${topPlayer.callsign} leads with ${topPlayer.score} points at level ${topPlayer.level}. ${efficient?.callsign ?? topPlayer.callsign} has the strongest kill-to-hit profile, useful for showing player efficiency from ADB analytics.`;
+    const leaderCounts = topPlayer.eventCounts ?? {};
+    const efficientCounts = efficient?.eventCounts ?? {};
+    return `${topPlayer.callsign} leads the board with ${topPlayer.score} points at level ${topPlayer.level}, backed by ${leaderCounts.kills ?? 0} kills, ${leaderCounts.bossPhases ?? 0} boss phases and ${leaderCounts.hits ?? 0} hits. ${efficient?.callsign ?? topPlayer.callsign} is the efficiency story, with ${efficientCounts.kills ?? leaderCounts.kills ?? 0} kills against ${efficientCounts.hits ?? leaderCounts.hits ?? 0} hits, which is useful when explaining how Autonomous AI Database turns gameplay events into ranked analytics. Watch for players with high hits or low level progression: they create a clean coaching moment for shields, powerups and routing pressure.`;
   }
 
   if (mode === "players" && livePlayers.length > 0) {
-    return `${livePlayers.length} players are active. ${livePlayers[0].callsign} is currently strongest, while Cache keeps live state shared across VM routes for the ops view.`;
+    return `${livePlayers.length} players are active right now, led by ${livePlayers[0].callsign} with ${livePlayers[0].score} points at level ${livePlayers[0].level}. OCI Cache is the live-state layer here: it keeps active pilots, scores and current levels visible even as API calls can route through different VM app instances. Compare this live view with the leaderboard to show the difference between fast temporary state and curated Autonomous AI Database results.`;
   }
 
   if (mode === "run" && latest) {
-    return `${latest.callsign}'s latest completed run reached level ${latest.level} with ${latest.score} points. Event chips show kills, hits, powerups and boss phases for a quick run review.`;
+    const counts = latest.eventCounts ?? {};
+    return `${latest.callsign}'s latest completed run reached level ${latest.level} with ${latest.score} points, ${counts.kills ?? 0} kills, ${counts.hits ?? 0} hits and ${counts.powerups ?? 0} powerups. The run looks strongest when kills and boss phases rise faster than hits; it looks risky when hits climb without level progression. Use this view to explain the full event path: gameplay telemetry becomes Streaming events, then curated analytics and leaderboard rows.`;
   }
 
   if (mode === "demo_summary") {
     const events = Number(eventAnalytics.windows?.last15m ?? analytics.totalRecentEvents ?? 0);
-    return `Demo story: VMs serve the game, API Gateway controls calls, Streaming carries ${events} recent events, ADB ranks runs, Object Storage archives raw telemetry and GenAI explains patterns.`;
+    return `Demo story: VMs serve the playable game through the Load Balancer, while API Gateway controls the API and AI calls. Functions handles event ingest, OCI Cache keeps live player state fast, Streaming buffers the event flow, Autonomous AI Database ranks runs and exposes analytics, and Object Storage keeps raw NDJSON event files. In the last window this demo has ${events} observed events, giving the presenter real signals to discuss instead of a static diagram.`;
   }
 
   if (eps > 4) {
@@ -357,6 +360,31 @@ function buildSdkChatRequest(prompt, model = getCopilotModel(), maxTokens = 1200
   };
 }
 
+function copilotResponseInstruction(mode) {
+  if (mode === "live") {
+    return "Return one or two customer-facing sentences under 80 words total. Mention one concrete signal and one OCI service if useful. No markdown.";
+  }
+
+  const modeDetails = {
+    leaderboard:
+      "Focus on the top performers, why they are winning, efficiency signals such as kills versus hits, level progression, powerups or extra lives, and one risk or coaching point.",
+    players:
+      "Compare currently active players, call out who is ahead now, who is improving or struggling, and connect live state to OCI Cache.",
+    run:
+      "Review the latest run: progression, score, kills, hits, powerups, boss phases, weakness, and the best presenter talking point.",
+    demo_summary:
+      "Explain what the observed telemetry proves about the OCI architecture, including Load Balancer, API Gateway, Functions, OCI Cache, Streaming, Autonomous AI Database, Object Storage and GenAI."
+  }[mode] ?? "Analyze the demo state with concrete metrics and service context.";
+
+  return [
+    "Return four customer-facing sentences under 190 words total.",
+    "Use concrete names, scores, levels and event counts when present; do not invent numbers.",
+    modeDetails,
+    "Sentence 1: headline conclusion. Sentence 2: evidence from gameplay metrics. Sentence 3: pattern, risk or comparison. Sentence 4: OCI service takeaway for the presenter.",
+    "No markdown, bullets, headings or emojis."
+  ].join(" ");
+}
+
 function buildAnalysisPrompt(context) {
   const mode = context.mode ?? "live";
   const intent = {
@@ -370,7 +398,7 @@ function buildAnalysisPrompt(context) {
   return [
     "You are the OCI Defense Grid ops copilot for a customer demo.",
     intent,
-    `Return ${mode === "live" ? "one or two" : "three"} customer-facing sentences under ${COPILOT_REPLY_WORD_LIMIT} words total.`,
+    copilotResponseInstruction(mode),
     "Mention concrete player or service signals when present. No markdown.",
     `Context JSON: ${JSON.stringify(buildCopilotContext(context))}`
   ].join("\n");
@@ -510,7 +538,7 @@ export async function createCopilotInsight(context) {
     const externalInsight = await withTimeout(
       callExternalCopilot(prompt, {
         model,
-        maxTokens: mode === "live" ? 300 : 600
+        maxTokens: mode === "live" ? 300 : 900
       }),
       timeoutMs
     );
@@ -539,7 +567,7 @@ export async function createCopilotInsight(context) {
       const externalInsight = await withTimeout(
         callExternalCopilot(prompt, {
           model: fastModel,
-          maxTokens: 360
+          maxTokens: mode === "live" ? 300 : 760
         }),
         Math.min(5000, timeoutMs)
       );
