@@ -113,6 +113,61 @@ test("leaderboard uses submitted player callsign", async () => {
   assert.equal(body.entries[0].eventCounts.run_end, 1);
 });
 
+test("leaderboard insight endpoint is ops-only and returns card copy", async () => {
+  let capturedEntries = [];
+  const app = createApp({
+    createCardInsights: async (entries) => {
+      capturedEntries = entries;
+      return {
+        cards: [
+          {
+            runId: entries[0]?.runId,
+            callsign: entries[0]?.callsign,
+            title: "Clean defense",
+            headline: "No extra-life buffer needed.",
+            detail: "Low damage and steady progress show controlled survival.",
+            tone: "clean"
+          }
+        ],
+        source: "oci-genai",
+        modelLabel: "Gemini 2.5 Flash-Lite"
+      };
+    }
+  });
+
+  const forbidden = await request(app, "/api/leaderboard/insights", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({})
+  });
+  assert.equal(forbidden.response.status, 403);
+
+  await request(app, "/api/events", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      type: "run_end",
+      runId: "run-card-copy",
+      sessionId: "session-card-copy",
+      level: 5,
+      score: 999999,
+      callsign: "Card Pilot",
+      clientTs: new Date().toISOString()
+    })
+  });
+
+  const { response, body } = await request(app, "/api/leaderboard/insights", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ops: true })
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(body.source, "oci-genai");
+  assert.equal(body.cards[0].title, "Clean defense");
+  assert.equal(capturedEntries[0].callsign, "CARD PILOT");
+});
+
 test("live players lists latest player snapshots", async () => {
   const app = createApp();
   const events = [

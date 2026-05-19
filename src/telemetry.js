@@ -148,6 +148,26 @@ export class OciTelemetry {
     }
   }
 
+  async refreshLeaderboardInsights() {
+    try {
+      const result = await fetch(`${this.apiBase}/leaderboard/insights`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ops: true })
+      }).then(readJson);
+      this.offline = false;
+      return result;
+    } catch {
+      this.offline = true;
+      return {
+        cards: [],
+        source: "fallback",
+        model: "browser",
+        modelLabel: "Browser fallback"
+      };
+    }
+  }
+
   async refreshLivePlayers() {
     try {
       const result = await fetch(`${this.apiBase}/players/live`).then(readJson);

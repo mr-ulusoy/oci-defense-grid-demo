@@ -3,7 +3,11 @@ import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
 import { randomUUID } from "node:crypto";
-import { createCoachReply, createCopilotInsight } from "./copilot.js";
+import {
+  createCoachReply,
+  createCopilotInsight,
+  createLeaderboardCardInsights
+} from "./copilot.js";
 import { startStress, stopStress, stressStatus } from "./demoStress.js";
 import { createStore } from "./store.js";
 import { systemMetrics } from "./systemMetrics.js";
@@ -76,6 +80,7 @@ function normalizeCallsign(value) {
 export function createApp({
   store = createStore(),
   createInsight = createCopilotInsight,
+  createCardInsights = createLeaderboardCardInsights,
   createCoach = createCoachReply,
   stressController = { start: startStress, stop: stopStress, status: stressStatus },
   streamConsumer = { status: () => ({ enabled: false, status: "disabled" }) }
@@ -119,6 +124,15 @@ export function createApp({
 
   app.get("/api/leaderboard", async (req, res) => {
     res.json({ entries: await store.leaderboard() });
+  });
+
+  app.post("/api/leaderboard/insights", async (req, res) => {
+    if (req.body?.ops !== true) {
+      res.status(403).json({ error: "Leaderboard insights are available in ops view only." });
+      return;
+    }
+
+    res.json(await createCardInsights(await store.leaderboard()));
   });
 
   app.get("/api/players/live", async (req, res) => {

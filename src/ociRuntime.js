@@ -90,8 +90,11 @@ const SCORE_EVENT_TYPES = [
 ];
 
 const observedVms = new Map();
+const leaderboardCardInsights = new Map();
 let activeVmKey = null;
 let scaleIntent = null;
+let latestLeaderboardEntries = [];
+let leaderboardInsightSignature = "";
 
 const VM_RECENT_MS = 30000;
 const minAppNodes = Number(window.OCI_DEFENSE_CONFIG?.minAppNodes ?? 2);
@@ -331,6 +334,31 @@ function countEvent(entry = {}, key) {
   return Number(entry.eventCounts?.[key] ?? 0);
 }
 
+function leaderboardEntryKey(entry = {}, index = 0) {
+  return String(
+    entry.runId ||
+    `${entry.callsign ?? "pilot"}-${Number(entry.score ?? 0)}-${Number(entry.level ?? 1)}-${index}`
+  );
+}
+
+function leaderboardEntriesSignature(entries = []) {
+  return entries
+    .slice(0, 2)
+    .map((entry, index) =>
+      [
+        leaderboardEntryKey(entry, index),
+        Number(entry.score ?? 0),
+        Number(entry.level ?? 1),
+        countEvent(entry, "enemy_killed"),
+        countEvent(entry, "player_hit"),
+        countEvent(entry, "powerup"),
+        countEvent(entry, "extra_life"),
+        countEvent(entry, "boss_phase")
+      ].join(":")
+    )
+    .join("|");
+}
+
 function playerArchetype(entry = {}) {
   const kills = countEvent(entry, "enemy_killed");
   const hits = countEvent(entry, "player_hit");
@@ -352,25 +380,81 @@ function efficiencyPercent(entry = {}) {
   return Math.max(8, Math.min(100, Math.round((kills / (kills + hits * 2)) * 100)));
 }
 
-function reserveStatusHtml(entry = {}) {
+function fallbackReserveInsight(entry = {}, index = 0) {
   const extraLives = countEvent(entry, "extra_life");
   const hits = countEvent(entry, "player_hit");
+  const level = Number(entry.level ?? 1);
+  const livesLabel = extraLives === 1 ? "life" : "lives";
 
-  if (extraLives > 0) {
-    return `
-      <div class="leaderboard-reserve is-risk">
-        <span>Risk</span>
-        <strong>Used ${formatNumber(extraLives)} extra ${extraLives === 1 ? "life" : "lives"}.</strong>
-        <em>${hits > 30 ? "Damage pressure is high; tighten boss positioning." : "Strong recovery, but reserves can mask risky movement."}</em>
-      </div>
-    `;
+  if (hits >= 40 && extraLives > 0) {
+    return {
+      title: "Recovery risk",
+      headline: `Collected ${formatNumber(extraLives)} extra ${livesLabel}.`,
+      detail: "Strong recovery buffer, but high damage pressure suggests risky movement.",
+      tone: "risk"
+    };
   }
 
+  if (extraLives > 0) {
+    return {
+      title: "Recovery run",
+      headline: `Collected ${formatNumber(extraLives)} extra ${livesLabel}.`,
+      detail: "Reserve pickups helped sustain the run through pressure spikes.",
+      tone: "recovery"
+    };
+  }
+
+  if (hits <= 20 && level >= 3) {
+    return {
+      title: "Clean defense",
+      headline: "No extra-life buffer needed.",
+      detail: "Low damage and steady progress show controlled survival.",
+      tone: "clean"
+    };
+  }
+
+  if (hits > 30) {
+    return {
+      title: "Thin margin",
+      headline: "No extra-life buffer collected.",
+      detail: "The run survived pressure, but damage left little room for mistakes.",
+      tone: "risk"
+    };
+  }
+
+  return {
+    title: index === 0 ? "Leader control" : "Contender pace",
+    headline: "Balanced survival profile.",
+    detail: "Score, level and damage pattern show steady control.",
+    tone: "controlled"
+  };
+}
+
+function normalizeInsightTone(value) {
+  const tone = String(value ?? "").toLowerCase();
+  return ["risk", "recovery", "aggressive"].includes(tone) ? "is-risk" : "is-clean";
+}
+
+function leaderboardInsightFor(entry = {}, index = 0) {
+  const insight = leaderboardCardInsights.get(leaderboardEntryKey(entry, index));
+  if (!insight) {
+    return fallbackReserveInsight(entry, index);
+  }
+
+  return {
+    ...fallbackReserveInsight(entry, index),
+    ...insight
+  };
+}
+
+function reserveStatusHtml(entry = {}, index = 0) {
+  const insight = leaderboardInsightFor(entry, index);
+
   return `
-    <div class="leaderboard-reserve is-clean">
-      <span>Stable</span>
-      <strong>Used 0 extra lives.</strong>
-      <em>Cleaner survival profile with reserves still intact.</em>
+    <div class="leaderboard-reserve ${normalizeInsightTone(insight.tone)}">
+      <span>${escapeHtml(insight.title)}</span>
+      <strong>${escapeHtml(insight.headline)}</strong>
+      <em>${escapeHtml(insight.detail)}</em>
     </div>
   `;
 }
@@ -423,7 +507,7 @@ function topPlayerCardHtml(entry = {}, index = 0) {
           <strong>${formatNumber(bossPhases)} survived</strong>
         </div>
       </div>
-      ${reserveStatusHtml(entry)}
+      ${reserveStatusHtml(entry, index)}
     </article>
   `;
 }
@@ -537,6 +621,7 @@ function renderLeaderboard(entries) {
 
   elements.leaderboard.innerHTML = "";
   const ranked = entries.slice(0, 8);
+  latestLeaderboardEntries = ranked;
 
   if (ranked.length === 0) {
     elements.leaderboard.innerHTML = '<div class="leaderboard-empty">Waiting for completed runs.</div>';
@@ -556,6 +641,38 @@ function renderLeaderboard(entries) {
     <div class="leaderboard-spotlight">${spotlight}</div>
     ${rows ? `<div class="leaderboard-list">${rows}</div>` : ""}
   `;
+}
+
+function applyLeaderboardCardInsights(result = {}) {
+  if (!Array.isArray(result.cards) || result.cards.length === 0) {
+    return false;
+  }
+
+  result.cards.forEach((card, index) => {
+    leaderboardCardInsights.set(leaderboardEntryKey(card, index), card);
+  });
+  return true;
+}
+
+async function refreshLeaderboardCardInsights(entries = []) {
+  if (!isOpsView || entries.length === 0) return;
+
+  const signature = leaderboardEntriesSignature(entries);
+  if (!signature || (signature === leaderboardInsightSignature && leaderboardCardInsights.size > 0)) {
+    return;
+  }
+
+  leaderboardInsightSignature = signature;
+  const result = await telemetry.refreshLeaderboardInsights();
+  if (applyLeaderboardCardInsights(result)) {
+    renderLeaderboard(latestLeaderboardEntries);
+  }
+}
+
+async function refreshLeaderboardBoard() {
+  const entries = await telemetry.refreshLeaderboard();
+  renderLeaderboard(entries);
+  await refreshLeaderboardCardInsights(entries);
 }
 
 export function updateHud() {
@@ -686,7 +803,7 @@ export async function initOciRuntime() {
     renderStatus(telemetry.status);
     renderLivePlayers(await telemetry.refreshLivePlayers());
     renderEventAnalytics(await telemetry.eventAnalytics());
-    renderLeaderboard(await telemetry.refreshLeaderboard());
+    await refreshLeaderboardBoard();
     setConnection(telemetry.offline);
 
     elements.copilotActions.forEach((button) => {
@@ -710,7 +827,7 @@ export async function initOciRuntime() {
       elements.stopStress.addEventListener("click", () => stopStress());
     }
     elements.refreshLeaderboard.addEventListener("click", async () => {
-      renderLeaderboard(await telemetry.refreshLeaderboard());
+      await refreshLeaderboardBoard();
     });
   } else {
     setConnection(telemetry.offline);

@@ -12,9 +12,13 @@ const DEFAULT_GENAI_MODEL = "openai.gpt-oss-120b";
 const DEFAULT_COACH_GENAI_MODEL = "google.gemini-2.5-flash-lite";
 const DEFAULT_GENAI_TIMEOUT_MS = 25000;
 const DEFAULT_COACH_GENAI_TIMEOUT_MS = 12000;
+const DEFAULT_CARD_INSIGHT_TIMEOUT_MS = 7000;
 const COPILOT_GATEWAY_SAFE_TIMEOUT_MS = 7600;
 const COACH_REPLY_WORD_LIMIT = 45;
 const COPILOT_REPLY_WORD_LIMIT = 220;
+const CARD_INSIGHT_CACHE_TTL_MS = 120000;
+
+const cardInsightCache = new Map();
 
 const QUIZ_COACH_CONTEXT = {
   "region-fault-domains": {
@@ -133,6 +137,81 @@ function compactPlayer(entry) {
       bossPhases: eventCount(entry, "boss_phase"),
       runEnd: eventCount(entry, "run_end")
     }
+  };
+}
+
+function cardMetrics(entry = {}, index = 0) {
+  return {
+    rank: index + 1,
+    callsign: entry.callsign,
+    runId: entry.runId,
+    score: Number(entry.score ?? 0),
+    level: Number(entry.level ?? 1),
+    kills: eventCount(entry, "enemy_killed"),
+    hits: eventCount(entry, "player_hit"),
+    powerups: eventCount(entry, "powerup"),
+    extraLivesCollected: eventCount(entry, "extra_life"),
+    bossPhases: eventCount(entry, "boss_phase")
+  };
+}
+
+function cardInsightSignature(entries = []) {
+  return entries
+    .slice(0, 2)
+    .map((entry, index) => JSON.stringify(cardMetrics(entry, index)))
+    .join("|");
+}
+
+function deterministicCardInsight(entry = {}, index = 0) {
+  const metrics = cardMetrics(entry, index);
+  const livesLabel = metrics.extraLivesCollected === 1 ? "life" : "lives";
+
+  if (metrics.hits >= 40 && metrics.extraLivesCollected > 0) {
+    return {
+      ...metrics,
+      title: "Recovery risk",
+      headline: `Collected ${metrics.extraLivesCollected} extra ${livesLabel}.`,
+      detail: "Strong recovery buffer, but high damage pressure suggests risky movement.",
+      tone: "risk"
+    };
+  }
+
+  if (metrics.extraLivesCollected > 0) {
+    return {
+      ...metrics,
+      title: "Recovery run",
+      headline: `Collected ${metrics.extraLivesCollected} extra ${livesLabel}.`,
+      detail: "Reserve pickups helped sustain the run through pressure spikes.",
+      tone: "recovery"
+    };
+  }
+
+  if (metrics.hits <= 20 && metrics.level >= 3) {
+    return {
+      ...metrics,
+      title: "Clean defense",
+      headline: "No extra-life buffer needed.",
+      detail: "Low damage and steady progress show controlled survival.",
+      tone: "clean"
+    };
+  }
+
+  if (metrics.hits > 30) {
+    return {
+      ...metrics,
+      title: "Thin margin",
+      headline: "No extra-life buffer collected.",
+      detail: "The run survived pressure, but damage left little room for mistakes.",
+      tone: "risk"
+    };
+  }
+
+  return {
+    ...metrics,
+    title: index === 0 ? "Leader control" : "Contender pace",
+    headline: "Balanced survival profile.",
+    detail: "Score, level and damage pattern show steady control.",
+    tone: "controlled"
   };
 }
 
@@ -268,6 +347,10 @@ function getCopilotModel() {
 
 function getCoachModel() {
   return process.env.OCI_GENAI_COACH_MODEL || DEFAULT_COACH_GENAI_MODEL;
+}
+
+function getCardInsightModel() {
+  return process.env.OCI_GENAI_CARD_MODEL || getCoachModel();
 }
 
 function modelLabel(model) {
@@ -416,6 +499,72 @@ function buildAnalysisPrompt(context) {
       : "Mention concrete player signals when present. No markdown.",
     `Context JSON: ${JSON.stringify(buildCopilotContext(context))}`
   ].join("\n");
+}
+
+function buildCardInsightPrompt(entries = []) {
+  return [
+    "You are a gameplay analyst for OCI Defense Grid leaderboard cards.",
+    "Return strict JSON only, no markdown, no comments.",
+    "Create one short card insight for each player in the input array.",
+    "The JSON must be an array with objects: rank, callsign, title, headline, detail, tone.",
+    "title: 1-3 words, title case. headline: one short sentence under 9 words. detail: one short sentence under 16 words.",
+    "tone must be one of: clean, controlled, recovery, risk, aggressive.",
+    "Use only the provided metrics. Do not invent numbers.",
+    "extraLivesCollected means extra lives collected, not used. Never write 'used extra lives'.",
+    "Mention collected extra lives only when extraLivesCollected is greater than 0.",
+    "Focus on playing style, risk, control, recovery and efficiency.",
+    `Input JSON: ${JSON.stringify(entries.slice(0, 2).map(cardMetrics))}`
+  ].join("\n");
+}
+
+function parseJsonArray(value) {
+  const text = String(value ?? "").trim();
+  try {
+    const parsed = JSON.parse(text);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    const match = text.match(/\[[\s\S]*\]/);
+    if (!match) {
+      return null;
+    }
+    try {
+      const parsed = JSON.parse(match[0]);
+      return Array.isArray(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+}
+
+function compactSentence(value, wordLimit) {
+  const text = trimWords(value, wordLimit).replace(/\s+/g, " ").trim();
+  return text || null;
+}
+
+function normalizeTone(value, fallback) {
+  const tone = String(value ?? "").toLowerCase();
+  return ["clean", "controlled", "recovery", "risk", "aggressive"].includes(tone)
+    ? tone
+    : fallback;
+}
+
+function sanitizeCardInsight(rawInsight, entry, index) {
+  const fallback = deterministicCardInsight(entry, index);
+  const title = compactSentence(rawInsight?.title, 3);
+  const headline = compactSentence(rawInsight?.headline, 10);
+  const detail = compactSentence(rawInsight?.detail, 18);
+
+  if (!title || !headline || !detail) {
+    return fallback;
+  }
+
+  return {
+    ...fallback,
+    title,
+    headline,
+    detail,
+    tone: normalizeTone(rawInsight?.tone, fallback.tone)
+  };
 }
 
 function extractCopilotText(payload) {
@@ -614,6 +763,77 @@ export async function createCopilotInsight(context) {
     mode,
     generatedAt: new Date().toISOString()
   };
+}
+
+export async function createLeaderboardCardInsights(entries = []) {
+  const topEntries = topByScore(entries, 2);
+  const fallbackCards = topEntries.map((entry, index) => deterministicCardInsight(entry, index));
+
+  if (topEntries.length === 0) {
+    return {
+      cards: [],
+      source: "fallback",
+      model: "deterministic",
+      modelLabel: "Deterministic fallback",
+      latencyMs: 0,
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  const signature = cardInsightSignature(topEntries);
+  const cached = cardInsightCache.get(signature);
+  if (cached && Date.now() - cached.cachedAt < CARD_INSIGHT_CACHE_TTL_MS) {
+    return {
+      ...cached.result,
+      cached: true
+    };
+  }
+
+  const started = Date.now();
+  const model = getCardInsightModel();
+  const prompt = buildCardInsightPrompt(topEntries);
+
+  try {
+    const timeoutMs = Number(
+      process.env.OCI_GENAI_CARD_TIMEOUT_MS ?? DEFAULT_CARD_INSIGHT_TIMEOUT_MS
+    );
+    const externalInsight = await withTimeout(
+      callExternalCopilot(prompt, {
+        model,
+        maxTokens: 420
+      }),
+      Math.min(timeoutMs, COPILOT_GATEWAY_SAFE_TIMEOUT_MS)
+    );
+    const parsed = parseJsonArray(externalInsight);
+    if (!parsed) {
+      throw new Error("Leaderboard card GenAI did not return JSON");
+    }
+
+    const cards = topEntries.map((entry, index) => sanitizeCardInsight(parsed[index], entry, index));
+    const result = {
+      cards,
+      source: "oci-genai",
+      model,
+      modelLabel: modelLabel(model),
+      latencyMs: Date.now() - started,
+      generatedAt: new Date().toISOString()
+    };
+    cardInsightCache.set(signature, { cachedAt: Date.now(), result });
+    return result;
+  } catch (error) {
+    console.warn("Leaderboard card GenAI call failed, using deterministic fallback.", error.message);
+  }
+
+  const result = {
+    cards: fallbackCards,
+    source: "fallback",
+    model: "deterministic",
+    modelLabel: "Deterministic fallback",
+    latencyMs: Date.now() - started,
+    generatedAt: new Date().toISOString()
+  };
+  cardInsightCache.set(signature, { cachedAt: Date.now(), result });
+  return result;
 }
 
 export async function createCoachReply({ level, questionId, message = "", attemptCount = 0 } = {}) {
