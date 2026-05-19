@@ -669,17 +669,23 @@ function applyLeaderboardCardInsights(result = {}) {
   return true;
 }
 
-async function refreshLeaderboardCardInsights(entries = []) {
+async function refreshLeaderboardCardInsights(entries = [], { force = false } = {}) {
   if (!isOpsView || entries.length === 0) return;
 
   const signature = leaderboardEntriesSignature(entries);
-  if (!signature || (signature === leaderboardInsightSignature && leaderboardCardInsights.size > 0)) {
+  if (!signature || (!force && signature === leaderboardInsightSignature)) {
     return;
   }
 
-  leaderboardInsightSignature = signature;
   const result = await telemetry.refreshLeaderboardInsights();
   if (applyLeaderboardCardInsights(result)) {
+    if (result.source === "oci-genai") {
+      leaderboardInsightSignature = signature;
+    } else {
+      window.setTimeout(() => {
+        refreshLeaderboardCardInsights(latestLeaderboardEntries, { force: true });
+      }, 5000);
+    }
     renderLeaderboard(latestLeaderboardEntries);
   }
 }

@@ -1,4 +1,4 @@
-import { initOciRuntime } from "./ociRuntime.js?v=20260519-run-ai";
+import { initOciRuntime } from "./ociRuntime.js?v=20260519-ai-retry";
 import BootScene from "./scenes/BootScene.js";
 import MenuScene from "./scenes/MenuScene.js";
 import GameScene from "./scenes/GameScene.js";

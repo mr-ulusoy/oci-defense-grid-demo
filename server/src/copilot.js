@@ -873,7 +873,6 @@ export async function createLeaderboardCardInsights(entries = []) {
     latencyMs: Date.now() - started,
     generatedAt: new Date().toISOString()
   };
-  cardInsightCache.set(signature, { cachedAt: Date.now(), result });
   return result;
 }
 
