@@ -458,7 +458,8 @@ function leaderboardInsightFor(entry = {}, index = 0) {
 
 function reserveStatusHtml(entry = {}, index = 0) {
   const insight = leaderboardInsightFor(entry, index);
-  const sourceLabel = insight.source === "oci-genai" || insight.source === "pending"
+  const source = String(insight.source ?? "");
+  const sourceLabel = source.startsWith("oci-genai") || source === "pending"
     ? "AI model"
     : "Analysis";
 

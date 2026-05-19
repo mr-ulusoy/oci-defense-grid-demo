@@ -383,7 +383,7 @@ function getCoachModel() {
 }
 
 function getCardInsightModel() {
-  return process.env.OCI_GENAI_CARD_MODEL || getCoachModel();
+  return getCopilotModel();
 }
 
 function modelLabel(model) {
@@ -832,18 +832,17 @@ export async function createLeaderboardCardInsights(entries = []) {
 
   const started = Date.now();
   const model = getCardInsightModel();
+  const fastModel = getCoachModel();
   const prompt = buildCardInsightPrompt(topEntries);
+  const timeoutMs = Number(process.env.OCI_GENAI_CARD_TIMEOUT_MS ?? DEFAULT_CARD_INSIGHT_TIMEOUT_MS);
 
-  try {
-    const timeoutMs = Number(
-      process.env.OCI_GENAI_CARD_TIMEOUT_MS ?? DEFAULT_CARD_INSIGHT_TIMEOUT_MS
-    );
+  const analyzeCardsWithModel = async (modelId, source, timeout) => {
     const externalInsight = await withTimeout(
       callExternalCopilot(prompt, {
-        model,
+        model: modelId,
         maxTokens: 420
       }),
-      Math.min(timeoutMs, COPILOT_GATEWAY_SAFE_TIMEOUT_MS)
+      timeout
     );
     const parsed = parseJsonArray(externalInsight);
     if (!parsed) {
@@ -851,18 +850,43 @@ export async function createLeaderboardCardInsights(entries = []) {
     }
 
     const cards = topEntries.map((entry, index) => sanitizeCardInsight(parsed[index], entry, index));
-    const result = {
+    return {
       cards,
-      source: "oci-genai",
-      model,
-      modelLabel: modelLabel(model),
+      source,
+      model: modelId,
+      modelLabel: modelLabel(modelId),
       latencyMs: Date.now() - started,
       generatedAt: new Date().toISOString()
     };
+  };
+
+  try {
+    const result = await analyzeCardsWithModel(
+      model,
+      "oci-genai",
+      Math.min(timeoutMs, COPILOT_GATEWAY_SAFE_TIMEOUT_MS)
+    );
     cardInsightCache.set(signature, { cachedAt: Date.now(), result });
     return result;
   } catch (error) {
-    console.warn("Leaderboard card GenAI call failed, using deterministic fallback.", error.message);
+    console.warn("Leaderboard card primary GenAI call failed, trying fast model.", error.message);
+  }
+
+  if (fastModel && fastModel !== model) {
+    try {
+      const result = await analyzeCardsWithModel(
+        fastModel,
+        "oci-genai-fast",
+        Math.min(5000, timeoutMs, COPILOT_GATEWAY_SAFE_TIMEOUT_MS)
+      );
+      cardInsightCache.set(signature, { cachedAt: Date.now(), result });
+      return result;
+    } catch (error) {
+      console.warn(
+        "Leaderboard card fast GenAI call failed, using deterministic fallback.",
+        error.message
+      );
+    }
   }
 
   const result = {
