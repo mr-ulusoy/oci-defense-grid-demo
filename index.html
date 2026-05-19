@@ -229,9 +229,15 @@
           </div>
         </section>
 
-        <section class="insight-box">
-          <div class="section-title">
-            <span>OCI Generative AI</span>
+        <section class="insight-box ai-panel">
+          <div class="ai-panel-header">
+            <div class="ai-panel-title">
+              <span class="ai-panel-icon">AI</span>
+              <div>
+                <span>OCI Generative AI</span>
+                <strong>Copilot analysis</strong>
+              </div>
+            </div>
             <button type="button" id="askCopilot" data-copilot-mode="live" title="Ask copilot">Live</button>
           </div>
           <div class="copilot-actions" aria-label="Copilot analysis modes">
@@ -240,8 +246,11 @@
             <button type="button" data-copilot-mode="run" title="Analyze the latest completed run">Latest Run</button>
             <button type="button" data-copilot-mode="demo_summary" title="Summarize the OCI demo story">Demo</button>
           </div>
-          <p id="hudInsight">Waiting for live telemetry.</p>
-          <small id="copilotMeta">Copilot source: waiting</small>
+          <div class="ai-output">
+            <span>Current insight</span>
+            <p id="hudInsight">Waiting for live telemetry.</p>
+            <small id="copilotMeta">Copilot source: waiting</small>
+          </div>
         </section>
 
         <section class="leaderboard">
