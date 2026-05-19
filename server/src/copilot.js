@@ -1,10 +1,10 @@
 import os from "node:os";
 
 const FALLBACK_INSIGHTS = [
-  "Traffic pressure is steady. Keep the Load Balancer path active and preserve shields for the next spike.",
-  "Latency remains inside demo range. VM routing looks healthy while event volume builds.",
-  "The latest wave looks like a short anomaly burst. Streaming ingest should absorb it cleanly.",
-  "Score velocity is rising. This is a good moment to show API Gateway throttling and backend identity."
+  "Traffic pressure is steady. Preserve shields for the next spike and watch for players taking unnecessary hits.",
+  "Latency remains inside range. Player scores are stable while event volume builds.",
+  "The latest wave looks like a short anomaly burst. High kill counts with low hits indicate efficient play.",
+  "Score velocity is rising. Compare kill-to-hit ratio and powerup use to find the strongest pilot."
 ];
 
 const DEFAULT_GENAI_ENDPOINT = "https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com";
@@ -190,16 +190,16 @@ function deterministicInsight(context = {}) {
   if (mode === "leaderboard" && topPlayer) {
     const leaderCounts = topPlayer.eventCounts ?? {};
     const efficientCounts = efficient?.eventCounts ?? {};
-    return `${topPlayer.callsign} leads the board with ${topPlayer.score} points at level ${topPlayer.level}, backed by ${leaderCounts.kills ?? 0} kills, ${leaderCounts.bossPhases ?? 0} boss phases and ${leaderCounts.hits ?? 0} hits. ${efficient?.callsign ?? topPlayer.callsign} is the efficiency story, with ${efficientCounts.kills ?? leaderCounts.kills ?? 0} kills against ${efficientCounts.hits ?? leaderCounts.hits ?? 0} hits, which is useful when explaining how Autonomous AI Database turns gameplay events into ranked analytics. Watch for players with high hits or low level progression: they create a clean coaching moment for shields, powerups and routing pressure.`;
+    return `${topPlayer.callsign} leads the board with ${topPlayer.score} points at level ${topPlayer.level}, backed by ${leaderCounts.kills ?? 0} kills, ${leaderCounts.bossPhases ?? 0} boss phases and ${leaderCounts.hits ?? 0} hits. ${efficient?.callsign ?? topPlayer.callsign} is the efficiency story, with ${efficientCounts.kills ?? leaderCounts.kills ?? 0} kills against ${efficientCounts.hits ?? leaderCounts.hits ?? 0} hits. Watch for players with high hits or low level progression: they create a clean coaching moment for shields, powerups and safer boss positioning.`;
   }
 
   if (mode === "players" && livePlayers.length > 0) {
-    return `${livePlayers.length} players are active right now, led by ${livePlayers[0].callsign} with ${livePlayers[0].score} points at level ${livePlayers[0].level}. OCI Cache is the live-state layer here: it keeps active pilots, scores and current levels visible even as API calls can route through different VM app instances. Compare this live view with the leaderboard to show the difference between fast temporary state and curated Autonomous AI Database results.`;
+    return `${livePlayers.length} players are active right now, led by ${livePlayers[0].callsign} with ${livePlayers[0].score} points at level ${livePlayers[0].level}. Compare the live players by score velocity, current level, hits and powerups to see who is actually in control now. If a player has a high score but many hits, they are playing aggressively; if another has fewer hits and steady level progression, they may be more consistent.`;
   }
 
   if (mode === "run" && latest) {
     const counts = latest.eventCounts ?? {};
-    return `${latest.callsign}'s latest completed run reached level ${latest.level} with ${latest.score} points, ${counts.kills ?? 0} kills, ${counts.hits ?? 0} hits and ${counts.powerups ?? 0} powerups. The run looks strongest when kills and boss phases rise faster than hits; it looks risky when hits climb without level progression. Use this view to explain the full event path: gameplay telemetry becomes Streaming events, then curated analytics and leaderboard rows.`;
+    return `${latest.callsign}'s latest completed run reached level ${latest.level} with ${latest.score} points, ${counts.kills ?? 0} kills, ${counts.hits ?? 0} hits and ${counts.powerups ?? 0} powerups. The run looks strongest when kills and boss phases rise faster than hits; it looks risky when hits climb without level progression. Review whether the pilot used powerups and extra lives as recovery tools or relied on them too heavily.`;
   }
 
   if (mode === "demo_summary") {
@@ -211,10 +211,10 @@ function deterministicInsight(context = {}) {
     return `High telemetry rate detected at level ${level}. API Gateway should throttle bursts while Streaming buffers the event flow.`;
   }
   if (score > 5000) {
-    return `Defense score is strong on ${vm.name ?? "the active VM"}. Keep routing balanced and use the leaderboard view to show Autonomous Database updates.`;
+    return `Defense score is strong at ${score}. Compare hits, powerups and boss phases to see whether the player is winning through clean movement or recovery resources.`;
   }
   if (level >= 3) {
-    return `Anomaly level ${level} is active. Watch VM latency and call out Load Balancer failover readiness.`;
+    return `Level ${level} is active. Watch whether the player keeps damage low while enemy pressure rises.`;
   }
 
   return FALLBACK_INSIGHTS[Math.floor(Math.random() * FALLBACK_INSIGHTS.length)];
@@ -362,25 +362,36 @@ function buildSdkChatRequest(prompt, model = getCopilotModel(), maxTokens = 1200
 
 function copilotResponseInstruction(mode) {
   if (mode === "live") {
-    return "Return one or two customer-facing sentences under 80 words total. Mention one concrete signal and one OCI service if useful. No markdown.";
+    return "Return one or two customer-facing sentences under 80 words total. Mention concrete gameplay signals only. Do not mention OCI services or demo architecture. No markdown.";
   }
 
   const modeDetails = {
     leaderboard:
-      "Focus on the top performers, why they are winning, efficiency signals such as kills versus hits, level progression, powerups or extra lives, and one risk or coaching point.",
+      "Focus only on top performers, why they are winning, efficiency signals such as kills versus hits, level progression, powerups or extra lives, and one risk or coaching point.",
     players:
-      "Compare currently active players, call out who is ahead now, who is improving or struggling, and connect live state to OCI Cache.",
+      "Compare only currently active players, call out who is ahead now, who is improving or struggling, and what their gameplay pattern suggests.",
     run:
-      "Review the latest run: progression, score, kills, hits, powerups, boss phases, weakness, and the best presenter talking point.",
+      "Review only the latest run: progression, score, kills, hits, powerups, boss phases, strength, weakness and one practical coaching point.",
     demo_summary:
       "Explain what the observed telemetry proves about the OCI architecture, including Load Balancer, API Gateway, Functions, OCI Cache, Streaming, Autonomous AI Database, Object Storage and GenAI."
   }[mode] ?? "Analyze the demo state with concrete metrics and service context.";
 
+  if (mode === "demo_summary") {
+    return [
+      "Return four customer-facing sentences under 190 words total.",
+      "Use concrete names, scores, levels and event counts when present; do not invent numbers.",
+      modeDetails,
+      "Sentence 1: headline conclusion. Sentence 2: observed telemetry. Sentence 3: service flow. Sentence 4: presenter takeaway.",
+      "No markdown, bullets, headings or emojis."
+    ].join(" ");
+  }
+
   return [
-    "Return four customer-facing sentences under 190 words total.",
+    "Return three or four customer-facing sentences under 170 words total.",
+    "Analyze gameplay only. Do not mention OCI, cloud services, architecture, Functions, Streaming, Database, Cache, Gateway, Load Balancer or Object Storage.",
     "Use concrete names, scores, levels and event counts when present; do not invent numbers.",
     modeDetails,
-    "Sentence 1: headline conclusion. Sentence 2: evidence from gameplay metrics. Sentence 3: pattern, risk or comparison. Sentence 4: OCI service takeaway for the presenter.",
+    "Sentence 1: headline conclusion. Sentence 2: evidence from gameplay metrics. Sentence 3: pattern, risk or comparison. Optional sentence 4: practical coaching point.",
     "No markdown, bullets, headings or emojis."
   ].join(" ");
 }
@@ -391,15 +402,19 @@ function buildAnalysisPrompt(context) {
     live: "Give the presenter a concise current-state insight.",
     leaderboard: "Analyze who is performing best and why, using score, level and event counts.",
     players: "Compare active players and call out live performance patterns.",
-    run: "Analyze the latest or selected run, including strengths, damage, progression and useful demo talking points.",
+    run: "Analyze the latest or selected run, including strengths, damage, progression and useful gameplay talking points.",
     demo_summary: "Summarize what the current telemetry proves about the OCI architecture."
   }[mode] ?? "Analyze the OCI Defense Grid demo state.";
 
   return [
-    "You are the OCI Defense Grid ops copilot for a customer demo.",
+    mode === "demo_summary"
+      ? "You are the OCI Defense Grid ops copilot for a customer demo."
+      : "You are the OCI Defense Grid gameplay analyst.",
     intent,
     copilotResponseInstruction(mode),
-    "Mention concrete player or service signals when present. No markdown.",
+    mode === "demo_summary"
+      ? "Mention concrete player or service signals when present. No markdown."
+      : "Mention concrete player signals when present. No markdown.",
     `Context JSON: ${JSON.stringify(buildCopilotContext(context))}`
   ].join("\n");
 }
