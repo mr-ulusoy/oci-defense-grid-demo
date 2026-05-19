@@ -123,8 +123,8 @@ test("leaderboard insight endpoint is ops-only and returns card copy", async () 
           {
             runId: entries[0]?.runId,
             callsign: entries[0]?.callsign,
-            title: "Clean defense",
-            headline: "No extra-life buffer needed.",
+            title: "Clean analysis",
+            headline: "12 kills, 1 hit.",
             detail: "Low damage and steady progress show controlled survival.",
             tone: "clean"
           }
@@ -164,7 +164,8 @@ test("leaderboard insight endpoint is ops-only and returns card copy", async () 
 
   assert.equal(response.status, 200);
   assert.equal(body.source, "oci-genai");
-  assert.equal(body.cards[0].title, "Clean defense");
+  assert.equal(body.cards[0].title, "Clean analysis");
+  assert.equal(body.modelLabel, "Gemini 2.5 Flash-Lite");
   assert.equal(capturedEntries[0].callsign, "CARD PILOT");
 });
 

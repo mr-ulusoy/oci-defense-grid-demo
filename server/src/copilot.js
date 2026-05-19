@@ -165,13 +165,15 @@ function cardInsightSignature(entries = []) {
 function deterministicCardInsight(entry = {}, index = 0) {
   const metrics = cardMetrics(entry, index);
   const livesLabel = metrics.extraLivesCollected === 1 ? "life" : "lives";
+  const killText = `${metrics.kills} kills`;
+  const hitText = `${metrics.hits} hits`;
 
   if (metrics.hits >= 40 && metrics.extraLivesCollected > 0) {
     return {
       ...metrics,
-      title: "Recovery risk",
-      headline: `Collected ${metrics.extraLivesCollected} extra ${livesLabel}.`,
-      detail: "Strong recovery buffer, but high damage pressure suggests risky movement.",
+      title: "Recovery analysis",
+      headline: `${killText}, ${hitText}.`,
+      detail: `Collected ${metrics.extraLivesCollected} extra ${livesLabel}; strong output, but damage pressure is high.`,
       tone: "risk"
     };
   }
@@ -179,9 +181,9 @@ function deterministicCardInsight(entry = {}, index = 0) {
   if (metrics.extraLivesCollected > 0) {
     return {
       ...metrics,
-      title: "Recovery run",
-      headline: `Collected ${metrics.extraLivesCollected} extra ${livesLabel}.`,
-      detail: "Reserve pickups helped sustain the run through pressure spikes.",
+      title: "Run analysis",
+      headline: `${killText}, ${hitText}.`,
+      detail: `Collected ${metrics.extraLivesCollected} extra ${livesLabel}; recovery resources helped sustain pressure.`,
       tone: "recovery"
     };
   }
@@ -189,9 +191,9 @@ function deterministicCardInsight(entry = {}, index = 0) {
   if (metrics.hits <= 20 && metrics.level >= 3) {
     return {
       ...metrics,
-      title: "Clean defense",
-      headline: "No extra-life buffer needed.",
-      detail: "Low damage and steady progress show controlled survival.",
+      title: "Clean analysis",
+      headline: `${killText}, ${hitText}.`,
+      detail: "Low damage and strong progress show controlled survival.",
       tone: "clean"
     };
   }
@@ -199,17 +201,17 @@ function deterministicCardInsight(entry = {}, index = 0) {
   if (metrics.hits > 30) {
     return {
       ...metrics,
-      title: "Thin margin",
-      headline: "No extra-life buffer collected.",
-      detail: "The run survived pressure, but damage left little room for mistakes.",
+      title: "Risk analysis",
+      headline: `${killText}, ${hitText}.`,
+      detail: "No extra-life buffer was collected, so the run had limited recovery margin.",
       tone: "risk"
     };
   }
 
   return {
     ...metrics,
-    title: index === 0 ? "Leader control" : "Contender pace",
-    headline: "Balanced survival profile.",
+    title: index === 0 ? "Leader analysis" : "Contender analysis",
+    headline: `${killText}, ${hitText}.`,
     detail: "Score, level and damage pattern show steady control.",
     tone: "controlled"
   };
@@ -505,13 +507,14 @@ function buildCardInsightPrompt(entries = []) {
   return [
     "You are a gameplay analyst for OCI Defense Grid leaderboard cards.",
     "Return strict JSON only, no markdown, no comments.",
-    "Create one short card insight for each player in the input array.",
+    "Create one short run analysis for each player in the input array. Each object represents one completed run.",
     "The JSON must be an array with objects: rank, callsign, title, headline, detail, tone.",
-    "title: 1-3 words, title case. headline: one short sentence under 9 words. detail: one short sentence under 16 words.",
+    "title: 1-3 words, title case. headline: one short sentence under 10 words. detail: one short sentence under 20 words.",
     "tone must be one of: clean, controlled, recovery, risk, aggressive.",
     "Use only the provided metrics. Do not invent numbers.",
     "extraLivesCollected means extra lives collected, not used. Never write 'used extra lives'.",
     "Mention collected extra lives only when extraLivesCollected is greater than 0.",
+    "Analyze the full run using score, level, kills, hits, powerups, extra lives collected and boss phases.",
     "Focus on playing style, risk, control, recovery and efficiency.",
     `Input JSON: ${JSON.stringify(entries.slice(0, 2).map(cardMetrics))}`
   ].join("\n");
@@ -552,7 +555,7 @@ function sanitizeCardInsight(rawInsight, entry, index) {
   const fallback = deterministicCardInsight(entry, index);
   const title = compactSentence(rawInsight?.title, 3);
   const headline = compactSentence(rawInsight?.headline, 10);
-  const detail = compactSentence(rawInsight?.detail, 18);
+  const detail = compactSentence(rawInsight?.detail, 22);
 
   if (!title || !headline || !detail) {
     return fallback;

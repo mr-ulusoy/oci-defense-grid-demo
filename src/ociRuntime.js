@@ -383,50 +383,58 @@ function efficiencyPercent(entry = {}) {
 function fallbackReserveInsight(entry = {}, index = 0) {
   const extraLives = countEvent(entry, "extra_life");
   const hits = countEvent(entry, "player_hit");
+  const kills = countEvent(entry, "enemy_killed");
   const level = Number(entry.level ?? 1);
   const livesLabel = extraLives === 1 ? "life" : "lives";
+  const headline = `${formatNumber(kills)} kills, ${formatNumber(hits)} hits.`;
+  const modelLabel = "Deterministic fallback";
 
   if (hits >= 40 && extraLives > 0) {
     return {
-      title: "Recovery risk",
-      headline: `Collected ${formatNumber(extraLives)} extra ${livesLabel}.`,
-      detail: "Strong recovery buffer, but high damage pressure suggests risky movement.",
-      tone: "risk"
+      title: "Recovery analysis",
+      headline,
+      detail: `Collected ${formatNumber(extraLives)} extra ${livesLabel}; strong output, but damage pressure is high.`,
+      tone: "risk",
+      modelLabel
     };
   }
 
   if (extraLives > 0) {
     return {
-      title: "Recovery run",
-      headline: `Collected ${formatNumber(extraLives)} extra ${livesLabel}.`,
-      detail: "Reserve pickups helped sustain the run through pressure spikes.",
-      tone: "recovery"
+      title: "Run analysis",
+      headline,
+      detail: `Collected ${formatNumber(extraLives)} extra ${livesLabel}; recovery resources helped sustain pressure.`,
+      tone: "recovery",
+      modelLabel
     };
   }
 
   if (hits <= 20 && level >= 3) {
     return {
-      title: "Clean defense",
-      headline: "No extra-life buffer needed.",
-      detail: "Low damage and steady progress show controlled survival.",
-      tone: "clean"
+      title: "Clean analysis",
+      headline,
+      detail: "Low damage and strong progress show controlled survival.",
+      tone: "clean",
+      modelLabel
     };
   }
 
   if (hits > 30) {
     return {
-      title: "Thin margin",
-      headline: "No extra-life buffer collected.",
-      detail: "The run survived pressure, but damage left little room for mistakes.",
-      tone: "risk"
+      title: "Risk analysis",
+      headline,
+      detail: "No extra-life buffer was collected, so the run had limited recovery margin.",
+      tone: "risk",
+      modelLabel
     };
   }
 
   return {
-    title: index === 0 ? "Leader control" : "Contender pace",
-    headline: "Balanced survival profile.",
+    title: index === 0 ? "Leader analysis" : "Contender analysis",
+    headline,
     detail: "Score, level and damage pattern show steady control.",
-    tone: "controlled"
+    tone: "controlled",
+    modelLabel
   };
 }
 
@@ -449,12 +457,14 @@ function leaderboardInsightFor(entry = {}, index = 0) {
 
 function reserveStatusHtml(entry = {}, index = 0) {
   const insight = leaderboardInsightFor(entry, index);
+  const sourceLabel = insight.source === "oci-genai" ? "AI model" : "Analysis";
 
   return `
     <div class="leaderboard-reserve ${normalizeInsightTone(insight.tone)}">
       <span>${escapeHtml(insight.title)}</span>
       <strong>${escapeHtml(insight.headline)}</strong>
       <em>${escapeHtml(insight.detail)}</em>
+      <small>${sourceLabel}: ${escapeHtml(insight.modelLabel ?? "waiting")}</small>
     </div>
   `;
 }
@@ -649,7 +659,12 @@ function applyLeaderboardCardInsights(result = {}) {
   }
 
   result.cards.forEach((card, index) => {
-    leaderboardCardInsights.set(leaderboardEntryKey(card, index), card);
+    leaderboardCardInsights.set(leaderboardEntryKey(card, index), {
+      ...card,
+      source: result.source,
+      model: result.model,
+      modelLabel: result.modelLabel
+    });
   });
   return true;
 }

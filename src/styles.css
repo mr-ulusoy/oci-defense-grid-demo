@@ -1582,6 +1582,14 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   color: var(--muted);
 }
 
+.leaderboard-reserve small {
+  color: rgba(214, 245, 239, 0.54);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+}
+
 .leaderboard-reserve.is-risk {
   background: rgba(255, 107, 107, 0.1);
   border: 1px solid rgba(255, 107, 107, 0.32);
