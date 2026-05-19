@@ -61,6 +61,7 @@ deploy_host() {
   local encoded_env
 
   remote_command="set -e"
+  remote_command="${remote_command}; if [ -f /etc/systemd/system/oci-defense-api.service ]; then sudo sed -i.bak '/^Environment=OCI_GENAI_/d;/^Environment=ADB_/d;/^Environment=OPS_ACCESS_TOKEN/d' /etc/systemd/system/oci-defense-api.service; fi"
   if [[ -n "$REDIS_HOST" ]]; then
     remote_command="${remote_command}; sudo mkdir -p /etc/systemd/system/oci-defense-api.service.d"
     remote_command="${remote_command}; printf '%s\n' '[Service]' 'EnvironmentFile=-/etc/oci-defense-redis.env' | sudo tee /etc/systemd/system/oci-defense-api.service.d/redis.conf >/dev/null"
