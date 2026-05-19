@@ -1083,7 +1083,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
     inset 0 1px 0 rgba(255, 255, 255, 0.03),
     0 20px 42px rgba(0, 0, 0, 0.24);
   overflow: hidden;
-  padding: 20px;
+  padding: 16px;
   position: relative;
 }
 
@@ -1097,11 +1097,11 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .ai-panel-hero {
-  align-items: start;
+  align-items: center;
   display: grid;
-  gap: 18px;
-  grid-template-columns: minmax(280px, 1fr) minmax(280px, auto);
-  margin-bottom: 16px;
+  gap: 14px;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  margin-bottom: 12px;
 }
 
 .ai-panel-copy {
@@ -1112,10 +1112,10 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   align-items: center;
   color: #ff8c1a;
   display: inline-flex;
-  font-size: 0.8rem;
+  font-size: 0.68rem;
   font-weight: 950;
-  gap: 9px;
-  letter-spacing: 0.18em;
+  gap: 7px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
@@ -1124,17 +1124,17 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   border-radius: 999px;
   box-shadow: 0 0 16px rgba(255, 140, 26, 0.45);
   display: inline-block;
-  height: 9px;
-  width: 9px;
+  height: 7px;
+  width: 7px;
 }
 
 .ai-panel-copy h3 {
   color: var(--text);
-  font-size: clamp(2.25rem, 4vw, 4.1rem);
+  font-size: clamp(1.55rem, 2.25vw, 2.6rem);
   font-weight: 950;
   letter-spacing: 0;
-  line-height: 1.05;
-  margin: 14px 0 0;
+  line-height: 1.08;
+  margin: 8px 0 0;
 }
 
 .section-title {
@@ -1154,15 +1154,14 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .copilot-actions {
   align-items: center;
-  display: grid;
-  flex-wrap: wrap;
-  gap: 10px;
-  grid-template-columns: repeat(3, minmax(116px, 1fr));
-  justify-content: flex-start;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 7px;
+  justify-content: flex-end;
   justify-self: end;
   margin-bottom: 0;
   max-width: 100%;
-  min-width: min(100%, 420px);
+  min-width: 0;
   padding: 0;
 }
 
@@ -1179,15 +1178,15 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   color: #aab7cc;
   display: inline-flex;
   flex: 0 0 auto;
-  font-size: 0.95rem;
+  font-size: 0.78rem;
   font-weight: 900;
-  gap: 9px;
+  gap: 7px;
   justify-content: center;
   line-height: 1;
-  min-height: 54px;
+  min-height: 38px;
   min-width: 0;
   overflow-wrap: normal;
-  padding: 13px 18px;
+  padding: 8px 12px;
   white-space: nowrap;
   width: auto !important;
 }
@@ -1195,13 +1194,13 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .copilot-actions button::before {
   color: currentColor;
   content: attr(data-icon);
-  font-size: 1.15rem;
+  font-size: 0.92rem;
   line-height: 1;
   opacity: 0.95;
 }
 
 .copilot-actions button[data-copilot-mode="demo_summary"] {
-  grid-column: 1 / 2;
+  grid-column: auto;
 }
 
 .copilot-actions button:hover,
@@ -1215,7 +1214,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   background: linear-gradient(135deg, #8b5cf6, #7c3aed);
   border-color: rgba(181, 139, 255, 0.82);
   box-shadow:
-    0 12px 28px rgba(124, 58, 237, 0.28),
+    0 8px 18px rgba(124, 58, 237, 0.22),
     inset 0 1px 0 rgba(255, 255, 255, 0.16);
   color: #ffffff;
 }
