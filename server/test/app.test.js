@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { test } from "node:test";
 import { createApp } from "../src/app.js";
+import { createCopilotInsight } from "../src/copilot.js";
 
 function request(app, path, options = {}) {
   const server = createServer(app);
@@ -396,6 +397,74 @@ test("copilot endpoint supports deep analysis modes", async () => {
   assert.equal(body.mode, "leaderboard");
   assert.equal(capturedContext.mode, "leaderboard");
   assert.ok(Array.isArray(capturedContext.leaderboard));
+});
+
+test("live copilot separates active players from completed leaderboard", async () => {
+  const previousEnv = {
+    endpoint: process.env.OCI_GENAI_ENDPOINT,
+    bearer: process.env.OCI_GENAI_BEARER_TOKEN,
+    compartment: process.env.OCI_GENAI_COMPARTMENT_OCID
+  };
+  process.env.OCI_GENAI_ENDPOINT = "";
+  delete process.env.OCI_GENAI_BEARER_TOKEN;
+  delete process.env.OCI_GENAI_COMPARTMENT_OCID;
+
+  try {
+    const result = await createCopilotInsight({
+      mode: "live",
+      livePlayers: [
+        {
+          callsign: "CAPPO",
+          score: 75700,
+          level: 3,
+          eventCounts: {
+            enemy_killed: 234,
+            player_hit: 18,
+            powerup: 48,
+            extra_life: 1,
+            boss_phase: 4
+          }
+        },
+        {
+          callsign: "AH",
+          score: 24000,
+          level: 2,
+          eventCounts: {
+            enemy_killed: 80,
+            player_hit: 4,
+            powerup: 10,
+            boss_phase: 1
+          }
+        }
+      ],
+      leaderboard: [
+        {
+          callsign: "CANO",
+          score: 280750,
+          level: 5,
+          eventCounts: {
+            enemy_killed: 524,
+            player_hit: 17,
+            powerup: 85,
+            extra_life: 6,
+            boss_phase: 10
+          }
+        }
+      ]
+    });
+
+    assert.equal(result.source, "fallback");
+    assert.match(result.insight, /2 active pilots/);
+    assert.match(result.insight, /CAPPO leads live/);
+    assert.match(result.insight, /CANO still holds the completed-run leaderboard/);
+  } finally {
+    if (previousEnv.endpoint === undefined) delete process.env.OCI_GENAI_ENDPOINT;
+    else process.env.OCI_GENAI_ENDPOINT = previousEnv.endpoint;
+    if (previousEnv.bearer === undefined) delete process.env.OCI_GENAI_BEARER_TOKEN;
+    else process.env.OCI_GENAI_BEARER_TOKEN = previousEnv.bearer;
+    if (previousEnv.compartment === undefined) delete process.env.OCI_GENAI_COMPARTMENT_OCID;
+    else process.env.OCI_GENAI_COMPARTMENT_OCID = previousEnv.compartment;
+  }
 });
 
 test("coach endpoint accepts valid quiz context", async () => {

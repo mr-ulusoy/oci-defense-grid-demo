@@ -99,10 +99,22 @@ function eventCount(entry, type) {
   return Number(entry?.eventCounts?.[type] ?? 0);
 }
 
+function eventCountAny(entry, ...types) {
+  return types.reduce((total, type) => total + Number(entry?.eventCounts?.[type] ?? 0), 0);
+}
+
 function playerEfficiency(entry) {
   const kills = eventCount(entry, "enemy_killed");
   const hits = eventCount(entry, "player_hit");
   return kills / Math.max(1, hits);
+}
+
+function formatNumber(value) {
+  return Number(value ?? 0).toLocaleString("en-US");
+}
+
+function pluralize(count, singular, plural = `${singular}s`) {
+  return Number(count) === 1 ? singular : plural;
 }
 
 function bestEfficiency(entries = []) {
@@ -258,6 +270,8 @@ function deterministicInsight(context = {}) {
   const livePlayers = topByScore(context.livePlayers ?? [], 8);
   const combined = [...livePlayers, ...leaderboard];
   const topPlayer = leaderboard[0] ?? livePlayers[0];
+  const topLivePlayer = livePlayers[0];
+  const topCompletedRun = leaderboard[0];
   const efficient = bestEfficiency(combined);
   const latest = latestRun(leaderboard) ?? topPlayer;
   const analytics = context.analytics ?? {};
@@ -266,6 +280,23 @@ function deterministicInsight(context = {}) {
   const eps = Number(analytics?.eventsPerSecond ?? snapshot?.eventsPerSecond ?? 0);
   const score = Number(snapshot.score ?? topPlayer?.score ?? 0);
   const level = Number(snapshot.level ?? topPlayer?.level ?? 1);
+
+  if (mode === "live") {
+    if (livePlayers.length > 0) {
+      const liveSummary = `${livePlayers.length} active ${pluralize(livePlayers.length, "pilot")}: ${topLivePlayer.callsign} leads live at level ${topLivePlayer.level} with ${formatNumber(topLivePlayer.score)} points`;
+      const metricSummary = `${eventCountAny(topLivePlayer, "enemy_killed", "kills")} kills, ${eventCountAny(topLivePlayer, "player_hit", "hits")} hits, ${eventCountAny(topLivePlayer, "powerup", "powerups")} power-ups and ${eventCountAny(topLivePlayer, "boss_phase", "bossPhases")} boss phases`;
+
+      if (topCompletedRun && topCompletedRun.callsign !== topLivePlayer.callsign) {
+        return `${liveSummary}, recording ${metricSummary}. ${topCompletedRun.callsign} still holds the completed-run leaderboard with ${formatNumber(topCompletedRun.score)} points at level ${topCompletedRun.level}.`;
+      }
+
+      return `${liveSummary}, recording ${metricSummary}. Compare live score velocity and hit count to see who is controlling the current field.`;
+    }
+
+    if (topCompletedRun) {
+      return `No active pilots right now. ${topCompletedRun.callsign} holds the completed-run leaderboard with ${formatNumber(topCompletedRun.score)} points at level ${topCompletedRun.level}.`;
+    }
+  }
 
   if (mode === "leaderboard" && topPlayer) {
     const leaderCounts = topPlayer.eventCounts ?? {};
@@ -446,7 +477,14 @@ function buildSdkChatRequest(prompt, model = getCopilotModel(), maxTokens = 1200
 
 function copilotResponseInstruction(mode) {
   if (mode === "live") {
-    return "Return one or two customer-facing sentences under 80 words total. Mention concrete gameplay signals only. Do not mention OCI services or demo architecture. No markdown.";
+    return [
+      "Return one or two customer-facing sentences under 90 words total.",
+      "Start with the number of active pilots when livePlayers is not empty.",
+      "Clearly distinguish active live players from completed leaderboard runs.",
+      "Do not imply a live player is the overall leaderboard leader unless they also lead completed runs.",
+      "Use concrete live player signals such as score, level, kills, hits, powerups and boss phases.",
+      "Do not mention OCI services or demo architecture. No markdown."
+    ].join(" ");
   }
 
   const modeDetails = {
@@ -483,7 +521,7 @@ function copilotResponseInstruction(mode) {
 function buildAnalysisPrompt(context) {
   const mode = context.mode ?? "live";
   const intent = {
-    live: "Give the presenter a concise current-state insight.",
+    live: "Give the presenter a concise multi-player current-state insight.",
     leaderboard: "Analyze who is performing best and why, using score, level and event counts.",
     players: "Compare active players and call out live performance patterns.",
     run: "Analyze the latest or selected run, including strengths, damage, progression and useful gameplay talking points.",
