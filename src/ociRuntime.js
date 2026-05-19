@@ -1,4 +1,4 @@
-import { OciTelemetry } from "./telemetry.js";
+import { OciTelemetry } from "./telemetry.js?v=20260520-security";
 
 const params = new URLSearchParams(window.location.search);
 export const isOpsView = params.get("ops") === "1";

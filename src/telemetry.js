@@ -34,6 +34,33 @@ async function readJson(response) {
   return response.json();
 }
 
+function readOpsAccessToken() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  try {
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const token = hashParams.get("opsToken") || hashParams.get("ops_token");
+    if (token) {
+      window.sessionStorage.setItem("ociDefenseOpsToken", token);
+      hashParams.delete("opsToken");
+      hashParams.delete("ops_token");
+      const nextHash = hashParams.toString();
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${window.location.search}${nextHash ? `#${nextHash}` : ""}`
+      );
+      return token;
+    }
+
+    return window.sessionStorage.getItem("ociDefenseOpsToken") || "";
+  } catch {
+    return "";
+  }
+}
+
 export class OciTelemetry {
   constructor(config = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -45,10 +72,19 @@ export class OciTelemetry {
     this.offline = false;
     this.lastLatencyMs = 0;
     this.lastCopilotAt = 0;
+    this.opsAccessToken = readOpsAccessToken();
   }
 
   get apiBase() {
     return this.config.apiBase.replace(/\/$/, "");
+  }
+
+  jsonHeaders({ ops = false } = {}) {
+    const headers = { "Content-Type": "application/json" };
+    if (ops && this.opsAccessToken) {
+      headers.Authorization = `Bearer ${this.opsAccessToken}`;
+    }
+    return headers;
   }
 
   async init() {
@@ -152,7 +188,7 @@ export class OciTelemetry {
     const requestInsights = (url) =>
       fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this.jsonHeaders({ ops: true }),
         body: JSON.stringify({ ops: true })
       }).then(readJson);
 
@@ -230,7 +266,7 @@ export class OciTelemetry {
     const requests = Array.from({ length: fanout }, () =>
       fetch(`${this.apiBase}/stress`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this.jsonHeaders({ ops: true }),
         body: JSON.stringify(payload)
       }).then(readJson)
     );
@@ -259,7 +295,7 @@ export class OciTelemetry {
     const requests = Array.from({ length: fanout }, () =>
       fetch(`${this.apiBase}/stress`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this.jsonHeaders({ ops: true }),
         body: JSON.stringify(payload)
       }).then(readJson)
     );
@@ -301,7 +337,7 @@ export class OciTelemetry {
     try {
       const result = await fetch(`${this.apiBase}/copilot`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this.jsonHeaders({ ops: true }),
         body: JSON.stringify(payload)
       }).then(readJson);
       this.offline = false;

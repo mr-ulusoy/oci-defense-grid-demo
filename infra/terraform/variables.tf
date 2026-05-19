@@ -221,6 +221,13 @@ variable "oci_genai_coach_model" {
   default     = "google.gemini-2.5-flash-lite"
 }
 
+variable "ops_access_token" {
+  description = "Optional bearer token required for presenter-only ops actions such as copilot, leaderboard AI insights and stress controls. Leave empty only for local demos."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "oci_genai_compartment_ocid" {
   description = "Compartment OCID used for OCI Generative AI inference. Defaults to the demo compartment when null."
   type        = string

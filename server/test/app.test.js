@@ -290,7 +290,7 @@ test("copilot endpoint rejects non-ops callers", async () => {
   });
 
   assert.equal(response.status, 403);
-  assert.equal(body.error, "Copilot is available in ops view only.");
+  assert.equal(body.error, "Ops access is required.");
 });
 
 test("stress endpoint rejects non-ops callers", async () => {
@@ -302,7 +302,39 @@ test("stress endpoint rejects non-ops callers", async () => {
   });
 
   assert.equal(response.status, 403);
-  assert.equal(body.error, "Stress is available in ops view only.");
+  assert.equal(body.error, "Ops access is required.");
+});
+
+test("ops endpoints require bearer token when configured", async () => {
+  const previousToken = process.env.OPS_ACCESS_TOKEN;
+  process.env.OPS_ACCESS_TOKEN = "test-ops-token";
+  const app = createApp({
+    createInsight: async () => ({ insight: "authorized", source: "test" })
+  });
+
+  try {
+    const missing = await request(app, "/api/copilot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ops: true, snapshot: { score: 1000 } })
+    });
+    assert.equal(missing.response.status, 403);
+    assert.equal(missing.body.error, "Ops authorization token is required.");
+
+    const authorized = await request(app, "/api/copilot", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer test-ops-token"
+      },
+      body: JSON.stringify({ ops: true, snapshot: { score: 1000 } })
+    });
+    assert.equal(authorized.response.status, 200);
+    assert.equal(authorized.body.insight, "authorized");
+  } finally {
+    if (previousToken === undefined) delete process.env.OPS_ACCESS_TOKEN;
+    else process.env.OPS_ACCESS_TOKEN = previousToken;
+  }
 });
 
 test("stress endpoint starts bounded ops stress", async () => {
@@ -523,4 +555,38 @@ test("coach endpoint rejects overlong messages", async () => {
 
   assert.equal(response.status, 400);
   assert.equal(body.error, "Coach message must be 300 characters or fewer.");
+});
+
+test("coach endpoint rate limits repeated AI help requests", async () => {
+  const previousLimit = process.env.COACH_AI_RATE_LIMIT_PER_MINUTE;
+  process.env.COACH_AI_RATE_LIMIT_PER_MINUTE = "1";
+  const app = createApp({
+    createCoach: async () => ({ questionId: "api-lb-route", reply: "hint", source: "test" })
+  });
+  const payload = {
+    level: 2,
+    questionId: "api-lb-route",
+    sessionId: "rate-session",
+    message: "hint please"
+  };
+
+  try {
+    const first = await request(app, "/api/coach", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const second = await request(app, "/api/coach", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    assert.equal(first.response.status, 200);
+    assert.equal(second.response.status, 429);
+    assert.equal(second.body.error, "Coach AI rate limit exceeded.");
+  } finally {
+    if (previousLimit === undefined) delete process.env.COACH_AI_RATE_LIMIT_PER_MINUTE;
+    else process.env.COACH_AI_RATE_LIMIT_PER_MINUTE = previousLimit;
+  }
 });

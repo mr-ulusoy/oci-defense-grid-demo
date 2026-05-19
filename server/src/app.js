@@ -2,7 +2,7 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import {
   createCoachReply,
   createCopilotInsight,
@@ -22,6 +22,91 @@ const VALID_EVENTS = new Set([
   "heartbeat"
 ]);
 const COPILOT_MODES = new Set(["live", "leaderboard", "players", "run", "demo_summary"]);
+const DEFAULT_OPS_AI_RATE_LIMIT_PER_MINUTE = 30;
+const DEFAULT_COACH_AI_RATE_LIMIT_PER_MINUTE = 12;
+const DEFAULT_OPS_CONTROL_RATE_LIMIT_PER_MINUTE = 8;
+
+function positiveInteger(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
+}
+
+function clientIp(req) {
+  const forwarded = String(req.headers["x-forwarded-for"] ?? "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)[0];
+  return forwarded || req.ip || req.socket?.remoteAddress || "unknown";
+}
+
+function safeEqual(left, right) {
+  const leftBuffer = Buffer.from(String(left ?? ""));
+  const rightBuffer = Buffer.from(String(right ?? ""));
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function bearerToken(req) {
+  const authorization = String(req.headers.authorization ?? "");
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  return match?.[1]?.trim() || String(req.headers["x-oci-ops-token"] ?? "").trim();
+}
+
+function requireOpsAccess(req, res, next) {
+  if (req.body?.ops !== true) {
+    res.status(403).json({ error: "Ops access is required." });
+    return;
+  }
+
+  const requiredToken = String(process.env.OPS_ACCESS_TOKEN ?? "").trim();
+  if (!requiredToken) {
+    next();
+    return;
+  }
+
+  if (!safeEqual(bearerToken(req), requiredToken)) {
+    res.status(403).json({ error: "Ops authorization token is required." });
+    return;
+  }
+
+  next();
+}
+
+function createFixedWindowRateLimit({ name, windowMs = 60000, max, keyFn, message }) {
+  const buckets = new Map();
+
+  return (req, res, next) => {
+    if (process.env.DISABLE_API_RATE_LIMITS === "true") {
+      next();
+      return;
+    }
+
+    const now = Date.now();
+    const key = `${name}:${keyFn(req)}`;
+    const bucket = buckets.get(key);
+    const activeBucket = bucket && bucket.resetAt > now
+      ? bucket
+      : { count: 0, resetAt: now + windowMs };
+
+    activeBucket.count += 1;
+    buckets.set(key, activeBucket);
+
+    if (buckets.size > 2000) {
+      for (const [bucketKey, value] of buckets.entries()) {
+        if (value.resetAt <= now) {
+          buckets.delete(bucketKey);
+        }
+      }
+    }
+
+    if (activeBucket.count > max) {
+      res.set("Retry-After", String(Math.ceil((activeBucket.resetAt - now) / 1000)));
+      res.status(429).json({ error: message ?? "Rate limit exceeded." });
+      return;
+    }
+
+    next();
+  };
+}
 
 function vmIdentity() {
   return {
@@ -86,7 +171,35 @@ export function createApp({
   streamConsumer = { status: () => ({ enabled: false, status: "disabled" }) }
 } = {}) {
   const app = express();
+  const opsAiRateLimit = createFixedWindowRateLimit({
+    name: "ops-ai",
+    max: positiveInteger(
+      process.env.OPS_AI_RATE_LIMIT_PER_MINUTE,
+      DEFAULT_OPS_AI_RATE_LIMIT_PER_MINUTE
+    ),
+    keyFn: clientIp,
+    message: "Ops AI rate limit exceeded."
+  });
+  const opsControlRateLimit = createFixedWindowRateLimit({
+    name: "ops-control",
+    max: positiveInteger(
+      process.env.OPS_CONTROL_RATE_LIMIT_PER_MINUTE,
+      DEFAULT_OPS_CONTROL_RATE_LIMIT_PER_MINUTE
+    ),
+    keyFn: clientIp,
+    message: "Ops control rate limit exceeded."
+  });
+  const coachAiRateLimit = createFixedWindowRateLimit({
+    name: "coach-ai",
+    max: positiveInteger(
+      process.env.COACH_AI_RATE_LIMIT_PER_MINUTE,
+      DEFAULT_COACH_AI_RATE_LIMIT_PER_MINUTE
+    ),
+    keyFn: (req) => `${clientIp(req)}:${String(req.body?.sessionId ?? "anonymous").slice(0, 80)}`,
+    message: "Coach AI rate limit exceeded."
+  });
 
+  app.set("trust proxy", true);
   app.use(helmet({ crossOriginEmbedderPolicy: false }));
   app.use(cors({ origin: process.env.CORS_ORIGIN?.split(",") ?? true }));
   app.use(express.json({ limit: "256kb" }));
@@ -126,12 +239,7 @@ export function createApp({
     res.json({ entries: await store.leaderboard() });
   });
 
-  app.post("/api/leaderboard/insights", async (req, res) => {
-    if (req.body?.ops !== true) {
-      res.status(403).json({ error: "Leaderboard insights are available in ops view only." });
-      return;
-    }
-
+  app.post("/api/leaderboard/insights", requireOpsAccess, opsAiRateLimit, async (req, res) => {
     res.json(await createCardInsights(await store.leaderboard()));
   });
 
@@ -151,12 +259,7 @@ export function createApp({
     res.json(stressController.status());
   });
 
-  app.post("/api/stress", (req, res) => {
-    if (req.body?.ops !== true) {
-      res.status(403).json({ error: "Stress is available in ops view only." });
-      return;
-    }
-
+  app.post("/api/stress", requireOpsAccess, opsControlRateLimit, (req, res) => {
     if (req.body?.action === "stop") {
       res.status(202).json(stressController.stop());
       return;
@@ -170,12 +273,7 @@ export function createApp({
     );
   });
 
-  app.post("/api/copilot", async (req, res) => {
-    if (req.body?.ops !== true) {
-      res.status(403).json({ error: "Copilot is available in ops view only." });
-      return;
-    }
-
+  app.post("/api/copilot", requireOpsAccess, opsAiRateLimit, async (req, res) => {
     const requestedMode = String(req.body?.mode ?? "live");
     const mode = COPILOT_MODES.has(requestedMode) ? requestedMode : "live";
     const [analytics, eventAnalytics, leaderboard, livePlayers, sinks] = await Promise.all([
@@ -211,7 +309,7 @@ export function createApp({
     );
   });
 
-  app.post("/api/coach", async (req, res) => {
+  app.post("/api/coach", coachAiRateLimit, async (req, res) => {
     const message = String(req.body?.message ?? "").trim();
     if (message.length > 300) {
       res.status(400).json({ error: "Coach message must be 300 characters or fewer." });

@@ -21,6 +21,7 @@ OCI_GENAI_MODEL="${OCI_GENAI_MODEL:-}"
 OCI_GENAI_COACH_MODEL="${OCI_GENAI_COACH_MODEL:-}"
 OCI_GENAI_COMPARTMENT_OCID="${OCI_GENAI_COMPARTMENT_OCID:-}"
 OCI_GENAI_TIMEOUT_MS="${OCI_GENAI_TIMEOUT_MS:-25000}"
+OPS_ACCESS_TOKEN="${OPS_ACCESS_TOKEN:-}"
 ADB_USER="${ADB_USER:-ADMIN}"
 ADB_PASSWORD="${ADB_PASSWORD:-}"
 ADB_CONNECT_STRING="${ADB_CONNECT_STRING:-}"
@@ -57,6 +58,7 @@ fi
 deploy_host() {
   local host="$1"
   local remote_command
+  local encoded_env
 
   remote_command="set -e"
   if [[ -n "$REDIS_HOST" ]]; then
@@ -71,16 +73,26 @@ deploy_host() {
     remote_command="${remote_command}; sudo systemctl daemon-reload"
   fi
   if [[ -n "$OCI_GENAI_ENDPOINT" || -n "$OCI_GENAI_BEARER_TOKEN" || -n "$OCI_GENAI_MODEL" || -n "$OCI_GENAI_COACH_MODEL" || -n "$OCI_GENAI_COMPARTMENT_OCID" ]]; then
+    encoded_env="$(printf '%s\n' "OCI_GENAI_ENDPOINT=${OCI_GENAI_ENDPOINT}" "OCI_GENAI_BEARER_TOKEN=${OCI_GENAI_BEARER_TOKEN}" "OCI_GENAI_MODEL=${OCI_GENAI_MODEL}" "OCI_GENAI_COACH_MODEL=${OCI_GENAI_COACH_MODEL}" "OCI_GENAI_COMPARTMENT_OCID=${OCI_GENAI_COMPARTMENT_OCID}" "OCI_GENAI_TIMEOUT_MS=${OCI_GENAI_TIMEOUT_MS}" | base64 | tr -d '\n')"
     remote_command="${remote_command}; sudo mkdir -p /etc/systemd/system/oci-defense-api.service.d"
     remote_command="${remote_command}; printf '%s\n' '[Service]' 'EnvironmentFile=-/etc/oci-defense-genai.env' | sudo tee /etc/systemd/system/oci-defense-api.service.d/genai.conf >/dev/null"
-    remote_command="${remote_command}; printf '%s\n' 'OCI_GENAI_ENDPOINT=${OCI_GENAI_ENDPOINT}' 'OCI_GENAI_BEARER_TOKEN=${OCI_GENAI_BEARER_TOKEN}' 'OCI_GENAI_MODEL=${OCI_GENAI_MODEL}' 'OCI_GENAI_COACH_MODEL=${OCI_GENAI_COACH_MODEL}' 'OCI_GENAI_COMPARTMENT_OCID=${OCI_GENAI_COMPARTMENT_OCID}' 'OCI_GENAI_TIMEOUT_MS=${OCI_GENAI_TIMEOUT_MS}' | sudo tee /etc/oci-defense-genai.env >/dev/null"
+    remote_command="${remote_command}; printf '%s' '${encoded_env}' | base64 -d | sudo tee /etc/oci-defense-genai.env >/dev/null"
     remote_command="${remote_command}; sudo chmod 600 /etc/oci-defense-genai.env"
     remote_command="${remote_command}; sudo systemctl daemon-reload"
   fi
+  if [[ -n "$OPS_ACCESS_TOKEN" ]]; then
+    encoded_env="$(printf '%s\n' "OPS_ACCESS_TOKEN=${OPS_ACCESS_TOKEN}" | base64 | tr -d '\n')"
+    remote_command="${remote_command}; sudo mkdir -p /etc/systemd/system/oci-defense-api.service.d"
+    remote_command="${remote_command}; printf '%s\n' '[Service]' 'EnvironmentFile=-/etc/oci-defense-ops.env' | sudo tee /etc/systemd/system/oci-defense-api.service.d/ops.conf >/dev/null"
+    remote_command="${remote_command}; printf '%s' '${encoded_env}' | base64 -d | sudo tee /etc/oci-defense-ops.env >/dev/null"
+    remote_command="${remote_command}; sudo chmod 600 /etc/oci-defense-ops.env"
+    remote_command="${remote_command}; sudo systemctl daemon-reload"
+  fi
   if [[ -n "$ADB_CONNECT_STRING" && -n "$ADB_PASSWORD" ]]; then
+    encoded_env="$(printf '%s\n' "ADB_USER=${ADB_USER}" "ADB_PASSWORD=${ADB_PASSWORD}" "ADB_CONNECT_STRING=${ADB_CONNECT_STRING}" | base64 | tr -d '\n')"
     remote_command="${remote_command}; sudo mkdir -p /etc/systemd/system/oci-defense-api.service.d"
     remote_command="${remote_command}; printf '%s\n' '[Service]' 'EnvironmentFile=-/etc/oci-defense-adb.env' | sudo tee /etc/systemd/system/oci-defense-api.service.d/adb.conf >/dev/null"
-    remote_command="${remote_command}; printf '%s\n' 'ADB_USER=${ADB_USER}' 'ADB_PASSWORD=${ADB_PASSWORD}' 'ADB_CONNECT_STRING=${ADB_CONNECT_STRING}' | sudo tee /etc/oci-defense-adb.env >/dev/null"
+    remote_command="${remote_command}; printf '%s' '${encoded_env}' | base64 -d | sudo tee /etc/oci-defense-adb.env >/dev/null"
     remote_command="${remote_command}; sudo chmod 600 /etc/oci-defense-adb.env"
     remote_command="${remote_command}; sudo systemctl daemon-reload"
   fi

@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260520-ai-cache" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260520-security" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -296,6 +296,11 @@
         const payload = isStop ? { ops: true, action: "stop" } : { ops: true, durationSeconds: 260, workers: 2 };
         const fanout = isStop ? 12 : 8;
         const originalText = button.textContent;
+        const opsToken = window.sessionStorage?.getItem("ociDefenseOpsToken");
+        const headers = {
+          "Content-Type": "application/json",
+          ...(opsToken ? { Authorization: `Bearer ${opsToken}` } : {})
+        };
 
         button.disabled = true;
         button.textContent = isStop ? "Releasing..." : "Starting...";
@@ -307,7 +312,7 @@
             Array.from({ length: fanout }, () =>
               fetch(`${apiBase}/stress`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers,
                 body: JSON.stringify(payload)
               }).then((response) => {
                 if (!response.ok) throw new Error(`Stress failed: ${response.status}`);
@@ -341,6 +346,6 @@
       });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <script type="module" src="/src/main.js?v=20260520-ai-cache"></script>
+    <script type="module" src="/src/main.js?v=20260520-security"></script>
   </body>
 </html>

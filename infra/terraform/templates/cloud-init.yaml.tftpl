@@ -55,6 +55,9 @@ write_files:
       Environment=NODE_ENV=production
       Environment=PORT=3000
       EnvironmentFile=-/etc/oci-defense-instance.env
+      EnvironmentFile=-/etc/oci-defense-genai.env
+      EnvironmentFile=-/etc/oci-defense-adb.env
+      EnvironmentFile=-/etc/oci-defense-ops.env
       Environment=API_GATEWAY_NAME=${api_gateway_name}
       Environment=LOAD_BALANCER_NAME=${load_balancer_name}
       Environment=OCI_STREAM_OCID=${stream_ocid}
@@ -62,12 +65,6 @@ write_files:
       Environment=OCI_BUCKET_NAME=${bucket_name}
       Environment=OCI_NAMESPACE=${namespace}
       Environment=OCI_REGION=${region}
-      Environment=OCI_GENAI_ENDPOINT=${genai_endpoint}
-      Environment=OCI_GENAI_BEARER_TOKEN=${genai_bearer_token}
-      Environment=OCI_GENAI_MODEL=${genai_model}
-      Environment=OCI_GENAI_COACH_MODEL=${genai_coach_model}
-      Environment=OCI_GENAI_COMPARTMENT_OCID=${genai_compartment}
-      Environment=OCI_GENAI_TIMEOUT_MS=25000
       Environment=EVENT_INGEST_ROUTE_MODE=${event_ingest_mode}
       Environment=STREAM_CONSUMER_ENABLED=true
       Environment=STREAM_CONSUMER_GROUP=oci-defense-grid-storage-writers
@@ -75,12 +72,28 @@ write_files:
       Environment=REDIS_PORT=${redis_port}
       Environment=REDIS_TLS=${redis_tls}
       Environment=LIVE_PLAYER_TTL_SECONDS=${live_player_ttl}
-      Environment=ADB_USER=${adb_user}
-      Environment=ADB_PASSWORD=${adb_password}
-      Environment=ADB_CONNECT_STRING=${adb_connect_string}
 
       [Install]
       WantedBy=multi-user.target
+  - path: /etc/oci-defense-genai.env
+    permissions: "0600"
+    content: |
+      OCI_GENAI_ENDPOINT=${genai_endpoint}
+      OCI_GENAI_BEARER_TOKEN=${genai_bearer_token}
+      OCI_GENAI_MODEL=${genai_model}
+      OCI_GENAI_COACH_MODEL=${genai_coach_model}
+      OCI_GENAI_COMPARTMENT_OCID=${genai_compartment}
+      OCI_GENAI_TIMEOUT_MS=25000
+  - path: /etc/oci-defense-adb.env
+    permissions: "0600"
+    content: |
+      ADB_USER=${adb_user}
+      ADB_PASSWORD=${adb_password}
+      ADB_CONNECT_STRING=${adb_connect_string}
+  - path: /etc/oci-defense-ops.env
+    permissions: "0600"
+    content: |
+      OPS_ACCESS_TOKEN=${ops_access_token}
   - path: /etc/nginx/conf.d/oci-defense-grid.conf
     permissions: "0644"
     content: |

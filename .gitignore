@@ -7,6 +7,7 @@ Game/
 coverage/
 infra/terraform/.terraform/
 infra/terraform/.keys/
+infra/terraform/.secrets/
 infra/terraform/terraform.tfstate
 infra/terraform/terraform.tfstate.backup
 infra/terraform/*.tfvars
