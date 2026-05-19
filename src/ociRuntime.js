@@ -91,6 +91,7 @@ const SCORE_EVENT_TYPES = [
 
 const observedVms = new Map();
 const leaderboardCardInsights = new Map();
+const leaderboardInsightRetryCounts = new Map();
 let activeVmKey = null;
 let scaleIntent = null;
 let latestLeaderboardEntries = [];
@@ -457,7 +458,9 @@ function leaderboardInsightFor(entry = {}, index = 0) {
 
 function reserveStatusHtml(entry = {}, index = 0) {
   const insight = leaderboardInsightFor(entry, index);
-  const sourceLabel = insight.source === "oci-genai" ? "AI model" : "Analysis";
+  const sourceLabel = insight.source === "oci-genai" || insight.source === "pending"
+    ? "AI model"
+    : "Analysis";
 
   return `
     <div class="leaderboard-reserve ${normalizeInsightTone(insight.tone)}">
@@ -467,6 +470,18 @@ function reserveStatusHtml(entry = {}, index = 0) {
       <small>${sourceLabel}: ${escapeHtml(insight.modelLabel ?? "waiting")}</small>
     </div>
   `;
+}
+
+function pendingCardInsight(entry = {}, index = 0) {
+  return {
+    ...fallbackReserveInsight(entry, index),
+    title: "AI analysis",
+    headline: "Analyzing this run.",
+    detail: "Waiting for the AI model to score risk, control and recovery.",
+    tone: "controlled",
+    source: "pending",
+    modelLabel: "analyzing..."
+  };
 }
 
 function topPlayerCardHtml(entry = {}, index = 0) {
@@ -677,23 +692,38 @@ async function refreshLeaderboardCardInsights(entries = [], { force = false } = 
     return;
   }
 
-  const result = await telemetry.refreshLeaderboardInsights();
-  if (applyLeaderboardCardInsights(result)) {
-    if (result.source === "oci-genai") {
-      leaderboardInsightSignature = signature;
-    } else {
-      window.setTimeout(() => {
-        refreshLeaderboardCardInsights(latestLeaderboardEntries, { force: true });
-      }, 5000);
+  entries.slice(0, 2).forEach((entry, index) => {
+    const key = leaderboardEntryKey(entry, index);
+    const existing = leaderboardCardInsights.get(key);
+    if (force || !existing || existing.source !== "oci-genai") {
+      leaderboardCardInsights.set(key, pendingCardInsight(entry, index));
     }
+  });
+  renderLeaderboard(latestLeaderboardEntries);
+
+  const result = await telemetry.refreshLeaderboardInsights();
+  if (result.source === "oci-genai" && applyLeaderboardCardInsights(result)) {
+    leaderboardInsightSignature = signature;
+    leaderboardInsightRetryCounts.delete(signature);
+    renderLeaderboard(latestLeaderboardEntries);
+    return;
+  }
+
+  const attempts = (leaderboardInsightRetryCounts.get(signature) ?? 0) + 1;
+  leaderboardInsightRetryCounts.set(signature, attempts);
+  if (attempts >= 3 && applyLeaderboardCardInsights(result)) {
     renderLeaderboard(latestLeaderboardEntries);
   }
+
+  window.setTimeout(() => {
+    refreshLeaderboardCardInsights(latestLeaderboardEntries, { force: true });
+  }, 5000);
 }
 
-async function refreshLeaderboardBoard() {
+async function refreshLeaderboardBoard({ forceInsights = false } = {}) {
   const entries = await telemetry.refreshLeaderboard();
   renderLeaderboard(entries);
-  await refreshLeaderboardCardInsights(entries);
+  await refreshLeaderboardCardInsights(entries, { force: forceInsights });
 }
 
 export function updateHud() {
@@ -848,7 +878,7 @@ export async function initOciRuntime() {
       elements.stopStress.addEventListener("click", () => stopStress());
     }
     elements.refreshLeaderboard.addEventListener("click", async () => {
-      await refreshLeaderboardBoard();
+      await refreshLeaderboardBoard({ forceInsights: true });
     });
   } else {
     setConnection(telemetry.offline);
