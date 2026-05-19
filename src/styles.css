@@ -1238,23 +1238,262 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   overflow-wrap: anywhere;
 }
 
-.leaderboard ol {
-  list-style-position: inside;
-  margin: 0;
-  padding: 0;
+.leaderboard-board {
+  display: grid;
+  gap: 12px;
 }
 
-.leaderboard li {
-  border-top: 1px solid rgba(145, 168, 166, 0.22);
+.leaderboard-spotlight {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.leaderboard-card {
+  background:
+    radial-gradient(circle at 10% 0, rgba(61, 220, 151, 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(19, 31, 45, 0.96), rgba(12, 22, 31, 0.98));
+  border: 1px solid rgba(124, 200, 255, 0.2);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 14px 34px rgba(0, 0, 0, 0.22);
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
+}
+
+.leaderboard-card-1 {
+  border-color: rgba(61, 220, 151, 0.28);
+}
+
+.leaderboard-card-2 {
+  background:
+    radial-gradient(circle at 10% 0, rgba(124, 200, 255, 0.16), transparent 34%),
+    linear-gradient(180deg, rgba(19, 31, 45, 0.96), rgba(12, 22, 31, 0.98));
+}
+
+.leaderboard-card-head {
   align-items: center;
   display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.leaderboard-avatar {
+  align-items: center;
+  background: linear-gradient(135deg, var(--accent), #5d6bff);
+  border-radius: 14px;
+  color: white;
+  display: flex;
+  font-size: 1.5rem;
+  font-weight: 900;
+  height: 64px;
+  justify-content: center;
+  letter-spacing: 0;
+  width: 64px;
+}
+
+.leaderboard-card-2 .leaderboard-avatar {
+  background: linear-gradient(135deg, #13c8d5, #4f86ff);
+}
+
+.leaderboard-card-head strong {
+  color: var(--text);
+  display: block;
+  font-size: clamp(1.35rem, 2.25vw, 2.25rem);
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.leaderboard-card-head span {
+  color: var(--muted);
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+.leaderboard-card-head em {
+  border: 1px solid rgba(255, 209, 102, 0.42);
+  border-radius: 999px;
+  color: var(--warning);
+  font-style: normal;
+  font-weight: 900;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
+.leaderboard-card-2 .leaderboard-card-head em {
+  border-color: rgba(124, 200, 255, 0.42);
+  color: var(--accent-2);
+}
+
+.leaderboard-card-stats {
+  display: grid;
   gap: 10px;
-  grid-template-columns: minmax(82px, 1fr) auto minmax(180px, auto) auto;
-  padding: 9px 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.leaderboard-card-stats div {
+  background: rgba(7, 16, 23, 0.54);
+  border: 1px solid rgba(124, 200, 255, 0.12);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.leaderboard-card-stats span,
+.leaderboard-efficiency span,
+.leaderboard-card-events span {
+  color: var(--muted);
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.leaderboard-card-stats strong {
+  color: var(--text);
+  display: block;
+  font-size: 1.55rem;
+  line-height: 1.1;
+  margin-top: 8px;
+}
+
+.leaderboard-card-stats div:nth-child(2) strong {
+  color: var(--accent);
+}
+
+.leaderboard-card-2 .leaderboard-card-stats div:nth-child(2) strong {
+  color: var(--accent-2);
+}
+
+.leaderboard-efficiency {
+  display: grid;
+  gap: 8px;
+}
+
+.leaderboard-efficiency div {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.leaderboard-efficiency strong {
+  color: var(--text);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.leaderboard-efficiency i {
+  background: rgba(4, 10, 17, 0.72);
+  border-radius: 999px;
+  display: block;
+  height: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.leaderboard-efficiency i::before {
+  background: linear-gradient(90deg, var(--accent), #5d6bff);
+  border-radius: inherit;
+  content: "";
+  inset: 0 auto 0 0;
+  position: absolute;
+  width: var(--efficiency, 0%);
+}
+
+.leaderboard-card-2 .leaderboard-efficiency i::before {
+  background: linear-gradient(90deg, #13c8d5, #4f86ff);
+}
+
+.leaderboard-card-events {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.leaderboard-card-events div {
+  background: rgba(7, 16, 23, 0.34);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.leaderboard-card-events strong {
+  color: var(--text);
+  display: block;
+  font-size: 1rem;
+  margin-top: 6px;
+}
+
+.leaderboard-reserve {
+  border-radius: 12px;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+
+.leaderboard-reserve span {
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.leaderboard-reserve strong,
+.leaderboard-reserve em {
+  color: var(--text);
+  font-style: normal;
+}
+
+.leaderboard-reserve em {
+  color: var(--muted);
+}
+
+.leaderboard-reserve.is-risk {
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.32);
+}
+
+.leaderboard-reserve.is-risk span {
+  color: var(--danger);
+}
+
+.leaderboard-reserve.is-clean {
+  background: rgba(61, 220, 151, 0.1);
+  border: 1px solid rgba(61, 220, 151, 0.3);
+}
+
+.leaderboard-reserve.is-clean span {
+  color: var(--accent);
+}
+
+.leaderboard-list {
+  display: grid;
+  gap: 6px;
+}
+
+.leaderboard-row {
+  align-items: center;
+  background: rgba(7, 16, 23, 0.56);
+  border: 1px solid rgba(124, 200, 255, 0.13);
+  border-radius: 8px;
+  display: grid;
+  gap: 9px;
+  grid-template-columns: 46px minmax(90px, 1fr) auto minmax(180px, auto) auto;
+  min-height: 42px;
+  padding: 8px 10px;
+}
+
+.leaderboard-rank {
+  color: var(--accent-2);
+  font-size: 0.78rem;
+  font-weight: 900;
 }
 
 .leaderboard-name {
-  font-weight: 700;
+  color: var(--text);
+  font-weight: 800;
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -1264,6 +1503,31 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.leaderboard-score {
+  color: var(--accent);
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.leaderboard-empty {
+  color: var(--muted);
+  padding: 8px 0;
+}
+
+@media (max-width: 1180px) {
+  .leaderboard-spotlight {
+    grid-template-columns: 1fr;
+  }
+
+  .leaderboard-row {
+    grid-template-columns: 42px minmax(96px, 1fr) auto auto;
+  }
+
+  .leaderboard-row .event-chip-set {
+    grid-column: 2 / -1;
+  }
 }
 
 @media (max-width: 980px) {

@@ -310,6 +310,137 @@ function escapeHtml(value) {
   });
 }
 
+const numberFormatter = new Intl.NumberFormat("en-US");
+
+function formatNumber(value) {
+  return numberFormatter.format(Number(value ?? 0));
+}
+
+function playerInitials(callsign = "") {
+  const clean = String(callsign || "Pilot")
+    .replace(/[^a-z0-9 ]/gi, " ")
+    .trim();
+  const parts = clean.split(/\s+/).filter(Boolean);
+  const initials = parts.length >= 2
+    ? `${parts[0][0]}${parts[1][0]}`
+    : clean.slice(0, 2);
+  return initials.toUpperCase() || "P1";
+}
+
+function countEvent(entry = {}, key) {
+  return Number(entry.eventCounts?.[key] ?? 0);
+}
+
+function playerArchetype(entry = {}) {
+  const kills = countEvent(entry, "enemy_killed");
+  const hits = countEvent(entry, "player_hit");
+  const powerups = countEvent(entry, "powerup");
+  const extraLives = countEvent(entry, "extra_life");
+
+  if (hits === 0 && Number(entry.level ?? 1) >= 3) return "Tactical / Untouched";
+  if (extraLives === 0 && hits <= 20) return "Clean / High Control";
+  if (kills >= hits * 18 && kills > 0) return "Aggressive / High Efficiency";
+  if (powerups >= 40) return "Resource Heavy / Resilient";
+  return "Steady / Progression Focus";
+}
+
+function efficiencyPercent(entry = {}) {
+  const kills = countEvent(entry, "enemy_killed");
+  const hits = countEvent(entry, "player_hit");
+  if (kills <= 0 && hits <= 0) return 0;
+  if (hits <= 0) return 100;
+  return Math.max(8, Math.min(100, Math.round((kills / (kills + hits * 2)) * 100)));
+}
+
+function reserveStatusHtml(entry = {}) {
+  const extraLives = countEvent(entry, "extra_life");
+  const hits = countEvent(entry, "player_hit");
+
+  if (extraLives > 0) {
+    return `
+      <div class="leaderboard-reserve is-risk">
+        <span>Risk</span>
+        <strong>Used ${formatNumber(extraLives)} extra ${extraLives === 1 ? "life" : "lives"}.</strong>
+        <em>${hits > 30 ? "Damage pressure is high; tighten boss positioning." : "Strong recovery, but reserves can mask risky movement."}</em>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="leaderboard-reserve is-clean">
+      <span>Stable</span>
+      <strong>Used 0 extra lives.</strong>
+      <em>Cleaner survival profile with reserves still intact.</em>
+    </div>
+  `;
+}
+
+function topPlayerCardHtml(entry = {}, index = 0) {
+  const rank = index + 1;
+  const kills = countEvent(entry, "enemy_killed");
+  const hits = countEvent(entry, "player_hit");
+  const powerups = countEvent(entry, "powerup");
+  const bossPhases = countEvent(entry, "boss_phase");
+  const level = Number(entry.level ?? 1);
+  const score = Number(entry.score ?? 0);
+  const percent = efficiencyPercent(entry);
+  const rankLabel = rank === 1 ? "#1 Leader" : "#2 Contender";
+
+  return `
+    <article class="leaderboard-card leaderboard-card-${rank}">
+      <div class="leaderboard-card-head">
+        <div class="leaderboard-avatar">${escapeHtml(playerInitials(entry.callsign))}</div>
+        <div>
+          <strong>${escapeHtml(entry.callsign ?? "Pilot")}</strong>
+          <span>${escapeHtml(playerArchetype(entry))}</span>
+        </div>
+        <em>${rankLabel}</em>
+      </div>
+      <div class="leaderboard-card-stats">
+        <div>
+          <span>Score</span>
+          <strong>${formatNumber(score)}</strong>
+        </div>
+        <div>
+          <span>Level reached</span>
+          <strong>Level ${level}</strong>
+        </div>
+      </div>
+      <div class="leaderboard-efficiency">
+        <div>
+          <span>Kills vs Hits</span>
+          <strong>${formatNumber(kills)} Kills / ${formatNumber(hits)} Hits</strong>
+        </div>
+        <i style="--efficiency:${percent}%"></i>
+      </div>
+      <div class="leaderboard-card-events">
+        <div>
+          <span>Power-ups</span>
+          <strong>${formatNumber(powerups)} collected</strong>
+        </div>
+        <div>
+          <span>Boss phases</span>
+          <strong>${formatNumber(bossPhases)} survived</strong>
+        </div>
+      </div>
+      ${reserveStatusHtml(entry)}
+    </article>
+  `;
+}
+
+function rankedPlayerRowHtml(entry = {}, index = 0) {
+  const rank = index + 3;
+  return `
+    <div class="leaderboard-row">
+      <span class="leaderboard-rank">#${rank}</span>
+      <strong class="leaderboard-name">${escapeHtml(entry.callsign ?? "Pilot")}</strong>
+      <span class="leaderboard-level">Lvl ${Number(entry.level ?? 1)}</span>
+      <span class="event-chip-set">${eventChipsHtml(entry.eventCounts)}</span>
+      <strong class="leaderboard-score">${formatNumber(entry.score)}</strong>
+    </div>
+  `;
+}
+
 function updateObservedVms(vm) {
   const name = vm?.name ?? "unknown";
   const key = vm?.id && vm.id !== "local-instance" ? vm.id : name;
@@ -405,16 +536,26 @@ function renderLeaderboard(entries) {
   if (!isOpsView) return;
 
   elements.leaderboard.innerHTML = "";
-  for (const entry of entries.slice(0, 5)) {
-    const item = document.createElement("li");
-    item.innerHTML = [
-      `<span class="leaderboard-name">${escapeHtml(entry.callsign)}</span>`,
-      `<span class="leaderboard-level">Lvl ${Number(entry.level ?? 1)}</span>`,
-      `<span class="event-chip-set">${eventChipsHtml(entry.eventCounts)}</span>`,
-      `<strong>${Number(entry.score ?? 0)}</strong>`
-    ].join("");
-    elements.leaderboard.appendChild(item);
+  const ranked = entries.slice(0, 8);
+
+  if (ranked.length === 0) {
+    elements.leaderboard.innerHTML = '<div class="leaderboard-empty">Waiting for completed runs.</div>';
+    return;
   }
+
+  const spotlight = ranked
+    .slice(0, 2)
+    .map((entry, index) => topPlayerCardHtml(entry, index))
+    .join("");
+  const rows = ranked
+    .slice(2, 8)
+    .map((entry, index) => rankedPlayerRowHtml(entry, index))
+    .join("");
+
+  elements.leaderboard.innerHTML = `
+    <div class="leaderboard-spotlight">${spotlight}</div>
+    ${rows ? `<div class="leaderboard-list">${rows}</div>` : ""}
+  `;
 }
 
 export function updateHud() {

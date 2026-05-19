@@ -185,7 +185,6 @@ function deterministicInsight(context = {}) {
   const eps = Number(analytics?.eventsPerSecond ?? snapshot?.eventsPerSecond ?? 0);
   const score = Number(snapshot.score ?? topPlayer?.score ?? 0);
   const level = Number(snapshot.level ?? topPlayer?.level ?? 1);
-  const vm = context.vm ?? {};
 
   if (mode === "leaderboard" && topPlayer) {
     const leaderCounts = topPlayer.eventCounts ?? {};
