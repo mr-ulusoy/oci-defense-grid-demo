@@ -289,7 +289,7 @@ export default class MenuScene extends Phaser.Scene {
         if (!this.callsignInput || !this.startButton) return;
 
         this.callsignInput.value = this.callsign;
-        this.startButton.textContent = this.isMobileRegisterFlow() ? 'Register' : 'Start';
+        this.startButton.textContent = this.isRegisterFlow() ? 'Register' : 'Start';
 
         this.inputHandler = () => {
             this.callsign = this.normalizeCallsign(this.callsignInput.value);
@@ -331,8 +331,8 @@ export default class MenuScene extends Phaser.Scene {
         this.callsignInput?.select();
     }
 
-    isMobileRegisterFlow() {
-        return window.matchMedia?.('(max-width: 820px), (pointer: coarse)')?.matches === true;
+    isRegisterFlow() {
+        return document.getElementById('appShell')?.classList.contains('ops-visible') !== true;
     }
 
     syncCallsignFromInput() {
@@ -359,7 +359,7 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     handlePilotAction() {
-        if (this.isMobileRegisterFlow() && !document.body.classList.contains('game-active')) {
+        if (this.isRegisterFlow() && !document.body.classList.contains('game-active')) {
             this.registerPilot();
             return;
         }

@@ -131,6 +131,7 @@ body.game-active.game-level-5 .app-shell:not(.ops-visible) .game-stage {
 }
 
 body.game-active .app-shell:not(.ops-visible) .top-strip,
+body.game-active .app-shell:not(.ops-visible) .mobile-register-hero,
 body.game-active .app-shell:not(.ops-visible) .pilot-bar {
   display: none;
 }
@@ -180,6 +181,74 @@ body.game-active .app-shell:not(.ops-visible) .pilot-bar {
 
 .mobile-register-hero {
   display: none;
+}
+
+body:not(.game-active) .app-shell:not(.ops-visible) {
+  min-height: 100dvh;
+}
+
+body:not(.game-active) .app-shell:not(.ops-visible) .game-stage {
+  align-items: center;
+  background:
+    linear-gradient(rgba(3, 8, 20, 0.54), rgba(3, 8, 20, 0.7)),
+    url("/assets/backgrounds/parallax-space-stars.png") center / 520px auto repeat,
+    #030814;
+  justify-content: center;
+  max-width: none;
+  min-height: 100dvh;
+  padding: max(28px, env(safe-area-inset-top)) 24px max(28px, env(safe-area-inset-bottom));
+}
+
+body:not(.game-active) .app-shell:not(.ops-visible) .top-strip,
+body:not(.game-active) .app-shell:not(.ops-visible) .game-root {
+  display: none;
+}
+
+body:not(.game-active) .app-shell:not(.ops-visible) .mobile-register-hero {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+}
+
+.mobile-register-logo {
+  display: block;
+  height: 54px;
+  object-fit: contain;
+  width: 88px;
+}
+
+.mobile-register-hero span {
+  color: #ff3f2f;
+  display: block;
+  font-family: monospace;
+  font-size: clamp(1.15rem, 2.1vw, 1.65rem);
+  font-weight: 800;
+  line-height: 1.15;
+  text-shadow: 0 2px 0 #3a0500;
+}
+
+.mobile-register-hero strong {
+  color: var(--accent);
+  display: block;
+  font-family: monospace;
+  font-size: clamp(3rem, 6vw, 5rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 0.96;
+  text-transform: uppercase;
+  text-shadow: 0 4px 0 #001f18;
+}
+
+.mobile-register-guide {
+  display: block;
+  height: min(38dvh, 360px);
+  margin-top: 10px;
+  object-fit: contain;
+  object-position: center bottom;
+  width: min(48vw, 420px);
 }
 
 .eyebrow {
@@ -251,6 +320,38 @@ h2 {
 .pilot-bar input:focus {
   border-color: var(--accent);
   outline: 2px solid rgba(61, 220, 151, 0.18);
+}
+
+body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar {
+  background: rgba(5, 13, 21, 0.78);
+  border-color: rgba(124, 200, 255, 0.45);
+  gap: 10px;
+  grid-template-columns: 1fr;
+  margin: 0;
+  max-width: 420px;
+  padding: 12px;
+  width: 100%;
+}
+
+body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar label {
+  color: #d9faff;
+  font-family: monospace;
+  font-size: 0.95rem;
+}
+
+body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar input {
+  font: 700 16px monospace;
+  min-height: 46px;
+  text-align: center;
+}
+
+body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar button {
+  background: #c74634;
+  border-color: #ff7a66;
+  color: #ffffff;
+  font: 900 1.05rem monospace;
+  min-height: 48px;
+  text-transform: uppercase;
 }
 
 .pilot-bar.needs-name input {
