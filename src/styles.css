@@ -1199,6 +1199,22 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   opacity: 0.95;
 }
 
+.copilot-actions button:not([data-icon])::before {
+  content: none;
+}
+
+.copilot-actions svg {
+  fill: none;
+  flex: 0 0 auto;
+  height: 0.98rem;
+  opacity: 0.96;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+  width: 0.98rem;
+}
+
 .copilot-actions button[data-copilot-mode="demo_summary"] {
   grid-column: auto;
 }
