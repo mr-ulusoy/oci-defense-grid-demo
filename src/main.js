@@ -1,4 +1,4 @@
-import { initOciRuntime } from "./ociRuntime.js?v=20260519-ai-route-fallback";
+import { initOciRuntime } from "./ociRuntime.js?v=20260520-ai-cache";
 import BootScene from "./scenes/BootScene.js";
 import MenuScene from "./scenes/MenuScene.js";
 import GameScene from "./scenes/GameScene.js";

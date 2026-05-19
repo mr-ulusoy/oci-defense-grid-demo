@@ -16,7 +16,7 @@ const DEFAULT_CARD_INSIGHT_TIMEOUT_MS = 7000;
 const COPILOT_GATEWAY_SAFE_TIMEOUT_MS = 7600;
 const COACH_REPLY_WORD_LIMIT = 45;
 const COPILOT_REPLY_WORD_LIMIT = 220;
-const CARD_INSIGHT_CACHE_TTL_MS = 120000;
+const CARD_INSIGHT_CACHE_MAX_ENTRIES = 50;
 
 const cardInsightCache = new Map();
 
@@ -172,6 +172,17 @@ function cardInsightSignature(entries = []) {
     .slice(0, 2)
     .map((entry, index) => JSON.stringify(cardMetrics(entry, index)))
     .join("|");
+}
+
+function cacheCardInsight(signature, result) {
+  if (!signature || !String(result?.source ?? "").startsWith("oci-genai")) {
+    return;
+  }
+
+  cardInsightCache.set(signature, result);
+  while (cardInsightCache.size > CARD_INSIGHT_CACHE_MAX_ENTRIES) {
+    cardInsightCache.delete(cardInsightCache.keys().next().value);
+  }
 }
 
 function deterministicCardInsight(entry = {}, index = 0) {
@@ -823,9 +834,9 @@ export async function createLeaderboardCardInsights(entries = []) {
 
   const signature = cardInsightSignature(topEntries);
   const cached = cardInsightCache.get(signature);
-  if (cached && Date.now() - cached.cachedAt < CARD_INSIGHT_CACHE_TTL_MS) {
+  if (cached) {
     return {
-      ...cached.result,
+      ...cached,
       cached: true
     };
   }
@@ -866,7 +877,7 @@ export async function createLeaderboardCardInsights(entries = []) {
       "oci-genai",
       Math.min(timeoutMs, COPILOT_GATEWAY_SAFE_TIMEOUT_MS)
     );
-    cardInsightCache.set(signature, { cachedAt: Date.now(), result });
+    cacheCardInsight(signature, result);
     return result;
   } catch (error) {
     console.warn("Leaderboard card primary GenAI call failed, trying fast model.", error.message);
@@ -879,7 +890,7 @@ export async function createLeaderboardCardInsights(entries = []) {
         "oci-genai-fast",
         Math.min(5000, timeoutMs, COPILOT_GATEWAY_SAFE_TIMEOUT_MS)
       );
-      cardInsightCache.set(signature, { cachedAt: Date.now(), result });
+      cacheCardInsight(signature, result);
       return result;
     } catch (error) {
       console.warn(

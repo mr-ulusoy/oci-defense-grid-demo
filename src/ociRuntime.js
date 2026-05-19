@@ -685,25 +685,44 @@ function applyLeaderboardCardInsights(result = {}) {
   return true;
 }
 
+function isAiLeaderboardInsight(insight = {}) {
+  return String(insight.source ?? "").startsWith("oci-genai");
+}
+
+function hasAiLeaderboardInsights(entries = []) {
+  return entries.slice(0, 2).every((entry, index) => {
+    const insight = leaderboardCardInsights.get(leaderboardEntryKey(entry, index));
+    return isAiLeaderboardInsight(insight);
+  });
+}
+
 async function refreshLeaderboardCardInsights(entries = [], { force = false } = {}) {
   if (!isOpsView || entries.length === 0) return;
 
   const signature = leaderboardEntriesSignature(entries);
-  if (!signature || (!force && signature === leaderboardInsightSignature)) {
+  if (!signature) {
+    return;
+  }
+
+  if (signature === leaderboardInsightSignature && hasAiLeaderboardInsights(entries)) {
+    return;
+  }
+
+  if (!force && signature === leaderboardInsightSignature) {
     return;
   }
 
   entries.slice(0, 2).forEach((entry, index) => {
     const key = leaderboardEntryKey(entry, index);
     const existing = leaderboardCardInsights.get(key);
-    if (force || !existing || existing.source !== "oci-genai") {
+    if (!isAiLeaderboardInsight(existing)) {
       leaderboardCardInsights.set(key, pendingCardInsight(entry, index));
     }
   });
   renderLeaderboard(latestLeaderboardEntries);
 
   const result = await telemetry.refreshLeaderboardInsights();
-  if (result.source === "oci-genai" && applyLeaderboardCardInsights(result)) {
+  if (isAiLeaderboardInsight(result) && applyLeaderboardCardInsights(result)) {
     leaderboardInsightSignature = signature;
     leaderboardInsightRetryCounts.delete(signature);
     renderLeaderboard(latestLeaderboardEntries);
