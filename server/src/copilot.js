@@ -491,6 +491,7 @@ function copilotResponseInstruction(mode) {
     return [
       "Return one or two customer-facing sentences under 90 words total.",
       "Start with the number of active pilots when livePlayers is not empty.",
+      "When two or more livePlayers are present, compare at least the top two active pilots by name.",
       "Clearly distinguish active live players from completed leaderboard runs.",
       "Do not imply a live player is the overall leaderboard leader unless they also lead completed runs.",
       "Use concrete live player signals such as score, level, kills, hits, powerups and boss phases.",

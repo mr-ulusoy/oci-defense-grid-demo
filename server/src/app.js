@@ -261,13 +261,18 @@ export function createApp({
   app.post("/api/copilot", requireOpsAccess, opsAiRateLimit, async (req, res) => {
     const requestedMode = String(req.body?.mode ?? "live");
     const mode = COPILOT_MODES.has(requestedMode) ? requestedMode : "live";
-    const [analytics, eventAnalytics, leaderboard, livePlayers, sinks] = await Promise.all([
+    const [analytics, eventAnalytics, leaderboard, cachedLivePlayers, sinks] = await Promise.all([
       store.liveAnalytics(req.body?.runId),
       store.eventAnalytics(),
       store.leaderboard(),
       store.livePlayers(),
       store.status()
     ]);
+    const snapshotLivePlayers = Array.isArray(req.body?.snapshot?.activePlayers)
+      ? req.body.snapshot.activePlayers
+      : [];
+    const livePlayers =
+      cachedLivePlayers.length > 0 || mode !== "live" ? cachedLivePlayers : snapshotLivePlayers;
     const result = await createInsight({
       mode,
       question: req.body?.question,

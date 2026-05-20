@@ -461,6 +461,45 @@ test("copilot endpoint supports deep analysis modes", async () => {
   assert.ok(Array.isArray(capturedContext.leaderboard));
 });
 
+test("live copilot can use active players from ops snapshot", async () => {
+  let capturedContext;
+  const store = {
+    liveAnalytics: async () => ({}),
+    eventAnalytics: async () => ({}),
+    leaderboard: async () => [],
+    livePlayers: async () => [],
+    status: async () => ({}),
+    recordInsight: async () => {}
+  };
+  const app = createApp({
+    store,
+    createInsight: async (context) => {
+      capturedContext = context;
+      return { insight: "live", source: "test", mode: context.mode };
+    }
+  });
+
+  const { response, body } = await request(app, "/api/copilot", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ops: true,
+      mode: "live",
+      snapshot: {
+        activePlayers: [
+          { callsign: "CAPPO", score: 75700, level: 3 },
+          { callsign: "AH", score: 24000, level: 2 }
+        ]
+      }
+    })
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(body.insight, "live");
+  assert.equal(capturedContext.livePlayers.length, 2);
+  assert.equal(capturedContext.livePlayers[0].callsign, "CAPPO");
+});
+
 test("live copilot separates active players from completed leaderboard", async () => {
   const previousEnv = {
     endpoint: process.env.OCI_GENAI_ENDPOINT,

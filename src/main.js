@@ -1,4 +1,4 @@
-import { initOciRuntime } from "./ociRuntime.js?v=20260520-live-copilot";
+import { initOciRuntime } from "./ociRuntime.js?v=20260520-live-auto";
 import BootScene from "./scenes/BootScene.js";
 import MenuScene from "./scenes/MenuScene.js";
 import GameScene from "./scenes/GameScene.js";
