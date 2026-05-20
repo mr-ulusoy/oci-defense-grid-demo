@@ -734,8 +734,15 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   stroke-width: 5;
 }
 
+.architecture-map.flow-idle .arch-link {
+  animation: none;
+  opacity: 0.74;
+  stroke-dasharray: none;
+  stroke-width: 3;
+}
+
 .architecture-map.flow-idle .arch-link-events {
-  opacity: 0.42;
+  opacity: 0.7;
 }
 
 .architecture-map.mode-vm .arch-link-events,
