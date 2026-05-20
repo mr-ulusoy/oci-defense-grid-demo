@@ -1,4 +1,4 @@
-import { OciTelemetry } from "./telemetry.js?v=20260520-global-rank";
+import { OciTelemetry } from "./telemetry.js?v=20260520-live-copilot";
 
 const params = new URLSearchParams(window.location.search);
 export const isOpsView = params.get("ops") === "1";
@@ -192,6 +192,9 @@ function renderLivePlayers(players = [], analytics = {}) {
     empty.className = "live-player-empty";
     empty.textContent = "Waiting for player telemetry.";
     elements.livePlayers.appendChild(empty);
+    if (activeCopilotMode() === "live" && !copilotInFlight) {
+      showWaitingForLivePlayers();
+    }
     return;
   }
 
@@ -808,6 +811,7 @@ function shortModelName(model = "") {
 function copilotSourceLabel(source = "unknown", model = "unknown model") {
   return {
     pending: "OCI GenAI running",
+    waiting: model,
     "oci-genai": `OCI GenAI: ${model}`,
     "oci-genai-fast": `OCI GenAI: ${model} after primary timed out`,
     "oci-genai-fast-fallback": `OCI GenAI: ${model} after primary timed out`,
@@ -828,9 +832,42 @@ function renderCopilotMeta(result = {}) {
   elements.copilotMeta.textContent = `${copilotModeLabel(result.mode)} | ${sourceLabel}${latency}`;
 }
 
+function activeCopilotMode() {
+  return [...elements.copilotActions].find((button) => button.classList.contains("is-active"))
+    ?.dataset.copilotMode ?? "live";
+}
+
+function activePlayerCount() {
+  return Number(elements.score.textContent || 0);
+}
+
+function copilotSnapshot() {
+  return {
+    livePlayers: activePlayerCount(),
+    topScore: Number(elements.level.textContent),
+    eventsPerSecond: telemetry.eventRate()
+  };
+}
+
+function showWaitingForLivePlayers() {
+  elements.insight.textContent = "Waiting for active players.";
+  renderCopilotMeta({
+    mode: "live",
+    source: "waiting",
+    modelLabel: "no active players"
+  });
+}
+
 export async function askCopilot(snapshot = {}, mode = "live") {
   if (!isOpsView) return;
   if (copilotInFlight) return;
+  if (mode === "live" && activePlayerCount() === 0) {
+    showWaitingForLivePlayers();
+    elements.copilotActions.forEach((button) => {
+      button.classList.toggle("is-active", (button.dataset.copilotMode ?? "live") === mode);
+    });
+    return;
+  }
 
   copilotInFlight = true;
   elements.insight.textContent = `${copilotModeLabel(mode)} is running...`;
@@ -915,14 +952,7 @@ export async function initOciRuntime() {
 
     elements.copilotActions.forEach((button) => {
       button.addEventListener("click", () => {
-        askCopilot(
-          {
-            livePlayers: Number(elements.score.textContent),
-            topScore: Number(elements.level.textContent),
-            eventsPerSecond: telemetry.eventRate()
-          },
-          button.dataset.copilotMode ?? "live"
-        );
+        askCopilot(copilotSnapshot(), button.dataset.copilotMode ?? "live");
       });
     });
     if (elements.startStress && elements.startStress.dataset.stressBound !== "true") {
@@ -937,17 +967,7 @@ export async function initOciRuntime() {
       await refreshLeaderboardBoard({ forceInsights: true });
     });
 
-    const activeCopilotMode =
-      [...elements.copilotActions].find((button) => button.classList.contains("is-active"))
-        ?.dataset.copilotMode ?? "leaderboard";
-    askCopilot(
-      {
-        livePlayers: Number(elements.score.textContent),
-        topScore: Number(elements.level.textContent),
-        eventsPerSecond: telemetry.eventRate()
-      },
-      activeCopilotMode
-    );
+    askCopilot(copilotSnapshot(), activeCopilotMode());
 
     const leaderboardIntervalMs = Number(window.OCI_DEFENSE_CONFIG.leaderboardIntervalMs ?? 6000);
     window.setInterval(() => {
@@ -977,17 +997,10 @@ export async function initOciRuntime() {
     if (!isOpsView) return;
 
     if (window.OCI_DEFENSE_CONFIG.copilotAutoEnabled === true) {
-      const activeCopilotMode =
-        [...elements.copilotActions].find((button) => button.classList.contains("is-active"))
-          ?.dataset.copilotMode ?? "leaderboard";
-      askCopilot(
-        {
-          livePlayers: Number(elements.score.textContent),
-          topScore: Number(elements.level.textContent),
-          eventsPerSecond: telemetry.eventRate()
-        },
-        activeCopilotMode
-      );
+      const mode = activeCopilotMode();
+      if (mode === "live") {
+        askCopilot(copilotSnapshot(), mode);
+      }
     }
   }, window.OCI_DEFENSE_CONFIG.copilotIntervalMs);
 }

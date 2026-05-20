@@ -1156,7 +1156,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   align-items: center;
   display: flex;
   flex-wrap: nowrap;
-  gap: 7px;
+  gap: 6px;
   justify-content: flex-end;
   justify-self: end;
   margin-bottom: 0;
@@ -1178,15 +1178,15 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   color: #aab7cc;
   display: inline-flex;
   flex: 0 0 auto;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 900;
-  gap: 7px;
+  gap: 6px;
   justify-content: center;
   line-height: 1;
-  min-height: 38px;
+  min-height: 36px;
   min-width: 0;
   overflow-wrap: normal;
-  padding: 8px 12px;
+  padding: 8px 10px;
   white-space: nowrap;
   width: auto !important;
 }

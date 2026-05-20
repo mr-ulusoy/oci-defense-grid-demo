@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260520-global-rank" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260520-live-copilot" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -236,7 +236,8 @@
               <h3>Leaderboard &amp; Performance Insight</h3>
             </div>
             <div class="copilot-actions" aria-label="Generative AI analysis modes">
-              <button class="is-active" type="button" data-copilot-mode="leaderboard" title="Analyze top players and score efficiency">
+              <button class="is-active" type="button" data-copilot-mode="live" data-icon="●" title="Analyze active live players every 12 seconds">Live</button>
+              <button type="button" data-copilot-mode="leaderboard" title="Analyze top players and score efficiency">
                 <svg aria-hidden="true" viewBox="0 0 24 24">
                   <path d="M8 21h8" />
                   <path d="M12 17v4" />
@@ -343,6 +344,6 @@
       });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <script type="module" src="/src/main.js?v=20260520-global-rank"></script>
+    <script type="module" src="/src/main.js?v=20260520-live-copilot"></script>
   </body>
 </html>
