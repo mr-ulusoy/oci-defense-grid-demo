@@ -1,4 +1,4 @@
-import { OciTelemetry } from "./telemetry.js?v=20260521-live-score-trigger";
+import { OciTelemetry } from "./telemetry.js?v=20260521-architecture-event-rate";
 
 const params = new URLSearchParams(window.location.search);
 export const isOpsView = params.get("ops") === "1";
@@ -99,6 +99,7 @@ let latestLeaderboardEntries = [];
 let latestActivePlayers = [];
 let latestLiveCopilotSignature = "";
 let lastLivePlayerHeartbeatAt = 0;
+let latestLivePlayerEventRate = 0;
 let leaderboardInsightSignature = "";
 let leaderboardRefreshInFlight = false;
 let copilotInFlight = false;
@@ -194,6 +195,7 @@ function renderLivePlayers(players = [], analytics = {}) {
     visiblePlayers.reduce((sum, player) => sum + Number(player.eventsPerSecond ?? 0), 0) ||
     analytics.eventsPerSecond ||
     telemetry.eventRate();
+  latestLivePlayerEventRate = Number(eventRate) || 0;
 
   elements.score.textContent = String(visiblePlayers.length);
   elements.level.textContent = String(topScore);
@@ -254,7 +256,8 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
 
   const routeMode = status?.eventIngestRouteMode ?? window.OCI_DEFENSE_CONFIG?.eventIngestRouteMode ?? "vm-api";
   const functionMode = routeMode === "oci-functions";
-  const eventRate = telemetry.eventRate();
+  const eventActivity = architectureEventActivity(eventAnalytics);
+  const eventRate = eventActivity.rate;
   const recentNodes = recentVmCount();
   const cacheStatus = status?.sinks?.redisLivePlayers ?? "memory";
   const streamStatus = status?.sinks?.streaming ?? "memory";
@@ -265,11 +268,11 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   architecture.map.classList.toggle("mode-functions", functionMode);
   architecture.map.classList.toggle("mode-vm", !functionMode);
   architecture.map.classList.toggle("flow-fast", eventRate >= 2);
-  architecture.map.classList.toggle("flow-idle", eventRate <= 0.05);
+  architecture.map.classList.toggle("flow-idle", eventActivity.lastMinuteEvents <= 0 && eventRate <= 0.05);
   architecture.map.style.setProperty("--arch-flow-speed", flowSpeed);
 
   architecture.routeMode.textContent = functionMode ? "Functions ingest + reads" : "VM API fallback";
-  architecture.eventRate.textContent = `${Number(eventRate).toFixed(1)} events/sec`;
+  architecture.eventRate.textContent = formatArchitectureEventActivity(eventActivity);
   architecture.publicLbState.textContent = status?.loadBalancer ?? "Frontend route";
   architecture.vmState.textContent = `${recentNodes || 1} nodes observed`;
   architecture.apiState.textContent = status?.gateway ?? "/api/* routing";
@@ -294,6 +297,30 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   setNodeLive(architecture.nodes.adb, serviceConfigured(adbStatus));
   setNodeLive(architecture.nodes.objectStorage, serviceConfigured(objectStatus));
   setNodeLive(architecture.nodes.genai, true);
+}
+
+function architectureEventActivity(eventAnalytics = {}) {
+  const lastMinuteEvents = Number(eventAnalytics?.windows?.last1m ?? 0);
+  const analyticsRate = lastMinuteEvents > 0 ? lastMinuteEvents / 60 : 0;
+  const liveRate = Number(latestLivePlayerEventRate ?? 0);
+  const localRate = Number(telemetry.eventRate() ?? 0);
+
+  return {
+    lastMinuteEvents,
+    rate: Math.max(liveRate, analyticsRate, localRate)
+  };
+}
+
+function formatArchitectureEventActivity(activity) {
+  if (activity.rate >= 0.1) {
+    return `${activity.rate.toFixed(1)} events/sec`;
+  }
+
+  if (activity.lastMinuteEvents > 0) {
+    return `${Math.round(activity.lastMinuteEvents)} events/min`;
+  }
+
+  return "0 events/min";
 }
 
 function setNodeLive(node, live) {
