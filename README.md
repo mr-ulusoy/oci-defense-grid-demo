@@ -116,6 +116,7 @@ POST /api/coach
 - GenAI credentials are server-side only. They are not written to `config.js` or bundled into the frontend.
 - Presenter-only endpoints are `/api/copilot`, `/api/leaderboard/insights` and `/api/stress`. Set `OPS_ACCESS_TOKEN` on the VM API to require a bearer token for these routes.
 - To open the ops page with a token, use the URL fragment form so the token is not sent to the web server as part of the request path: `http://<web-lb-ip>/?ops=1#opsToken=<token>`. The frontend stores it in session storage and strips the fragment from the address bar.
+- Without the ops token, presenter controls stay visible but AI/stress actions return an explicit "Ops token required" state. Leaderboard card AI copy is cached in VM memory per leaderboard signature, so it regenerates after API restarts or redeploys.
 - GenAI routes have in-memory rate limits: `OPS_AI_RATE_LIMIT_PER_MINUTE` for ops AI, `COACH_AI_RATE_LIMIT_PER_MINUTE` for player quiz coaching and `OPS_CONTROL_RATE_LIMIT_PER_MINUTE` for stress controls.
 - `/api/coach` only accepts known quiz `level/questionId` combinations and caps messages at 300 characters.
 

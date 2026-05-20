@@ -1,4 +1,4 @@
-import { OciTelemetry } from "./telemetry.js?v=20260520-security";
+import { OciTelemetry } from "./telemetry.js?v=20260520-ops-auth";
 
 const params = new URLSearchParams(window.location.search);
 export const isOpsView = params.get("ops") === "1";
@@ -459,9 +459,11 @@ function leaderboardInsightFor(entry = {}, index = 0) {
 function reserveStatusHtml(entry = {}, index = 0) {
   const insight = leaderboardInsightFor(entry, index);
   const source = String(insight.source ?? "");
-  const sourceLabel = source.startsWith("oci-genai") || source === "pending"
-    ? "AI model"
-    : "Analysis";
+  const sourceLabel = source === "auth-required"
+    ? "Ops access"
+    : source.startsWith("oci-genai") || source === "pending"
+      ? "AI model"
+      : "Analysis";
 
   return `
     <div class="leaderboard-reserve ${normalizeInsightTone(insight.tone)}">
@@ -482,6 +484,18 @@ function pendingCardInsight(entry = {}, index = 0) {
     tone: "controlled",
     source: "pending",
     modelLabel: "analyzing..."
+  };
+}
+
+function authRequiredCardInsight(entry = {}, index = 0, result = {}) {
+  return {
+    ...fallbackReserveInsight(entry, index),
+    title: "Ops token required",
+    headline: "AI analysis is locked.",
+    detail: "Open the ops URL with the presenter token, then press Refresh to regenerate this run analysis.",
+    tone: "risk",
+    source: "auth-required",
+    modelLabel: result.modelLabel ?? "Ops token required"
   };
 }
 
@@ -689,6 +703,10 @@ function isAiLeaderboardInsight(insight = {}) {
   return String(insight.source ?? "").startsWith("oci-genai");
 }
 
+function isAuthRequiredInsight(result = {}) {
+  return result.source === "auth-required";
+}
+
 function hasAiLeaderboardInsights(entries = []) {
   return entries.slice(0, 2).every((entry, index) => {
     const insight = leaderboardCardInsights.get(leaderboardEntryKey(entry, index));
@@ -724,6 +742,18 @@ async function refreshLeaderboardCardInsights(entries = [], { force = false } = 
   const result = await telemetry.refreshLeaderboardInsights();
   if (isAiLeaderboardInsight(result) && applyLeaderboardCardInsights(result)) {
     leaderboardInsightSignature = signature;
+    leaderboardInsightRetryCounts.delete(signature);
+    renderLeaderboard(latestLeaderboardEntries);
+    return;
+  }
+
+  if (isAuthRequiredInsight(result)) {
+    entries.slice(0, 2).forEach((entry, index) => {
+      leaderboardCardInsights.set(
+        leaderboardEntryKey(entry, index),
+        authRequiredCardInsight(entry, index, result)
+      );
+    });
     leaderboardInsightRetryCounts.delete(signature);
     renderLeaderboard(latestLeaderboardEntries);
     return;
@@ -778,6 +808,7 @@ function copilotSourceLabel(source = "unknown", model = "unknown model") {
     "oci-genai": `OCI GenAI: ${model}`,
     "oci-genai-fast": `OCI GenAI: ${model} after primary timed out`,
     "oci-genai-fast-fallback": `OCI GenAI: ${model} after primary timed out`,
+    "auth-required": "Ops token required",
     fallback: "No AI: local fallback",
     "local-fallback": "No API: browser fallback",
     disabled: "Disabled",
@@ -833,8 +864,8 @@ export async function startStress() {
   try {
     const result = await telemetry.startStress();
     elements.stressStatus.textContent = `Started ${result.accepted}/${result.requested} routes`;
-  } catch {
-    elements.stressStatus.textContent = "Stress request failed";
+  } catch (error) {
+    elements.stressStatus.textContent = error?.message ?? "Stress request failed";
   } finally {
     setTimeout(() => {
       elements.startStress.disabled = false;
@@ -854,8 +885,8 @@ export async function stopStress() {
   try {
     const result = await telemetry.stopStress();
     elements.stressStatus.textContent = `Released ${result.accepted}/${result.requested} routes`;
-  } catch {
-    elements.stressStatus.textContent = "Scale-down request failed";
+  } catch (error) {
+    elements.stressStatus.textContent = error?.message ?? "Scale-down request failed";
   } finally {
     setTimeout(() => {
       elements.stopStress.disabled = false;

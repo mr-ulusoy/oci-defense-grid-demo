@@ -27,11 +27,52 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-async function readJson(response) {
-  if (!response.ok) {
-    throw new Error(`Request failed with ${response.status}`);
+class ApiRequestError extends Error {
+  constructor(response, body) {
+    const message = typeof body?.error === "string"
+      ? body.error
+      : `Request failed with ${response.status}`;
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = response.status;
+    this.body = body;
   }
-  return response.json();
+}
+
+async function readJson(response) {
+  const text = await response.text();
+  let body = {};
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = { error: text.slice(0, 300) };
+    }
+  }
+  if (!response.ok) {
+    throw new ApiRequestError(response, body);
+  }
+  return body;
+}
+
+function isOpsAuthorizationError(error) {
+  if (error?.status !== 403) {
+    return false;
+  }
+
+  return /ops|authorization|token/i.test(String(error.message ?? error.body?.error ?? ""));
+}
+
+function opsAuthorizationRequired(mode = "ops") {
+  return {
+    insight:
+      "Ops token required. Open the ops page with #opsToken=<token>, then use Refresh to regenerate AI insights.",
+    cards: [],
+    source: "auth-required",
+    model: "ops-access-token",
+    modelLabel: "Ops token required",
+    mode
+  };
 }
 
 function readOpsAccessToken() {
@@ -80,6 +121,10 @@ export class OciTelemetry {
   }
 
   jsonHeaders({ ops = false } = {}) {
+    if (ops && !this.opsAccessToken) {
+      this.opsAccessToken = readOpsAccessToken();
+    }
+
     const headers = { "Content-Type": "application/json" };
     if (ops && this.opsAccessToken) {
       headers.Authorization = `Bearer ${this.opsAccessToken}`;
@@ -196,14 +241,22 @@ export class OciTelemetry {
       const result = await requestInsights(`${this.apiBase}/leaderboard/insights`);
       this.offline = false;
       return result;
-    } catch {
+    } catch (error) {
+      if (isOpsAuthorizationError(error)) {
+        this.offline = false;
+        return opsAuthorizationRequired("leaderboard");
+      }
       // The deployed API Gateway can lag behind new demo-only routes. Keep the
       // ops UI live by falling back to the same-origin Load Balancer API.
       try {
         const result = await requestInsights("/api/leaderboard/insights");
         this.offline = false;
         return result;
-      } catch {
+      } catch (fallbackError) {
+        if (isOpsAuthorizationError(fallbackError)) {
+          this.offline = false;
+          return opsAuthorizationRequired("leaderboard");
+        }
         this.offline = true;
         return {
           cards: [],
@@ -276,7 +329,8 @@ export class OciTelemetry {
       .map((result) => result.value);
 
     if (started.length === 0) {
-      throw new Error("Stress request failed.");
+      const denied = results.some((result) => isOpsAuthorizationError(result.reason));
+      throw new Error(denied ? "Ops token required." : "Stress request failed.");
     }
 
     this.offline = false;
@@ -305,7 +359,8 @@ export class OciTelemetry {
       .map((result) => result.value);
 
     if (stopped.length === 0) {
-      throw new Error("Scale-down request failed.");
+      const denied = results.some((result) => isOpsAuthorizationError(result.reason));
+      throw new Error(denied ? "Ops token required." : "Scale-down request failed.");
     }
 
     this.offline = false;
@@ -343,7 +398,12 @@ export class OciTelemetry {
       this.offline = false;
       this.lastCopilotAt = Date.now();
       return result;
-    } catch {
+    } catch (error) {
+      if (isOpsAuthorizationError(error)) {
+        this.offline = false;
+        return opsAuthorizationRequired(options.mode ?? "live");
+      }
+
       this.offline = true;
       return {
         insight: "Local fallback: traffic pressure is stable. Keep shields ready for the next anomaly wave.",
