@@ -1106,12 +1106,4 @@ export async function initOciRuntime() {
     }
     setConnection(telemetry.offline);
   }, window.OCI_DEFENSE_CONFIG.telemetryIntervalMs);
-
-  setInterval(() => {
-    if (!isOpsView) return;
-
-    if (window.OCI_DEFENSE_CONFIG.copilotAutoEnabled === true) {
-      maybeRunLiveCopilot();
-    }
-  }, window.OCI_DEFENSE_CONFIG.copilotIntervalMs);
 }

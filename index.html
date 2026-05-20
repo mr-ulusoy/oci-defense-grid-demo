@@ -236,7 +236,7 @@
               <h3>Leaderboard &amp; Performance Insight</h3>
             </div>
             <div class="copilot-actions" aria-label="Generative AI analysis modes">
-              <button class="is-active" type="button" data-copilot-mode="live" data-icon="●" title="Analyze active live players every 12 seconds">Live</button>
+              <button class="is-active" type="button" data-copilot-mode="live" data-icon="●" title="Analyze active live players when the race state changes">Live</button>
               <button type="button" data-copilot-mode="leaderboard" title="Analyze top players and score efficiency">
                 <svg aria-hidden="true" viewBox="0 0 24 24">
                   <path d="M8 21h8" />
@@ -283,7 +283,6 @@
         apiBase: "/api",
         telemetryIntervalMs: 1400,
         leaderboardIntervalMs: 6000,
-        copilotIntervalMs: 12000,
         copilotAutoEnabled: true,
         minAppNodes: 2,
         ...(window.OCI_DEFENSE_CONFIG ?? {})
