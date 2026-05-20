@@ -1,4 +1,4 @@
-import { OciTelemetry } from "./telemetry.js?v=20260520-live-stable-fullscreen";
+import { OciTelemetry } from "./telemetry.js?v=20260521-live-score-trigger";
 
 const params = new URLSearchParams(window.location.search);
 export const isOpsView = params.get("ops") === "1";
@@ -864,7 +864,7 @@ function activePlayerCount() {
 }
 
 function liveScoreBucket(score) {
-  return Math.floor(Number(score ?? 0) / 25000);
+  return Math.floor(Number(score ?? 0) / 20000);
 }
 
 function livePlayerKey(player = {}) {
@@ -884,11 +884,15 @@ function liveCopilotSignature() {
 
   if (players.length === 1) {
     const player = players[0];
+    const phase = player.bossActive === true ? "boss" : `wave-${Number(player.wave ?? 1)}`;
     return [
       "single",
       livePlayerKey(player),
       "level",
-      Number(player.level ?? 1)
+      Number(player.level ?? 1),
+      phase,
+      "score",
+      liveScoreBucket(player.score)
     ].join(":");
   }
 
@@ -905,7 +909,9 @@ function liveCopilotTrigger() {
   const players = sortedActivePlayersForInsight();
   if (players.length === 0) return "waiting";
   if (players.length === 1) {
-    return `${players[0].callsign} reached level ${Number(players[0].level ?? 1)}`;
+    const player = players[0];
+    const phase = player.bossActive === true ? "boss phase" : `wave ${Number(player.wave ?? 1)}`;
+    return `${player.callsign} reached level ${Number(player.level ?? 1)} ${phase} with ${Number(player.score ?? 0).toLocaleString("en-US")} points`;
   }
 
   return `${players.length} active players, top4 levels and score buckets changed`;

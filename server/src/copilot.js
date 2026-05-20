@@ -521,6 +521,7 @@ function copilotResponseInstruction(mode) {
       "When one livePlayer reaches a new level, frame it as competition against the completed high score when leaderboard data is present.",
       "Mention if a player needs cleaner hits, stronger survival, or more score pace to take the high score.",
       "For one active pilot, include their current wave or boss phase when provided, their high-score gap or percentage when a completed leader exists, one strength, and one specific next move.",
+      "If the active pilot has 0 to 3 hits, do not tell them to play cleaner; praise control and focus the next move on score pace, kills, boss progress, powerups, or level progression.",
       "Avoid generic advice such as 'improve score pace and survival' unless you explain the exact metric behind it.",
       "Clearly distinguish active live players from completed leaderboard runs.",
       "Do not imply a live player is the overall leaderboard leader unless they also lead completed runs.",
