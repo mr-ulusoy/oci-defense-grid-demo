@@ -1,4 +1,4 @@
-import { OciTelemetry } from "./telemetry.js?v=20260520-no-token";
+import { OciTelemetry } from "./telemetry.js?v=20260520-leaderboard-fix";
 
 const params = new URLSearchParams(window.location.search);
 export const isOpsView = params.get("ops") === "1";
@@ -669,20 +669,42 @@ function renderLeaderboard(entries) {
   `;
 }
 
-function applyLeaderboardCardInsights(result = {}) {
+function sameLeaderboardEntry(left = {}, right = {}) {
+  const leftRunId = String(left.runId ?? "");
+  const rightRunId = String(right.runId ?? "");
+  if (leftRunId && rightRunId) {
+    return leftRunId === rightRunId;
+  }
+
+  return (
+    String(left.callsign ?? "").toUpperCase() === String(right.callsign ?? "").toUpperCase() &&
+    Number(left.score ?? 0) === Number(right.score ?? 0) &&
+    Number(left.level ?? 1) === Number(right.level ?? 1)
+  );
+}
+
+function applyLeaderboardCardInsights(result = {}, expectedEntries = []) {
   if (!Array.isArray(result.cards) || result.cards.length === 0) {
     return false;
   }
 
+  let applied = 0;
   result.cards.forEach((card, index) => {
-    leaderboardCardInsights.set(leaderboardEntryKey(card, index), {
+    const expectedEntry = expectedEntries[index] ?? card;
+    if (!sameLeaderboardEntry(card, expectedEntry)) {
+      return;
+    }
+
+    leaderboardCardInsights.set(leaderboardEntryKey(expectedEntry, index), {
       ...card,
       source: result.source,
       model: result.model,
       modelLabel: result.modelLabel
     });
+    applied += 1;
   });
-  return true;
+
+  return applied > 0 && applied === Math.min(result.cards.length, expectedEntries.length || result.cards.length);
 }
 
 function isAiLeaderboardInsight(insight = {}) {
@@ -722,7 +744,7 @@ async function refreshLeaderboardCardInsights(entries = [], { force = false } = 
   renderLeaderboard(latestLeaderboardEntries);
 
   const result = await telemetry.refreshLeaderboardInsights();
-  if (isAiLeaderboardInsight(result) && applyLeaderboardCardInsights(result)) {
+  if (isAiLeaderboardInsight(result) && applyLeaderboardCardInsights(result, entries.slice(0, 2))) {
     leaderboardInsightSignature = signature;
     leaderboardInsightRetryCounts.delete(signature);
     renderLeaderboard(latestLeaderboardEntries);
@@ -731,7 +753,7 @@ async function refreshLeaderboardCardInsights(entries = [], { force = false } = 
 
   const attempts = (leaderboardInsightRetryCounts.get(signature) ?? 0) + 1;
   leaderboardInsightRetryCounts.set(signature, attempts);
-  if (attempts >= 3 && applyLeaderboardCardInsights(result)) {
+  if (attempts >= 3 && applyLeaderboardCardInsights(result, entries.slice(0, 2))) {
     renderLeaderboard(latestLeaderboardEntries);
   }
 

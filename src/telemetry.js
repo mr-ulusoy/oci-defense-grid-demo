@@ -165,11 +165,7 @@ export class OciTelemetry {
       return result.entries ?? [];
     } catch {
       this.offline = true;
-      return [
-        { callsign: "VEGA-9", score: 12400 },
-        { callsign: "PHOENIX", score: 9800 },
-        { callsign: "ORACLE-1", score: 7600 }
-      ];
+      return [];
     }
   }
 
