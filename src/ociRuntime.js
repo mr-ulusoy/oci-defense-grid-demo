@@ -1,4 +1,4 @@
-import { OciTelemetry } from "./telemetry.js?v=20260520-leaderboard-fix";
+import { OciTelemetry } from "./telemetry.js?v=20260520-copilot-init";
 
 const params = new URLSearchParams(window.location.search);
 export const isOpsView = params.get("ops") === "1";
@@ -922,6 +922,18 @@ export async function initOciRuntime() {
     elements.refreshLeaderboard.addEventListener("click", async () => {
       await refreshLeaderboardBoard({ forceInsights: true });
     });
+
+    const activeCopilotMode =
+      [...elements.copilotActions].find((button) => button.classList.contains("is-active"))
+        ?.dataset.copilotMode ?? "leaderboard";
+    askCopilot(
+      {
+        livePlayers: Number(elements.score.textContent),
+        topScore: Number(elements.level.textContent),
+        eventsPerSecond: telemetry.eventRate()
+      },
+      activeCopilotMode
+    );
   } else {
     setConnection(telemetry.offline);
   }

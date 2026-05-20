@@ -1,4 +1,4 @@
-import { initOciRuntime } from "./ociRuntime.js?v=20260520-leaderboard-fix";
+import { initOciRuntime } from "./ociRuntime.js?v=20260520-copilot-init";
 import BootScene from "./scenes/BootScene.js";
 import MenuScene from "./scenes/MenuScene.js";
 import GameScene from "./scenes/GameScene.js";
