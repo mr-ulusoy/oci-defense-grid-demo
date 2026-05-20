@@ -557,7 +557,8 @@ test("live copilot separates active players from completed leaderboard", async (
     assert.equal(result.source, "fallback");
     assert.match(result.insight, /2 active pilots/);
     assert.match(result.insight, /CAPPO leads live/);
-    assert.match(result.insight, /CANO still holds the completed-run leaderboard/);
+    assert.match(result.insight, /AH is chasing/);
+    assert.match(result.insight, /CANO still owns the completed high score/);
   } finally {
     if (previousEnv.endpoint === undefined) delete process.env.OCI_GENAI_ENDPOINT;
     else process.env.OCI_GENAI_ENDPOINT = previousEnv.endpoint;

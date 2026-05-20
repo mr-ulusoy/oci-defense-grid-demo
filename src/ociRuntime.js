@@ -1,4 +1,4 @@
-import { OciTelemetry } from "./telemetry.js?v=20260520-live-auto";
+import { OciTelemetry } from "./telemetry.js?v=20260520-event-live";
 
 const params = new URLSearchParams(window.location.search);
 export const isOpsView = params.get("ops") === "1";
@@ -92,14 +92,16 @@ const SCORE_EVENT_TYPES = [
 const observedVms = new Map();
 const leaderboardCardInsights = new Map();
 const leaderboardInsightRetryCounts = new Map();
+const liveCopilotInsights = new Map();
 let activeVmKey = null;
 let scaleIntent = null;
 let latestLeaderboardEntries = [];
 let latestActivePlayers = [];
+let latestLiveCopilotSignature = "";
 let leaderboardInsightSignature = "";
 let leaderboardRefreshInFlight = false;
 let copilotInFlight = false;
-let lastLiveCopilotStartedAt = 0;
+let liveCopilotSignatureInFlight = "";
 
 const VM_RECENT_MS = 30000;
 const minAppNodes = Number(window.OCI_DEFENSE_CONFIG?.minAppNodes ?? 2);
@@ -852,6 +854,54 @@ function activePlayerCount() {
   return latestActivePlayers.length || Number(elements.score.textContent || 0);
 }
 
+function liveScoreBucket(score) {
+  return Math.floor(Number(score ?? 0) / 25000);
+}
+
+function livePlayerKey(player = {}) {
+  return player.runId || player.sessionId || player.callsign || "unknown";
+}
+
+function sortedActivePlayersForInsight() {
+  return latestActivePlayers
+    .filter((player) => player.callsign && player.callsign !== "UNKNOWN")
+    .slice()
+    .sort((left, right) => Number(right.score ?? 0) - Number(left.score ?? 0));
+}
+
+function liveCopilotSignature() {
+  const players = sortedActivePlayersForInsight();
+  if (players.length === 0) return "";
+
+  if (players.length === 1) {
+    const player = players[0];
+    return [
+      "single",
+      livePlayerKey(player),
+      "level",
+      Number(player.level ?? 1)
+    ].join(":");
+  }
+
+  const top4 = players.slice(0, 4).map((player) => [
+    livePlayerKey(player),
+    Number(player.level ?? 1),
+    liveScoreBucket(player.score)
+  ].join(":")).join("|");
+
+  return `multi:${players.length}:${top4}`;
+}
+
+function liveCopilotTrigger() {
+  const players = sortedActivePlayersForInsight();
+  if (players.length === 0) return "waiting";
+  if (players.length === 1) {
+    return `${players[0].callsign} reached level ${Number(players[0].level ?? 1)}`;
+  }
+
+  return `${players.length} active players, top4 levels and score buckets changed`;
+}
+
 function copilotSnapshot() {
   return {
     livePlayers: activePlayerCount(),
@@ -864,18 +914,26 @@ function copilotSnapshot() {
       eventCounts: player.eventCounts ?? {},
       vm: player.vm ?? "unknown"
     })),
+    liveSignature: liveCopilotSignature(),
+    liveTrigger: liveCopilotTrigger(),
     topScore: Number(elements.level.textContent),
     eventsPerSecond: telemetry.eventRate()
   };
 }
 
 function showWaitingForLivePlayers() {
+  latestLiveCopilotSignature = "";
   elements.insight.textContent = "Waiting for active players.";
   renderCopilotMeta({
     mode: "live",
     source: "waiting",
     modelLabel: "no active players"
   });
+}
+
+function renderCopilotResult(result = {}) {
+  elements.insight.textContent = result.insight ?? "AI returned no insight.";
+  renderCopilotMeta(result);
 }
 
 export async function askCopilot(snapshot = {}, mode = "live") {
@@ -888,8 +946,9 @@ export async function askCopilot(snapshot = {}, mode = "live") {
   }
 
   copilotInFlight = true;
+  const liveSignature = mode === "live" ? snapshot.liveSignature || liveCopilotSignature() : "";
   if (mode === "live") {
-    lastLiveCopilotStartedAt = Date.now();
+    liveCopilotSignatureInFlight = liveSignature;
   }
   elements.insight.textContent = `${copilotModeLabel(mode)} is running...`;
   renderCopilotMeta({ mode, source: "pending", model: "OCI GenAI" });
@@ -899,10 +958,16 @@ export async function askCopilot(snapshot = {}, mode = "live") {
   });
   try {
     const result = await telemetry.askCopilot(snapshot, { mode });
-    elements.insight.textContent = result.insight ?? "AI returned no insight.";
-    renderCopilotMeta(result);
+    if (mode === "live" && liveSignature) {
+      liveCopilotInsights.set(liveSignature, result);
+      latestLiveCopilotSignature = liveSignature;
+    }
+    renderCopilotResult(result);
   } finally {
     copilotInFlight = false;
+    if (mode === "live") {
+      liveCopilotSignatureInFlight = "";
+    }
     architecture.nodes.genai?.classList.remove("is-busy");
     elements.copilotActions.forEach((button) => {
       button.disabled = false;
@@ -917,8 +982,19 @@ function maybeRunLiveCopilot({ force = false } = {}) {
     return;
   }
 
-  const intervalMs = Number(window.OCI_DEFENSE_CONFIG.copilotIntervalMs ?? 12000);
-  if (!force && Date.now() - lastLiveCopilotStartedAt < intervalMs) return;
+  const signature = liveCopilotSignature();
+  if (!signature || liveCopilotSignatureInFlight === signature) return;
+
+  const cached = liveCopilotInsights.get(signature);
+  if (cached) {
+    if (force || latestLiveCopilotSignature !== signature) {
+      latestLiveCopilotSignature = signature;
+      renderCopilotResult(cached);
+    }
+    return;
+  }
+
+  if (!force && latestLiveCopilotSignature === signature) return;
   askCopilot(copilotSnapshot(), "live");
 }
 

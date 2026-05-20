@@ -294,14 +294,21 @@ function deterministicInsight(context = {}) {
 
   if (mode === "live") {
     if (livePlayers.length > 0) {
+      const secondLivePlayer = livePlayers[1];
       const liveSummary = `${livePlayers.length} active ${pluralize(livePlayers.length, "pilot")}: ${topLivePlayer.callsign} leads live at level ${topLivePlayer.level} with ${formatNumber(topLivePlayer.score)} points`;
       const metricSummary = `${eventCountAny(topLivePlayer, "enemy_killed", "kills")} kills, ${eventCountAny(topLivePlayer, "player_hit", "hits")} hits, ${eventCountAny(topLivePlayer, "powerup", "powerups")} power-ups and ${eventCountAny(topLivePlayer, "boss_phase", "bossPhases")} boss phases`;
+      const highScoreGap = topCompletedRun
+        ? Math.max(0, Number(topCompletedRun.score ?? 0) - Number(topLivePlayer.score ?? 0))
+        : 0;
+      const raceSummary = secondLivePlayer
+        ? ` ${secondLivePlayer.callsign} is chasing at level ${secondLivePlayer.level} with ${formatNumber(secondLivePlayer.score)} points.`
+        : "";
 
       if (topCompletedRun && topCompletedRun.callsign !== topLivePlayer.callsign) {
-        return `${liveSummary}, recording ${metricSummary}. ${topCompletedRun.callsign} still holds the completed-run leaderboard with ${formatNumber(topCompletedRun.score)} points at level ${topCompletedRun.level}.`;
+        return `${liveSummary}, recording ${metricSummary}.${raceSummary} ${topCompletedRun.callsign} still owns the completed high score; ${topLivePlayer.callsign} needs ${formatNumber(highScoreGap)} more points and cleaner hits to catch it.`;
       }
 
-      return `${liveSummary}, recording ${metricSummary}. Compare live score velocity and hit count to see who is controlling the current field.`;
+      return `${liveSummary}, recording ${metricSummary}.${raceSummary} Compare live score velocity and hit count to see who is controlling the current field.`;
     }
 
     if (topCompletedRun) {
@@ -492,6 +499,8 @@ function copilotResponseInstruction(mode) {
       "Return one or two customer-facing sentences under 90 words total.",
       "Start with the number of active pilots when livePlayers is not empty.",
       "When two or more livePlayers are present, compare at least the top two active pilots by name.",
+      "When one livePlayer reaches a new level, frame it as competition against the completed high score when leaderboard data is present.",
+      "Mention if a player needs cleaner hits, stronger survival, or more score pace to take the high score.",
       "Clearly distinguish active live players from completed leaderboard runs.",
       "Do not imply a live player is the overall leaderboard leader unless they also lead completed runs.",
       "Use concrete live player signals such as score, level, kills, hits, powerups and boss phases.",
