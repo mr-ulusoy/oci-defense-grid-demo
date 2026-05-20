@@ -75,6 +75,8 @@ function playerSnapshot(event) {
     callsign: event.callsign || "UNKNOWN",
     score: Number(event.score ?? 0),
     level: Number(event.level ?? 1),
+    wave: Number(event.wave ?? 1),
+    bossActive: event.bossActive === true,
     latencyMs: Number(event.metrics?.latencyMs ?? 0),
     fps: Number(event.metrics?.fps ?? 0),
     cloudAction: event.cloudAction ?? "none",

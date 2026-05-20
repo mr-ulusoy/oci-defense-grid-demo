@@ -1,4 +1,4 @@
-import { initOciRuntime } from "./ociRuntime.js?v=20260520-event-live";
+import { initOciRuntime } from "./ociRuntime.js?v=20260520-live-stable-fullscreen";
 import BootScene from "./scenes/BootScene.js";
 import MenuScene from "./scenes/MenuScene.js";
 import GameScene from "./scenes/GameScene.js";
@@ -64,7 +64,8 @@ function sizeGameRoot() {
   const availableHeight = isFullscreenGame
     ? Math.max(320, viewportHeight - bottomPadding)
     : Math.max(320, viewportHeight - rootRect.top - bottomPadding - 34);
-  const maxScale = isOps ? MAX_OPS_SCALE : isFullscreenGame ? MAX_GAME_SCALE : MAX_MENU_SCALE;
+  const fullscreenMaxScale = isMobileViewport ? Number.POSITIVE_INFINITY : MAX_GAME_SCALE;
+  const maxScale = isOps ? MAX_OPS_SCALE : isFullscreenGame ? fullscreenMaxScale : MAX_MENU_SCALE;
   const width = Math.floor(Math.min(GAME_WIDTH * maxScale, availableWidth, availableHeight * GAME_ASPECT));
   const height = Math.floor(width / GAME_ASPECT);
 

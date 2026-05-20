@@ -117,6 +117,8 @@ function normalizeEvent(event) {
     level: Number(event.level ?? 1),
     score: Number(event.score ?? 0),
     callsign: normalizeCallsign(event.callsign),
+    wave: Number(event.wave ?? 1),
+    bossActive: event.bossActive === true,
     cloudAction: String(event.cloudAction ?? "none"),
     metrics: {
       fps: Number(event.metrics?.fps ?? 0),

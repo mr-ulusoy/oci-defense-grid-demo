@@ -99,6 +99,8 @@ export class OciTelemetry {
       level: payload.level ?? 1,
       score: payload.score ?? 0,
       callsign: payload.callsign ?? localStorage.getItem("playerCallsign") ?? "UNKNOWN",
+      wave: payload.wave ?? 1,
+      bossActive: payload.bossActive === true,
       cloudAction: payload.cloudAction ?? "none",
       metrics: {
         fps: Math.round(payload.fps ?? 60),

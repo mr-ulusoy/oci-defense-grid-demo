@@ -138,6 +138,8 @@ function compactPlayer(entry) {
     callsign: entry.callsign,
     score: Number(entry.score ?? 0),
     level: Number(entry.level ?? 1),
+    wave: Number(entry.wave ?? 1),
+    bossActive: entry.bossActive === true,
     runId: entry.runId,
     vm: entry.vm,
     createdAt: entry.createdAt,
@@ -295,17 +297,34 @@ function deterministicInsight(context = {}) {
   if (mode === "live") {
     if (livePlayers.length > 0) {
       const secondLivePlayer = livePlayers[1];
+      const topHits = eventCountAny(topLivePlayer, "player_hit", "hits");
+      const topKills = eventCountAny(topLivePlayer, "enemy_killed", "kills");
+      const topPowerups = eventCountAny(topLivePlayer, "powerup", "powerups");
+      const topBossPhases = eventCountAny(topLivePlayer, "boss_phase", "bossPhases");
       const liveSummary = `${livePlayers.length} active ${pluralize(livePlayers.length, "pilot")}: ${topLivePlayer.callsign} leads live at level ${topLivePlayer.level} with ${formatNumber(topLivePlayer.score)} points`;
-      const metricSummary = `${eventCountAny(topLivePlayer, "enemy_killed", "kills")} kills, ${eventCountAny(topLivePlayer, "player_hit", "hits")} hits, ${eventCountAny(topLivePlayer, "powerup", "powerups")} power-ups and ${eventCountAny(topLivePlayer, "boss_phase", "bossPhases")} boss phases`;
+      const phaseSummary = topLivePlayer.bossActive
+        ? ` and is in a boss phase`
+        : Number(topLivePlayer.wave ?? 0) > 0
+          ? ` on wave ${topLivePlayer.wave}`
+          : "";
+      const metricSummary = `${topKills} kills, ${topHits} hits, ${topPowerups} power-ups and ${topBossPhases} boss phases${phaseSummary}`;
       const highScoreGap = topCompletedRun
         ? Math.max(0, Number(topCompletedRun.score ?? 0) - Number(topLivePlayer.score ?? 0))
         : 0;
+      const highScorePace = topCompletedRun?.score
+        ? Math.round((Number(topLivePlayer.score ?? 0) / Math.max(1, Number(topCompletedRun.score))) * 100)
+        : 0;
+      const coachingSignal = topHits <= 3
+        ? "clean control is strong, so the next move is pushing kill pace and boss clears"
+        : topPowerups <= Math.max(2, Math.floor(topKills / 12))
+          ? "power-up pickup is the pressure point"
+          : "hit control is the pressure point";
       const raceSummary = secondLivePlayer
         ? ` ${secondLivePlayer.callsign} is chasing at level ${secondLivePlayer.level} with ${formatNumber(secondLivePlayer.score)} points.`
         : "";
 
       if (topCompletedRun && topCompletedRun.callsign !== topLivePlayer.callsign) {
-        return `${liveSummary}, recording ${metricSummary}.${raceSummary} ${topCompletedRun.callsign} still owns the completed high score; ${topLivePlayer.callsign} needs ${formatNumber(highScoreGap)} more points and cleaner hits to catch it.`;
+        return `${liveSummary}, recording ${metricSummary}.${raceSummary} ${topCompletedRun.callsign} still owns the completed high score; ${topLivePlayer.callsign} is ${highScorePace}% of that mark, needs ${formatNumber(highScoreGap)} more points, and ${coachingSignal}.`;
       }
 
       return `${liveSummary}, recording ${metricSummary}.${raceSummary} Compare live score velocity and hit count to see who is controlling the current field.`;
@@ -501,6 +520,8 @@ function copilotResponseInstruction(mode) {
       "When two or more livePlayers are present, compare at least the top two active pilots by name.",
       "When one livePlayer reaches a new level, frame it as competition against the completed high score when leaderboard data is present.",
       "Mention if a player needs cleaner hits, stronger survival, or more score pace to take the high score.",
+      "For one active pilot, include their current wave or boss phase when provided, their high-score gap or percentage when a completed leader exists, one strength, and one specific next move.",
+      "Avoid generic advice such as 'improve score pace and survival' unless you explain the exact metric behind it.",
       "Clearly distinguish active live players from completed leaderboard runs.",
       "Do not imply a live player is the overall leaderboard leader unless they also lead completed runs.",
       "Use concrete live player signals such as score, level, kills, hits, powerups and boss phases.",

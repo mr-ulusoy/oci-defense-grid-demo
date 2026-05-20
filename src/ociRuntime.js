@@ -1,4 +1,4 @@
-import { OciTelemetry } from "./telemetry.js?v=20260520-event-live";
+import { OciTelemetry } from "./telemetry.js?v=20260520-live-stable-fullscreen";
 
 const params = new URLSearchParams(window.location.search);
 export const isOpsView = params.get("ops") === "1";
@@ -98,6 +98,7 @@ let scaleIntent = null;
 let latestLeaderboardEntries = [];
 let latestActivePlayers = [];
 let latestLiveCopilotSignature = "";
+let lastLivePlayerHeartbeatAt = 0;
 let leaderboardInsightSignature = "";
 let leaderboardRefreshInFlight = false;
 let copilotInFlight = false;
@@ -172,27 +173,35 @@ function renderScaleState(stress = {}) {
 function renderLivePlayers(players = [], analytics = {}) {
   if (!isOpsView) return;
 
+  const now = Date.now();
   const activePlayers = players.filter((player) => player.callsign !== "UNKNOWN");
-  latestActivePlayers = activePlayers.slice(0, 12);
-  const topScore = activePlayers.reduce((max, player) => Math.max(max, Number(player.score ?? 0)), 0);
-  const latencySamples = activePlayers
+  if (activePlayers.length > 0) {
+    latestActivePlayers = activePlayers.slice(0, 12);
+    lastLivePlayerHeartbeatAt = now;
+  } else if (now - lastLivePlayerHeartbeatAt > 20000) {
+    latestActivePlayers = [];
+  }
+
+  const visiblePlayers = activePlayers.length > 0 ? activePlayers : latestActivePlayers;
+  const topScore = visiblePlayers.reduce((max, player) => Math.max(max, Number(player.score ?? 0)), 0);
+  const latencySamples = visiblePlayers
     .map((player) => Number(player.latencyMs ?? 0))
     .filter((latency) => latency > 0);
   const avgLatency = latencySamples.length
     ? Math.round(latencySamples.reduce((sum, latency) => sum + latency, 0) / latencySamples.length)
     : null;
   const eventRate =
-    activePlayers.reduce((sum, player) => sum + Number(player.eventsPerSecond ?? 0), 0) ||
+    visiblePlayers.reduce((sum, player) => sum + Number(player.eventsPerSecond ?? 0), 0) ||
     analytics.eventsPerSecond ||
     telemetry.eventRate();
 
-  elements.score.textContent = String(activePlayers.length);
+  elements.score.textContent = String(visiblePlayers.length);
   elements.level.textContent = String(topScore);
   elements.latency.textContent = avgLatency == null ? "-- ms" : `${avgLatency} ms`;
   elements.events.textContent = Number(eventRate).toFixed(1);
 
   elements.livePlayers.innerHTML = "";
-  if (activePlayers.length === 0) {
+  if (visiblePlayers.length === 0) {
     const empty = document.createElement("div");
     empty.className = "live-player-empty";
     empty.textContent = "Waiting for player telemetry.";
@@ -210,7 +219,7 @@ function renderLivePlayers(players = [], analytics = {}) {
   header.innerHTML = "<span>Callsign</span><span>Score</span><span>Lvl</span><span>Latency</span><span>Events</span><span>VM</span>";
   elements.livePlayers.appendChild(header);
 
-  for (const player of activePlayers.slice(0, 12)) {
+  for (const player of visiblePlayers.slice(0, 12)) {
     const row = document.createElement("div");
     row.className = "live-player-row";
     row.innerHTML = [
@@ -911,6 +920,8 @@ function copilotSnapshot() {
       level: Number(player.level ?? 1),
       latencyMs: Number(player.latencyMs ?? 0),
       eventsPerSecond: Number(player.eventsPerSecond ?? 0),
+      wave: Number(player.wave ?? 1),
+      bossActive: player.bossActive === true,
       eventCounts: player.eventCounts ?? {},
       vm: player.vm ?? "unknown"
     })),
@@ -936,6 +947,11 @@ function renderCopilotResult(result = {}) {
   renderCopilotMeta(result);
 }
 
+function hasStableLiveInsight() {
+  const text = elements.insight?.textContent?.trim() ?? "";
+  return Boolean(text && !/^Waiting/i.test(text) && !/is running\.\.\.$/i.test(text));
+}
+
 export async function askCopilot(snapshot = {}, mode = "live") {
   if (!isOpsView) return;
   if (copilotInFlight) return;
@@ -950,7 +966,9 @@ export async function askCopilot(snapshot = {}, mode = "live") {
   if (mode === "live") {
     liveCopilotSignatureInFlight = liveSignature;
   }
-  elements.insight.textContent = `${copilotModeLabel(mode)} is running...`;
+  if (mode !== "live" || !hasStableLiveInsight()) {
+    elements.insight.textContent = `${copilotModeLabel(mode)} is running...`;
+  }
   renderCopilotMeta({ mode, source: "pending", model: "OCI GenAI" });
   architecture.nodes.genai?.classList.add("is-busy");
   elements.copilotActions.forEach((button) => {
