@@ -83,7 +83,7 @@ export default class GameOverScene extends Phaser.Scene {
         if (this.finalScore > highScore) {
             localStorage.setItem('highScore', this.finalScore);
 
-            const newHighText = this.add.text(width / 2, 370, 'NEW HIGH SCORE', {
+            const newHighText = this.add.text(width / 2, 370, 'NEW PERSONAL BEST', {
                 fontFamily: 'monospace',
                 fontSize: '16px',
                 fill: '#ffff00',

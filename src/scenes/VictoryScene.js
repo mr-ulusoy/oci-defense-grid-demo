@@ -159,7 +159,7 @@ export default class VictoryScene extends Phaser.Scene {
             localStorage.setItem('highScore', this.finalScore);
 
             this.time.delayedCall(1600, () => {
-                const newRecordText = this.add.text(width / 2, 505, 'NEW HIGH SCORE!', {
+                const newRecordText = this.add.text(width / 2, 505, 'NEW PERSONAL BEST!', {
                     fontFamily: 'monospace',
                     fontSize: '18px',
                     fill: '#ff00ff',

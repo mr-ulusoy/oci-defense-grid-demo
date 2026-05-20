@@ -1,4 +1,4 @@
-import { OciTelemetry } from "./telemetry.js?v=20260520-copilot-init";
+import { OciTelemetry } from "./telemetry.js?v=20260520-leaderboard-auto";
 
 const params = new URLSearchParams(window.location.search);
 export const isOpsView = params.get("ops") === "1";
@@ -96,6 +96,7 @@ let activeVmKey = null;
 let scaleIntent = null;
 let latestLeaderboardEntries = [];
 let leaderboardInsightSignature = "";
+let leaderboardRefreshInFlight = false;
 
 const VM_RECENT_MS = 30000;
 const minAppNodes = Number(window.OCI_DEFENSE_CONFIG?.minAppNodes ?? 2);
@@ -763,9 +764,18 @@ async function refreshLeaderboardCardInsights(entries = [], { force = false } = 
 }
 
 async function refreshLeaderboardBoard({ forceInsights = false } = {}) {
-  const entries = await telemetry.refreshLeaderboard();
-  renderLeaderboard(entries);
-  await refreshLeaderboardCardInsights(entries, { force: forceInsights });
+  if (leaderboardRefreshInFlight) {
+    return;
+  }
+
+  leaderboardRefreshInFlight = true;
+  try {
+    const entries = await telemetry.refreshLeaderboard();
+    renderLeaderboard(entries);
+    await refreshLeaderboardCardInsights(entries, { force: forceInsights });
+  } finally {
+    leaderboardRefreshInFlight = false;
+  }
 }
 
 export function updateHud() {
@@ -934,6 +944,11 @@ export async function initOciRuntime() {
       },
       activeCopilotMode
     );
+
+    const leaderboardIntervalMs = Number(window.OCI_DEFENSE_CONFIG.leaderboardIntervalMs ?? 6000);
+    window.setInterval(() => {
+      refreshLeaderboardBoard();
+    }, leaderboardIntervalMs);
   } else {
     setConnection(telemetry.offline);
   }
