@@ -305,7 +305,7 @@ test("stress endpoint rejects non-ops callers", async () => {
   assert.equal(body.error, "Ops access is required.");
 });
 
-test("ops endpoints require bearer token when configured", async () => {
+test("ops endpoints allow ops callers without browser tokens", async () => {
   const previousToken = process.env.OPS_ACCESS_TOKEN;
   process.env.OPS_ACCESS_TOKEN = "test-ops-token";
   const app = createApp({
@@ -313,20 +313,9 @@ test("ops endpoints require bearer token when configured", async () => {
   });
 
   try {
-    const missing = await request(app, "/api/copilot", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ops: true, snapshot: { score: 1000 } })
-    });
-    assert.equal(missing.response.status, 403);
-    assert.equal(missing.body.error, "Ops authorization token is required.");
-
     const authorized = await request(app, "/api/copilot", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer test-ops-token"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ops: true, snapshot: { score: 1000 } })
     });
     assert.equal(authorized.response.status, 200);

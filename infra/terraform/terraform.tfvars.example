@@ -17,7 +17,6 @@ oci_genai_bearer_token = ""
 oci_genai_model        = "openai.gpt-oss-120b"
 oci_genai_coach_model  = "google.gemini-2.5-flash-lite"
 oci_genai_compartment_ocid = null
-ops_access_token       = ""
 
 instance_shape      = "VM.Standard.E4.Flex"
 instance_ocpus      = 1

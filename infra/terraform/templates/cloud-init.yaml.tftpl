@@ -90,10 +90,6 @@ write_files:
       ADB_USER=${adb_user}
       ADB_PASSWORD=${adb_password}
       ADB_CONNECT_STRING=${adb_connect_string}
-  - path: /etc/oci-defense-ops.env
-    permissions: "0600"
-    content: |
-      OPS_ACCESS_TOKEN=${ops_access_token}
   - path: /etc/nginx/conf.d/oci-defense-grid.conf
     permissions: "0644"
     content: |

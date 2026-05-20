@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260520-ops-auth" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260520-no-token" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -296,11 +296,7 @@
         const payload = isStop ? { ops: true, action: "stop" } : { ops: true, durationSeconds: 260, workers: 2 };
         const fanout = isStop ? 12 : 8;
         const originalText = button.textContent;
-        const opsToken = window.sessionStorage?.getItem("ociDefenseOpsToken");
-        const headers = {
-          "Content-Type": "application/json",
-          ...(opsToken ? { Authorization: `Bearer ${opsToken}` } : {})
-        };
+        const headers = { "Content-Type": "application/json" };
 
         button.disabled = true;
         button.textContent = isStop ? "Releasing..." : "Starting...";
@@ -346,6 +342,6 @@
       });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <script type="module" src="/src/main.js?v=20260520-ops-auth"></script>
+    <script type="module" src="/src/main.js?v=20260520-no-token"></script>
   </body>
 </html>

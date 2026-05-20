@@ -222,7 +222,7 @@ variable "oci_genai_coach_model" {
 }
 
 variable "ops_access_token" {
-  description = "Optional bearer token required for presenter-only ops actions such as copilot, leaderboard AI insights and stress controls. Leave empty only for local demos."
+  description = "Deprecated and ignored. Presenter auth is being redesigned; keep empty."
   type        = string
   default     = ""
   sensitive   = true

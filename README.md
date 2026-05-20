@@ -107,16 +107,15 @@ POST /api/copilot
 POST /api/coach
 ```
 
-`POST /api/copilot` is for the presenter/ops view only. The browser sends it only when `?ops=1` is active, and the API requires `"ops": true` in the JSON body. When `OPS_ACCESS_TOKEN` is configured on the server, ops calls must also include `Authorization: Bearer <token>`. It supports analysis modes such as `live`, `leaderboard`, `players`, `run` and `demo_summary`, and returns `source`, `modelLabel` and `latencyMs` so presenters can see whether the answer came from OCI GenAI or deterministic fallback.
+`POST /api/copilot` is for the presenter/ops view only. The browser sends it only when `?ops=1` is active, and the API requires `"ops": true` in the JSON body. It supports analysis modes such as `live`, `leaderboard`, `players`, `run` and `demo_summary`, and returns `source`, `modelLabel` and `latencyMs` so presenters can see whether the answer came from OCI GenAI or deterministic fallback.
 `POST /api/stress` follows the same ops-only pattern and starts short, bounded CPU load on VM API backends so autoscaling can be demonstrated without real player volume.
 `POST /api/coach` is the player-facing OCI Guide helper used during level-unlock quizzes. It accepts a known `level/questionId`, a short player message and returns a guarded hint from OCI GenAI or deterministic fallback. It is rate-limited so public players cannot use it as a general-purpose GenAI proxy.
 
 ### API security controls
 
 - GenAI credentials are server-side only. They are not written to `config.js` or bundled into the frontend.
-- Presenter-only endpoints are `/api/copilot`, `/api/leaderboard/insights` and `/api/stress`. Set `OPS_ACCESS_TOKEN` on the VM API to require a bearer token for these routes.
-- To open the ops page with a token, use the URL fragment form so the token is not sent to the web server as part of the request path: `http://<web-lb-ip>/?ops=1#opsToken=<token>`. The frontend stores it in session storage and strips the fragment from the address bar.
-- Without the ops token, presenter controls stay visible but AI/stress actions return an explicit "Ops token required" state. Leaderboard card AI copy is cached in VM memory per leaderboard signature, so it regenerates after API restarts or redeploys.
+- Presenter-only endpoints are `/api/copilot`, `/api/leaderboard/insights` and `/api/stress`. In the current demo build they require `"ops": true` and rely on strict rate limits while the admin-login design is being finalized.
+- Leaderboard card AI copy is cached in VM memory per leaderboard signature, so it regenerates after API restarts or redeploys.
 - GenAI routes have in-memory rate limits: `OPS_AI_RATE_LIMIT_PER_MINUTE` for ops AI, `COACH_AI_RATE_LIMIT_PER_MINUTE` for player quiz coaching and `OPS_CONTROL_RATE_LIMIT_PER_MINUTE` for stress controls.
 - `/api/coach` only accepts known quiz `level/questionId` combinations and caps messages at 300 characters.
 
@@ -310,10 +309,9 @@ OCI_GENAI_MODEL=openai.gpt-oss-120b
 OCI_GENAI_COACH_MODEL=google.gemini-2.5-flash-lite
 OCI_GENAI_COMPARTMENT_OCID=<compartment OCID>
 OCI_GENAI_TIMEOUT_MS=25000
-OPS_ACCESS_TOKEN=<presenter ops bearer token>
 ```
 
-It SSHes through the bastion, discovers active private VM DNS names in the VCN, optionally writes the Redis/OCI Cache, event-ingest, GenAI, ADB and ops-token environment drop-ins, pulls the latest `main`, installs production dependencies and restarts `oci-defense-api` and `nginx`. This avoids stale private IPs when autoscaling replaces instances.
+It SSHes through the bastion, discovers active private VM DNS names in the VCN, optionally writes the Redis/OCI Cache, event-ingest, GenAI and ADB environment drop-ins, removes the deprecated ops-token drop-in, pulls the latest `main`, installs production dependencies and restarts `oci-defense-api` and `nginx`. This avoids stale private IPs when autoscaling replaces instances.
 
 Override any value as an environment variable if needed, for example:
 

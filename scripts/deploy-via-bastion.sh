@@ -21,7 +21,6 @@ OCI_GENAI_MODEL="${OCI_GENAI_MODEL:-}"
 OCI_GENAI_COACH_MODEL="${OCI_GENAI_COACH_MODEL:-}"
 OCI_GENAI_COMPARTMENT_OCID="${OCI_GENAI_COMPARTMENT_OCID:-}"
 OCI_GENAI_TIMEOUT_MS="${OCI_GENAI_TIMEOUT_MS:-25000}"
-OPS_ACCESS_TOKEN="${OPS_ACCESS_TOKEN:-}"
 ADB_USER="${ADB_USER:-ADMIN}"
 ADB_PASSWORD="${ADB_PASSWORD:-}"
 ADB_CONNECT_STRING="${ADB_CONNECT_STRING:-}"
@@ -62,6 +61,8 @@ deploy_host() {
 
   remote_command="set -e"
   remote_command="${remote_command}; if [ -f /etc/systemd/system/oci-defense-api.service ]; then sudo sed -i.bak '/^Environment=OCI_GENAI_/d;/^Environment=ADB_/d;/^Environment=OPS_ACCESS_TOKEN/d' /etc/systemd/system/oci-defense-api.service; fi"
+  remote_command="${remote_command}; sudo rm -f /etc/systemd/system/oci-defense-api.service.d/ops.conf /etc/oci-defense-ops.env"
+  remote_command="${remote_command}; sudo systemctl daemon-reload"
   if [[ -n "$REDIS_HOST" ]]; then
     remote_command="${remote_command}; sudo mkdir -p /etc/systemd/system/oci-defense-api.service.d"
     remote_command="${remote_command}; printf '%s\n' '[Service]' 'EnvironmentFile=-/etc/oci-defense-redis.env' | sudo tee /etc/systemd/system/oci-defense-api.service.d/redis.conf >/dev/null"
@@ -79,14 +80,6 @@ deploy_host() {
     remote_command="${remote_command}; printf '%s\n' '[Service]' 'EnvironmentFile=-/etc/oci-defense-genai.env' | sudo tee /etc/systemd/system/oci-defense-api.service.d/genai.conf >/dev/null"
     remote_command="${remote_command}; printf '%s' '${encoded_env}' | base64 -d | sudo tee /etc/oci-defense-genai.env >/dev/null"
     remote_command="${remote_command}; sudo chmod 600 /etc/oci-defense-genai.env"
-    remote_command="${remote_command}; sudo systemctl daemon-reload"
-  fi
-  if [[ -n "$OPS_ACCESS_TOKEN" ]]; then
-    encoded_env="$(printf '%s\n' "OPS_ACCESS_TOKEN=${OPS_ACCESS_TOKEN}" | base64 | tr -d '\n')"
-    remote_command="${remote_command}; sudo mkdir -p /etc/systemd/system/oci-defense-api.service.d"
-    remote_command="${remote_command}; printf '%s\n' '[Service]' 'EnvironmentFile=-/etc/oci-defense-ops.env' | sudo tee /etc/systemd/system/oci-defense-api.service.d/ops.conf >/dev/null"
-    remote_command="${remote_command}; printf '%s' '${encoded_env}' | base64 -d | sudo tee /etc/oci-defense-ops.env >/dev/null"
-    remote_command="${remote_command}; sudo chmod 600 /etc/oci-defense-ops.env"
     remote_command="${remote_command}; sudo systemctl daemon-reload"
   fi
   if [[ -n "$ADB_CONNECT_STRING" && -n "$ADB_PASSWORD" ]]; then

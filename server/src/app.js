@@ -2,7 +2,7 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
-import { randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import {
   createCoachReply,
   createCopilotInsight,
@@ -39,32 +39,9 @@ function clientIp(req) {
   return forwarded || req.ip || req.socket?.remoteAddress || "unknown";
 }
 
-function safeEqual(left, right) {
-  const leftBuffer = Buffer.from(String(left ?? ""));
-  const rightBuffer = Buffer.from(String(right ?? ""));
-  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
-}
-
-function bearerToken(req) {
-  const authorization = String(req.headers.authorization ?? "");
-  const match = authorization.match(/^Bearer\s+(.+)$/i);
-  return match?.[1]?.trim() || String(req.headers["x-oci-ops-token"] ?? "").trim();
-}
-
 function requireOpsAccess(req, res, next) {
   if (req.body?.ops !== true) {
     res.status(403).json({ error: "Ops access is required." });
-    return;
-  }
-
-  const requiredToken = String(process.env.OPS_ACCESS_TOKEN ?? "").trim();
-  if (!requiredToken) {
-    next();
-    return;
-  }
-
-  if (!safeEqual(bearerToken(req), requiredToken)) {
-    res.status(403).json({ error: "Ops authorization token is required." });
     return;
   }
 

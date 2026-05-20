@@ -55,53 +55,6 @@ async function readJson(response) {
   return body;
 }
 
-function isOpsAuthorizationError(error) {
-  if (error?.status !== 403) {
-    return false;
-  }
-
-  return /ops|authorization|token/i.test(String(error.message ?? error.body?.error ?? ""));
-}
-
-function opsAuthorizationRequired(mode = "ops") {
-  return {
-    insight:
-      "Ops token required. Open the ops page with #opsToken=<token>, then use Refresh to regenerate AI insights.",
-    cards: [],
-    source: "auth-required",
-    model: "ops-access-token",
-    modelLabel: "Ops token required",
-    mode
-  };
-}
-
-function readOpsAccessToken() {
-  if (typeof window === "undefined") {
-    return "";
-  }
-
-  try {
-    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-    const token = hashParams.get("opsToken") || hashParams.get("ops_token");
-    if (token) {
-      window.sessionStorage.setItem("ociDefenseOpsToken", token);
-      hashParams.delete("opsToken");
-      hashParams.delete("ops_token");
-      const nextHash = hashParams.toString();
-      window.history.replaceState(
-        null,
-        "",
-        `${window.location.pathname}${window.location.search}${nextHash ? `#${nextHash}` : ""}`
-      );
-      return token;
-    }
-
-    return window.sessionStorage.getItem("ociDefenseOpsToken") || "";
-  } catch {
-    return "";
-  }
-}
-
 export class OciTelemetry {
   constructor(config = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -113,23 +66,14 @@ export class OciTelemetry {
     this.offline = false;
     this.lastLatencyMs = 0;
     this.lastCopilotAt = 0;
-    this.opsAccessToken = readOpsAccessToken();
   }
 
   get apiBase() {
     return this.config.apiBase.replace(/\/$/, "");
   }
 
-  jsonHeaders({ ops = false } = {}) {
-    if (ops && !this.opsAccessToken) {
-      this.opsAccessToken = readOpsAccessToken();
-    }
-
-    const headers = { "Content-Type": "application/json" };
-    if (ops && this.opsAccessToken) {
-      headers.Authorization = `Bearer ${this.opsAccessToken}`;
-    }
-    return headers;
+  jsonHeaders() {
+    return { "Content-Type": "application/json" };
   }
 
   async init() {
@@ -241,22 +185,14 @@ export class OciTelemetry {
       const result = await requestInsights(`${this.apiBase}/leaderboard/insights`);
       this.offline = false;
       return result;
-    } catch (error) {
-      if (isOpsAuthorizationError(error)) {
-        this.offline = false;
-        return opsAuthorizationRequired("leaderboard");
-      }
+    } catch {
       // The deployed API Gateway can lag behind new demo-only routes. Keep the
       // ops UI live by falling back to the same-origin Load Balancer API.
       try {
         const result = await requestInsights("/api/leaderboard/insights");
         this.offline = false;
         return result;
-      } catch (fallbackError) {
-        if (isOpsAuthorizationError(fallbackError)) {
-          this.offline = false;
-          return opsAuthorizationRequired("leaderboard");
-        }
+      } catch {
         this.offline = true;
         return {
           cards: [],
@@ -329,8 +265,7 @@ export class OciTelemetry {
       .map((result) => result.value);
 
     if (started.length === 0) {
-      const denied = results.some((result) => isOpsAuthorizationError(result.reason));
-      throw new Error(denied ? "Ops token required." : "Stress request failed.");
+      throw new Error("Stress request failed.");
     }
 
     this.offline = false;
@@ -359,8 +294,7 @@ export class OciTelemetry {
       .map((result) => result.value);
 
     if (stopped.length === 0) {
-      const denied = results.some((result) => isOpsAuthorizationError(result.reason));
-      throw new Error(denied ? "Ops token required." : "Scale-down request failed.");
+      throw new Error("Scale-down request failed.");
     }
 
     this.offline = false;
@@ -398,12 +332,7 @@ export class OciTelemetry {
       this.offline = false;
       this.lastCopilotAt = Date.now();
       return result;
-    } catch (error) {
-      if (isOpsAuthorizationError(error)) {
-        this.offline = false;
-        return opsAuthorizationRequired(options.mode ?? "live");
-      }
-
+    } catch {
       this.offline = true;
       return {
         insight: "Local fallback: traffic pressure is stable. Keep shields ready for the next anomaly wave.",
