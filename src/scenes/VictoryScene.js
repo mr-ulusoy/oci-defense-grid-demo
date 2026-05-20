@@ -1,4 +1,5 @@
 import { loadVictoryAssets } from "../gameAssets.js";
+import { fetchGlobalLeaderboardRank, formatScore } from "../globalLeaderboardRank.js";
 
 export default class VictoryScene extends Phaser.Scene {
     constructor() {
@@ -7,6 +8,8 @@ export default class VictoryScene extends Phaser.Scene {
 
     init(data) {
         this.finalScore = data.score || 0;
+        this.callsign = data.callsign || localStorage.getItem('playerCallsign') || 'UNKNOWN';
+        this.runId = data.runId || '';
     }
 
     preload() {
@@ -159,7 +162,7 @@ export default class VictoryScene extends Phaser.Scene {
             localStorage.setItem('highScore', this.finalScore);
 
             this.time.delayedCall(1600, () => {
-                const newRecordText = this.add.text(width / 2, 505, 'NEW PERSONAL BEST!', {
+                const newRecordText = this.add.text(width / 2, 535, 'NEW PERSONAL BEST!', {
                     fontFamily: 'monospace',
                     fontSize: '18px',
                     fill: '#ff00ff',
@@ -183,9 +186,23 @@ export default class VictoryScene extends Phaser.Scene {
             });
         }
 
+        const rankText = this.add.text(width / 2, 510, 'GLOBAL RANK: SYNCING...', {
+            fontFamily: 'monospace',
+            fontSize: '15px',
+            fill: '#7cc8ff',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(0.5).setAlpha(0);
+        this.tweens.add({
+            targets: rankText,
+            alpha: 1,
+            duration: 500
+        });
+        this.showGlobalRank(rankText);
+
         // Return button
         this.time.delayedCall(2000, () => {
-            const playAgainBtn = this.add.text(width / 2, 570, '[ RETURN TO BASE ]', {
+            const playAgainBtn = this.add.text(width / 2, 590, '[ RETURN TO BASE ]', {
                 fontFamily: 'monospace',
                 fontSize: '18px',
                 fill: '#00ffff',
@@ -218,6 +235,27 @@ export default class VictoryScene extends Phaser.Scene {
                 delay: 500
             });
         });
+    }
+
+    async showGlobalRank(rankText) {
+        const result = await fetchGlobalLeaderboardRank({
+            runId: this.runId,
+            callsign: this.callsign,
+            score: this.finalScore
+        });
+
+        if (result.rank) {
+            rankText.setText(`GLOBAL RANK: #${result.rank}`);
+            rankText.setFill(result.rank <= 3 ? '#40f0a0' : '#7cc8ff');
+            return;
+        }
+
+        if (result.leader) {
+            rankText.setText(`GLOBAL RANK PENDING  TOP: ${result.leader.callsign} ${formatScore(result.leader.score)}`);
+            return;
+        }
+
+        rankText.setText('GLOBAL RANK: PENDING');
     }
 
     returnToMenu() {

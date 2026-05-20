@@ -114,6 +114,47 @@ test("leaderboard uses submitted player callsign", async () => {
   assert.equal(body.entries[0].eventCounts.run_end, 1);
 });
 
+test("leaderboard rank endpoint returns global placement", async () => {
+  const app = createApp();
+  const events = [
+    {
+      runId: "run-rank-top",
+      sessionId: "session-rank-top",
+      type: "run_end",
+      level: 5,
+      score: 50000,
+      callsign: "Top Pilot",
+      cloudAction: "none",
+      metrics: { fps: 60, latencyMs: 10 },
+      clientTs: new Date().toISOString()
+    },
+    {
+      runId: "run-rank-second",
+      sessionId: "session-rank-second",
+      type: "run_end",
+      level: 4,
+      score: 23000,
+      callsign: "Zizo",
+      cloudAction: "none",
+      metrics: { fps: 60, latencyMs: 10 },
+      clientTs: new Date().toISOString()
+    }
+  ];
+
+  await request(app, "/api/events", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ events })
+  });
+
+  const { response, body } = await request(app, "/api/leaderboard/rank?runId=run-rank-second&score=23000&callsign=Zizo");
+
+  assert.equal(response.status, 200);
+  assert.equal(body.rank, 2);
+  assert.equal(body.total, 2);
+  assert.equal(body.leader.callsign, "TOP PILOT");
+});
+
 test("leaderboard insight endpoint is ops-only and returns card copy", async () => {
   let capturedEntries = [];
   const app = createApp({

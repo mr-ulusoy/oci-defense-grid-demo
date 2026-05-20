@@ -216,6 +216,14 @@ export function createApp({
     res.json({ entries: await store.leaderboard() });
   });
 
+  app.get("/api/leaderboard/rank", async (req, res) => {
+    res.json(await store.leaderboardRank({
+      runId: req.query.runId,
+      callsign: req.query.callsign,
+      score: req.query.score
+    }));
+  });
+
   app.post("/api/leaderboard/insights", requireOpsAccess, opsAiRateLimit, async (req, res) => {
     res.json(await createCardInsights(await store.leaderboard()));
   });

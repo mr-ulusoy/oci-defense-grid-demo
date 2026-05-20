@@ -1,4 +1,4 @@
-import { OciTelemetry } from "./telemetry.js?v=20260520-leaderboard-auto";
+import { OciTelemetry } from "./telemetry.js?v=20260520-global-rank";
 
 const params = new URLSearchParams(window.location.search);
 export const isOpsView = params.get("ops") === "1";
@@ -97,6 +97,7 @@ let scaleIntent = null;
 let latestLeaderboardEntries = [];
 let leaderboardInsightSignature = "";
 let leaderboardRefreshInFlight = false;
+let copilotInFlight = false;
 
 const VM_RECENT_MS = 30000;
 const minAppNodes = Number(window.OCI_DEFENSE_CONFIG?.minAppNodes ?? 2);
@@ -829,7 +830,9 @@ function renderCopilotMeta(result = {}) {
 
 export async function askCopilot(snapshot = {}, mode = "live") {
   if (!isOpsView) return;
+  if (copilotInFlight) return;
 
+  copilotInFlight = true;
   elements.insight.textContent = `${copilotModeLabel(mode)} is running...`;
   renderCopilotMeta({ mode, source: "pending", model: "OCI GenAI" });
   architecture.nodes.genai?.classList.add("is-busy");
@@ -842,6 +845,7 @@ export async function askCopilot(snapshot = {}, mode = "live") {
     elements.insight.textContent = result.insight ?? "AI returned no insight.";
     renderCopilotMeta(result);
   } finally {
+    copilotInFlight = false;
     architecture.nodes.genai?.classList.remove("is-busy");
     elements.copilotActions.forEach((button) => {
       button.disabled = false;
@@ -973,13 +977,16 @@ export async function initOciRuntime() {
     if (!isOpsView) return;
 
     if (window.OCI_DEFENSE_CONFIG.copilotAutoEnabled === true) {
+      const activeCopilotMode =
+        [...elements.copilotActions].find((button) => button.classList.contains("is-active"))
+          ?.dataset.copilotMode ?? "leaderboard";
       askCopilot(
         {
           livePlayers: Number(elements.score.textContent),
           topScore: Number(elements.level.textContent),
           eventsPerSecond: telemetry.eventRate()
         },
-        "live"
+        activeCopilotMode
       );
     }
   }, window.OCI_DEFENSE_CONFIG.copilotIntervalMs);

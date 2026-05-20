@@ -447,7 +447,11 @@ export default class GameScene extends Phaser.Scene {
 
                 if (this.level >= this.maxLevel) {
                     // Victory!
-                    this.scene.start('VictoryScene', { score: this.score });
+                    this.scene.start('VictoryScene', {
+                        score: this.score,
+                        callsign: this.callsign,
+                        runId: telemetry.runId
+                    });
                 } else {
                     // Next level
                     this.scene.start('GameScene', {
@@ -1957,7 +1961,11 @@ export default class GameScene extends Phaser.Scene {
             this.music.stop();
             this.sendTelemetry('run_end');
             void telemetry.flush();
-            this.scene.start('VictoryScene', { score: this.score });
+            this.scene.start('VictoryScene', {
+                score: this.score,
+                callsign: this.callsign,
+                runId: telemetry.runId
+            });
             return;
         }
 
@@ -2150,7 +2158,13 @@ export default class GameScene extends Phaser.Scene {
         void telemetry.flush();
 
         this.time.delayedCall(2000, () => {
-            this.scene.start('GameOverScene', { score: this.score, level: this.level, wave: this.wave });
+            this.scene.start('GameOverScene', {
+                score: this.score,
+                level: this.level,
+                wave: this.wave,
+                callsign: this.callsign,
+                runId: telemetry.runId
+            });
         });
     }
 

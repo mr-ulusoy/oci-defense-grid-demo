@@ -407,6 +407,121 @@ export function createStore() {
     }));
   }
 
+  async function leaderboardRankFromAutonomousDb({ runId, callsign, score }) {
+    const connection = await createOracleConnection();
+    if (!connection) {
+      return null;
+    }
+
+    try {
+      await ensureAutonomousSchema(connection);
+      const options = await oracleObjectOptions();
+      let target = null;
+
+      if (runId) {
+        const targetResult = await connection.execute(
+          `select callsign, score, run_id
+           from high_scores
+           where run_id = :runId
+           fetch first 1 rows only`,
+          { runId },
+          options
+        );
+        target = targetResult.rows?.[0] ?? null;
+      }
+
+      if (!target && callsign && Number.isFinite(Number(score))) {
+        const targetResult = await connection.execute(
+          `select callsign, score, run_id
+           from high_scores
+           where upper(callsign) = upper(:callsign)
+             and score = :score
+           order by created_at desc
+           fetch first 1 rows only`,
+          { callsign, score: Number(score) },
+          options
+        );
+        target = targetResult.rows?.[0] ?? null;
+      }
+
+      const targetScore = Number(target?.SCORE ?? score);
+      if (!Number.isFinite(targetScore)) {
+        return null;
+      }
+
+      const rankResult = await connection.execute(
+        `select count(*) + 1 as rank_no
+         from high_scores
+         where score > :score`,
+        { score: targetScore },
+        options
+      );
+      const totalResult = await connection.execute(
+        `select count(*) as total_runs from high_scores`,
+        [],
+        options
+      );
+      const leaderResult = await connection.execute(
+        `select callsign, score, run_id
+         from high_scores
+         order by score desc, created_at asc
+         fetch first 1 rows only`,
+        [],
+        options
+      );
+
+      const leader = leaderResult.rows?.[0];
+      return {
+        rank: toNumber(rankResult.rows?.[0]?.RANK_NO),
+        total: toNumber(totalResult.rows?.[0]?.TOTAL_RUNS),
+        source: "autonomousDatabase",
+        leader: leader
+          ? {
+              callsign: leader.CALLSIGN,
+              score: Number(leader.SCORE),
+              runId: leader.RUN_ID
+            }
+          : null
+      };
+    } finally {
+      await connection.close();
+    }
+  }
+
+  function leaderboardRankFromMemory({ runId, callsign, score }) {
+    const ranked = [...leaderboard].sort(
+      (left, right) => Number(right.score) - Number(left.score) || Date.parse(left.createdAt) - Date.parse(right.createdAt)
+    );
+    const rankIndex = ranked.findIndex((entry) => {
+      if (runId && entry.runId) {
+        return entry.runId === runId;
+      }
+      return (
+        String(entry.callsign ?? "").toUpperCase() === String(callsign ?? "").toUpperCase() &&
+        Number(entry.score ?? 0) === Number(score ?? 0)
+      );
+    });
+
+    if (rankIndex >= 0) {
+      return {
+        rank: rankIndex + 1,
+        total: ranked.length,
+        source: "memory",
+        leader: ranked[0] ?? null
+      };
+    }
+
+    const numericScore = Number(score);
+    return {
+      rank: Number.isFinite(numericScore)
+        ? ranked.filter((entry) => Number(entry.score ?? 0) > numericScore).length + 1
+        : null,
+      total: ranked.length,
+      source: "memory",
+      leader: ranked[0] ?? null
+    };
+  }
+
   return {
     async status() {
       return {
@@ -476,6 +591,19 @@ export function createStore() {
       }
 
       return addEventCountsByRun(entries ?? leaderboard.slice(0, 10));
+    },
+
+    async leaderboardRank(target = {}) {
+      try {
+        const persisted = await leaderboardRankFromAutonomousDb(target);
+        if (persisted) {
+          return persisted;
+        }
+      } catch (error) {
+        console.warn("Autonomous Database rank read failed, using memory fallback.", error.message);
+      }
+
+      return leaderboardRankFromMemory(target);
     },
 
     async livePlayers() {

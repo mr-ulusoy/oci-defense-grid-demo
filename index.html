@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260520-leaderboard-auto" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260520-global-rank" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -283,7 +283,7 @@
         telemetryIntervalMs: 1400,
         leaderboardIntervalMs: 6000,
         copilotIntervalMs: 12000,
-        copilotAutoEnabled: false,
+        copilotAutoEnabled: true,
         minAppNodes: 2,
         ...(window.OCI_DEFENSE_CONFIG ?? {})
       };
@@ -343,6 +343,6 @@
       });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <script type="module" src="/src/main.js?v=20260520-leaderboard-auto"></script>
+    <script type="module" src="/src/main.js?v=20260520-global-rank"></script>
   </body>
 </html>

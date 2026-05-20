@@ -1,3 +1,5 @@
+import { fetchGlobalLeaderboardRank, formatScore } from "../globalLeaderboardRank.js";
+
 export default class GameOverScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameOverScene' });
@@ -7,6 +9,8 @@ export default class GameOverScene extends Phaser.Scene {
         this.finalScore = data.score || 0;
         this.level = data.level || 1;
         this.wave = data.wave || 1;
+        this.callsign = data.callsign || localStorage.getItem('playerCallsign') || 'UNKNOWN';
+        this.runId = data.runId || '';
     }
 
     create() {
@@ -100,9 +104,18 @@ export default class GameOverScene extends Phaser.Scene {
             });
         }
 
+        const rankText = this.add.text(width / 2, 410, 'GLOBAL RANK: SYNCING...', {
+            fontFamily: 'monospace',
+            fontSize: '15px',
+            fill: '#7cc8ff',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(0.5);
+        this.showGlobalRank(rankText);
+
         // ===== BUTTONS =====
 
-        const retryBtn = this.add.text(width / 2, 480, '[ RETRY ]', {
+        const retryBtn = this.add.text(width / 2, 500, '[ RETRY ]', {
             fontFamily: 'monospace',
             fontSize: '22px',
             fill: '#00ff00',
@@ -133,7 +146,7 @@ export default class GameOverScene extends Phaser.Scene {
             repeat: -1
         });
 
-        const menuBtn = this.add.text(width / 2, 530, '[ MENU ]', {
+        const menuBtn = this.add.text(width / 2, 550, '[ MENU ]', {
             fontFamily: 'monospace',
             fontSize: '16px',
             fill: '#888888',
@@ -163,6 +176,27 @@ export default class GameOverScene extends Phaser.Scene {
         // Initial effects
         this.cameras.main.shake(200, 0.015);
         this.cameras.main.flash(400, 255, 0, 0);
+    }
+
+    async showGlobalRank(rankText) {
+        const result = await fetchGlobalLeaderboardRank({
+            runId: this.runId,
+            callsign: this.callsign,
+            score: this.finalScore
+        });
+
+        if (result.rank) {
+            rankText.setText(`GLOBAL RANK: #${result.rank}`);
+            rankText.setFill(result.rank <= 3 ? '#40f0a0' : '#7cc8ff');
+            return;
+        }
+
+        if (result.leader) {
+            rankText.setText(`GLOBAL RANK PENDING  TOP: ${result.leader.callsign} ${formatScore(result.leader.score)}`);
+            return;
+        }
+
+        rankText.setText('GLOBAL RANK: PENDING');
     }
 
     update() {
