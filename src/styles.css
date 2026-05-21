@@ -873,10 +873,14 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .cloud-map {
   background:
-    linear-gradient(180deg, rgba(16, 24, 32, 0.86), rgba(8, 14, 20, 0.92)),
+    radial-gradient(circle at 12% 0, rgba(61, 220, 151, 0.07), transparent 28%),
+    linear-gradient(180deg, rgba(21, 36, 47, 0.96), rgba(14, 27, 37, 0.98)),
     var(--panel);
-  border: 1px solid rgba(124, 200, 255, 0.18);
+  border: 1px solid rgba(124, 200, 255, 0.34);
   border-radius: 10px;
+  box-shadow:
+    0 0 0 1px rgba(238, 247, 242, 0.025) inset,
+    0 16px 46px rgba(0, 0, 0, 0.18);
   overflow: hidden;
   padding: 0 28px 26px;
 }
@@ -893,9 +897,11 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .topology-service-row {
   align-items: center;
-  background: rgba(9, 13, 18, 0.74);
-  border: 1px solid rgba(145, 168, 166, 0.24);
+  background:
+    linear-gradient(180deg, rgba(18, 34, 44, 0.94), rgba(13, 25, 34, 0.96));
+  border: 1px solid rgba(124, 200, 255, 0.31);
   border-radius: 8px;
+  box-shadow: 0 1px 0 rgba(238, 247, 242, 0.035) inset;
   display: grid;
   gap: 14px;
   grid-template-columns: 30px minmax(160px, auto) minmax(0, 1fr);
@@ -921,7 +927,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .topology-service-row code {
-  color: #858996;
+  color: #a1abb4;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.88rem;
   overflow-wrap: anywhere;
@@ -929,22 +935,24 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .topology-connector {
-  background: rgba(145, 168, 166, 0.28);
+  background: rgba(124, 200, 255, 0.36);
   height: 26px;
   margin-left: 38px;
   width: 1px;
 }
 
 .topology-vm-panel {
-  background: rgba(9, 13, 18, 0.74);
-  border: 1px solid rgba(145, 168, 166, 0.24);
+  background:
+    linear-gradient(180deg, rgba(18, 34, 44, 0.94), rgba(12, 24, 32, 0.98));
+  border: 1px solid rgba(124, 200, 255, 0.34);
   border-radius: 8px;
+  box-shadow: 0 1px 0 rgba(238, 247, 242, 0.035) inset;
   overflow: hidden;
 }
 
 .topology-vm-header {
   align-items: center;
-  border-bottom: 1px solid rgba(145, 168, 166, 0.2);
+  border-bottom: 1px solid rgba(124, 200, 255, 0.24);
   display: flex;
   gap: 28px;
   justify-content: space-between;
@@ -999,9 +1007,11 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .vm-metrics div {
-  background: rgba(9, 13, 18, 0.72);
-  border: 1px solid rgba(145, 168, 166, 0.2);
+  background:
+    linear-gradient(180deg, rgba(17, 32, 42, 0.86), rgba(11, 23, 31, 0.9));
+  border: 1px solid rgba(124, 200, 255, 0.27);
   border-radius: 8px;
+  box-shadow: 0 1px 0 rgba(238, 247, 242, 0.035) inset;
   min-width: 0;
   min-height: 150px;
   padding: 24px 26px;
@@ -1041,8 +1051,9 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .vm-list-title {
   align-items: center;
-  border-top: 1px solid rgba(145, 168, 166, 0.2);
-  border-bottom: 1px solid rgba(145, 168, 166, 0.2);
+  background: rgba(18, 36, 46, 0.34);
+  border-top: 1px solid rgba(124, 200, 255, 0.25);
+  border-bottom: 1px solid rgba(124, 200, 255, 0.25);
   color: #a6abb4;
   display: grid;
   font-size: 0.88rem;
@@ -1068,8 +1079,8 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .vm-list li {
   align-items: center;
-  background: rgba(7, 10, 13, 0.62);
-  border-bottom: 1px solid rgba(145, 168, 166, 0.18);
+  background: rgba(12, 25, 34, 0.76);
+  border-bottom: 1px solid rgba(124, 200, 255, 0.2);
   display: grid;
   gap: 18px;
   grid-template-columns: minmax(190px, 1.25fr) minmax(240px, 1.6fr) minmax(110px, 0.65fr);
@@ -1079,8 +1090,8 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .vm-list li.is-active {
   background:
-    linear-gradient(90deg, rgba(61, 220, 151, 0.08), transparent 34%),
-    rgba(7, 10, 13, 0.62);
+    linear-gradient(90deg, rgba(61, 220, 151, 0.14), rgba(61, 220, 151, 0.02) 36%, transparent 64%),
+    rgba(13, 31, 38, 0.86);
 }
 
 .vm-list li.is-stale {
@@ -1140,7 +1151,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .vm-resource-bar {
-  background: rgba(145, 168, 166, 0.18);
+  background: rgba(145, 168, 166, 0.28);
   border-radius: 999px;
   height: 7px;
   overflow: hidden;
@@ -1176,8 +1187,8 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .stress-control {
   align-items: center;
-  background: rgba(7, 10, 13, 0.62);
-  border-top: 1px solid rgba(145, 168, 166, 0.18);
+  background: rgba(12, 25, 34, 0.76);
+  border-top: 1px solid rgba(124, 200, 255, 0.22);
   border-radius: 0;
   display: flex;
   gap: 10px;
@@ -1223,7 +1234,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .stress-control button {
   align-items: center;
   background: transparent;
-  border-color: rgba(145, 168, 166, 0.24);
+  border-color: rgba(124, 200, 255, 0.28);
   border-radius: 6px;
   color: #f4f8f5;
   display: inline-flex;
