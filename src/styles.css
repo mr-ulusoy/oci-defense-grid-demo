@@ -877,21 +877,21 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
     linear-gradient(180deg, rgba(21, 36, 47, 0.96), rgba(14, 27, 37, 0.98)),
     var(--panel);
   border: 1px solid rgba(124, 200, 255, 0.34);
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow:
     0 0 0 1px rgba(238, 247, 242, 0.025) inset,
-    0 16px 46px rgba(0, 0, 0, 0.18);
+    0 12px 34px rgba(0, 0, 0, 0.16);
   overflow: hidden;
-  padding: 0 28px 26px;
+  padding: 0 20px 18px;
 }
 
 .topology-eyebrow {
   color: #a6abb4;
   display: block;
-  font-size: 0.82rem;
+  font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.16em;
-  padding: 26px 0 32px;
+  padding: 18px 0 18px;
   text-transform: uppercase;
 }
 
@@ -903,41 +903,41 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   border-radius: 8px;
   box-shadow: 0 1px 0 rgba(238, 247, 242, 0.035) inset;
   display: grid;
-  gap: 14px;
-  grid-template-columns: 30px minmax(160px, auto) minmax(0, 1fr);
-  min-height: 68px;
-  padding: 0 28px;
+  gap: 10px;
+  grid-template-columns: 24px minmax(150px, auto) minmax(0, 1fr);
+  min-height: 54px;
+  padding: 0 20px;
 }
 
 .topology-icon {
   color: #a6abb4;
-  height: 24px;
+  height: 19px;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.8;
   fill: none;
-  width: 24px;
+  width: 19px;
 }
 
 .topology-service-row strong {
   color: #f4f8f5;
-  font-size: 1.02rem;
+  font-size: 0.9rem;
   font-weight: 750;
 }
 
 .topology-service-row code {
   color: #a1abb4;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.88rem;
+  font-size: 0.78rem;
   overflow-wrap: anywhere;
   text-align: right;
 }
 
 .topology-connector {
   background: rgba(124, 200, 255, 0.36);
-  height: 26px;
-  margin-left: 38px;
+  height: 18px;
+  margin-left: 30px;
   width: 1px;
 }
 
@@ -954,22 +954,22 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   align-items: center;
   border-bottom: 1px solid rgba(124, 200, 255, 0.24);
   display: flex;
-  gap: 28px;
+  gap: 18px;
   justify-content: space-between;
-  min-height: 104px;
-  padding: 24px 32px;
+  min-height: 74px;
+  padding: 16px 20px;
 }
 
 .topology-vm-title {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 18px;
+  gap: 12px;
 }
 
 .topology-vm-title > strong {
   color: #f4f8f5;
-  font-size: 1.28rem;
+  font-size: 1.05rem;
   font-weight: 760;
 }
 
@@ -981,15 +981,15 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   color: var(--accent);
   display: inline-flex;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 1.02rem;
-  gap: 8px;
-  min-height: 38px;
-  padding: 0 14px;
+  font-size: 0.86rem;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
 }
 
 .topology-active-vm {
   color: #f4f8f5;
-  font-size: 1.16rem;
+  font-size: 0.94rem;
   font-weight: 500;
   overflow-wrap: anywhere;
   text-align: right;
@@ -1001,9 +1001,9 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .vm-metrics {
   display: grid;
-  gap: 32px;
+  gap: 18px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  padding: 32px;
+  padding: 20px;
 }
 
 .vm-metrics div {
@@ -1013,14 +1013,14 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   border-radius: 8px;
   box-shadow: 0 1px 0 rgba(238, 247, 242, 0.035) inset;
   min-width: 0;
-  min-height: 150px;
-  padding: 24px 26px;
+  min-height: 94px;
+  padding: 16px 18px;
 }
 
 .vm-metrics span {
   color: #a6abb4;
   display: block;
-  font-size: 0.92rem;
+  font-size: 0.78rem;
   font-weight: 750;
   letter-spacing: 0.02em;
 }
@@ -1029,11 +1029,11 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   align-items: baseline;
   color: #f4f8f5;
   display: block;
-  font-size: 1.72rem;
+  font-size: 1.32rem;
   font-weight: 750;
-  line-height: 1.45;
+  line-height: 1.35;
   overflow-wrap: anywhere;
-  padding-top: 22px;
+  padding-top: 12px;
 }
 
 .vm-metrics strong b {
@@ -1043,7 +1043,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .vm-metrics strong em,
 .vm-metrics strong i {
   color: #777a84;
-  font-size: 0.84rem;
+  font-size: 0.74rem;
   font-style: normal;
   font-weight: 600;
   margin-left: 4px;
@@ -1056,12 +1056,12 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   border-bottom: 1px solid rgba(124, 200, 255, 0.25);
   color: #a6abb4;
   display: grid;
-  font-size: 0.88rem;
+  font-size: 0.72rem;
   font-weight: 800;
-  gap: 18px;
+  gap: 14px;
   grid-template-columns: minmax(190px, 1.25fr) minmax(240px, 1.6fr) minmax(110px, 0.65fr);
   letter-spacing: 0.14em;
-  padding: 20px 32px;
+  padding: 13px 20px;
   text-transform: uppercase;
 }
 
@@ -1082,10 +1082,10 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   background: rgba(12, 25, 34, 0.76);
   border-bottom: 1px solid rgba(124, 200, 255, 0.2);
   display: grid;
-  gap: 18px;
+  gap: 14px;
   grid-template-columns: minmax(190px, 1.25fr) minmax(240px, 1.6fr) minmax(110px, 0.65fr);
-  min-height: 124px;
-  padding: 22px 32px;
+  min-height: 86px;
+  padding: 15px 20px;
 }
 
 .vm-list li.is-active {
@@ -1101,7 +1101,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .vm-list-header {
   align-items: center;
   display: flex;
-  gap: 10px;
+  gap: 9px;
   justify-content: flex-start;
   min-width: 0;
 }
@@ -1109,7 +1109,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .vm-list-header strong {
   color: #f4f8f5;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 1.14rem;
+  font-size: 0.96rem;
   font-weight: 650;
   overflow-wrap: anywhere;
 }
@@ -1127,33 +1127,33 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   color: #777a84;
   display: block;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.86rem;
-  margin: 10px 0 0 28px;
+  font-size: 0.74rem;
+  margin: 6px 0 0 24px;
 }
 
 .vm-list-resources {
   display: grid;
-  gap: 10px;
+  gap: 7px;
 }
 
 .vm-resource-row {
   align-items: center;
   display: grid;
-  gap: 14px;
-  grid-template-columns: 46px minmax(140px, 1fr) 52px;
+  gap: 10px;
+  grid-template-columns: 42px minmax(140px, 1fr) 48px;
 }
 
 .vm-resource-row span,
 .vm-disk-cell em {
   color: #a6abb4;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.9rem;
+  font-size: 0.78rem;
 }
 
 .vm-resource-bar {
   background: rgba(145, 168, 166, 0.28);
   border-radius: 999px;
-  height: 7px;
+  height: 6px;
   overflow: hidden;
 }
 
@@ -1168,7 +1168,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .vm-resource-row strong {
   color: #a6abb4;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.9rem;
+  font-size: 0.78rem;
   font-weight: 600;
 }
 
@@ -1176,8 +1176,8 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   color: #a6abb4;
   display: grid;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.95rem;
-  gap: 8px;
+  font-size: 0.82rem;
+  gap: 5px;
   justify-items: end;
 }
 
@@ -1193,7 +1193,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   display: flex;
   gap: 10px;
   justify-content: space-between;
-  padding: 26px 32px 30px;
+  padding: 18px 20px 20px;
 }
 
 .stress-control > div:first-child {
@@ -1203,7 +1203,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .stress-control span {
   color: #a6abb4;
   display: block;
-  font-size: 0.9rem;
+  font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1212,15 +1212,15 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .stress-control strong {
   color: #a6abb4;
   display: block;
-  font-size: 1.1rem;
-  margin-top: 10px;
+  font-size: 0.98rem;
+  margin-top: 6px;
   overflow-wrap: anywhere;
 }
 
 .stress-control small {
   color: #777a84;
   display: block;
-  font-size: 0.86rem;
+  font-size: 0.76rem;
   margin-top: 4px;
   overflow-wrap: anywhere;
 }
@@ -1238,10 +1238,10 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   border-radius: 6px;
   color: #f4f8f5;
   display: inline-flex;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 750;
-  min-height: 54px;
-  padding: 0 24px;
+  min-height: 42px;
+  padding: 0 18px;
 }
 
 .stress-control button:first-child {
