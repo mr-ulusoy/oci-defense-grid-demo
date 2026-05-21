@@ -1,5 +1,7 @@
 node_modules/
 dist/
+.agents/
+skills-lock.json
 .env
 config.js
 .DS_Store

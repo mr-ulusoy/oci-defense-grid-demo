@@ -2,7 +2,7 @@ import js from "@eslint/js";
 
 export default [
   {
-    ignores: ["dist/**", "node_modules/**", "infra/terraform/.terraform/**"]
+    ignores: ["dist/**", "node_modules/**", ".agents/**", "infra/terraform/.terraform/**"]
   },
   js.configs.recommended,
   {

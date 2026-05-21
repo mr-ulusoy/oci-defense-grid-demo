@@ -600,6 +600,11 @@ function rankedPlayerRowHtml(entry = {}, index = 0) {
 }
 
 function updateObservedVms(vm) {
+  if (!vm || isSyntheticVm(vm)) {
+    activeVmKey = null;
+    return;
+  }
+
   const name = vm?.name ?? "unknown";
   const key = vm?.id && vm.id !== "local-instance" ? vm.id : name;
   activeVmKey = key;
@@ -624,7 +629,7 @@ function renderVmFleet() {
   });
 
   const activeVm = vms.find((vm) => vm.id === activeVmKey);
-  elements.vm.textContent = activeVm ? `Active: ${activeVm.name}` : "Active: unknown";
+  elements.vm.textContent = activeVm ? `Active: ${activeVm.name}` : "Active: status unavailable";
   elements.vmCount.textContent = String(recentVmCount());
   elements.vmList.innerHTML = "";
 
@@ -662,6 +667,10 @@ function renderVmFleet() {
 function recentVmCount() {
   const cutoff = Date.now() - VM_RECENT_MS;
   return [...observedVms.values()].filter((vm) => vm.lastSeen >= cutoff).length;
+}
+
+function isSyntheticVm(vm) {
+  return vm?.name === "browser-demo" || vm?.gateway === "offline fallback";
 }
 
 function secondsSince(timestamp) {
