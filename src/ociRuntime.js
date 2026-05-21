@@ -30,6 +30,7 @@ const elements = {
   cores: document.getElementById("hudCores"),
   cpu: document.getElementById("hudCpu"),
   ram: document.getElementById("hudRam"),
+  ramTotal: document.getElementById("hudRamTotal"),
   disk: document.getElementById("hudDisk"),
   diskLabel: document.getElementById("hudDiskLabel"),
   insight: document.getElementById("hudInsight"),
@@ -129,6 +130,9 @@ function renderStatus(status) {
   elements.cores.textContent = metrics?.cpuCores == null ? "--" : String(metrics.cpuCores);
   elements.cpu.textContent = metrics?.cpuPercent == null ? "--%" : `${metrics.cpuPercent}%`;
   elements.ram.textContent = metrics?.ramPercent == null ? "--%" : `${metrics.ramPercent}%`;
+  if (elements.ramTotal) {
+    elements.ramTotal.textContent = metrics?.ramTotalGb == null ? "--" : String(metrics.ramTotalGb);
+  }
 
   const diskIo = metrics?.diskIo;
   elements.diskLabel.textContent = diskIo?.source === "process" ? "Disk I/O*" : "Disk I/O";

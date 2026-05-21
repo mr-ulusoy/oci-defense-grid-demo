@@ -140,6 +140,7 @@ export async function systemMetrics() {
     cpuCores: os.cpus().length,
     cpuPercent: cpuPercent(),
     ramPercent: clampPercent(((totalMem - freeMem) / totalMem) * 100),
+    ramTotalGb: Math.max(1, Math.round(totalMem / 1024 / 1024 / 1024)),
     diskIo: io
   };
 }

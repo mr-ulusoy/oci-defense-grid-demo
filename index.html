@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260521-topology-redesign" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260521-topology-reference" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -206,7 +206,7 @@
               </div>
               <div>
                 <span>RAM / Usage</span>
-                <strong><b id="hudRam">--%</b> <em>used</em></strong>
+                <strong><b id="hudRam">--%</b> <em>used</em> <i>/</i> <b id="hudRamTotal">--</b> <em>GB total</em></strong>
               </div>
               <div>
                 <span id="hudDiskLabel">Disk I/O</span>
@@ -376,6 +376,6 @@
       });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <script type="module" src="/src/main.js?v=20260521-topology-redesign"></script>
+    <script type="module" src="/src/main.js?v=20260521-topology-reference"></script>
   </body>
 </html>
