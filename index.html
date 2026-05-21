@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260521-desktop-quiz-layout" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260521-topology-redesign" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -159,36 +159,69 @@
           </article>
         </section>
 
-        <section class="cloud-map">
-          <div class="cloud-node active">
-            <span>API Gateway</span>
-            <strong id="hudGateway">public</strong>
+        <section class="cloud-map" aria-label="OCI topology and VM fleet">
+          <span class="topology-eyebrow">Topology</span>
+          <div class="topology-row topology-service-row">
+            <svg class="topology-icon" aria-hidden="true" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M3 12h18" />
+              <path d="M12 3c3 3 3 15 0 18" />
+              <path d="M12 3c-3 3-3 15 0 18" />
+            </svg>
+            <strong>API Gateway</strong>
+            <code id="hudGateway">public</code>
           </div>
-          <div class="cloud-link"></div>
-          <div class="cloud-node">
-            <span>Load Balancer</span>
-            <strong id="hudLoadBalancer">healthy</strong>
+          <div class="topology-connector"></div>
+          <div class="topology-row topology-service-row">
+            <svg class="topology-icon" aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M12 4v5" />
+              <path d="M6 14v-3h12v3" />
+              <rect x="4" y="14" width="4" height="5" rx="1" />
+              <rect x="10" y="14" width="4" height="5" rx="1" />
+              <rect x="16" y="14" width="4" height="5" rx="1" />
+              <rect x="9" y="3" width="6" height="4" rx="1" />
+            </svg>
+            <strong>Load Balancer</strong>
+            <code id="hudLoadBalancer">healthy</code>
           </div>
-          <div class="cloud-link"></div>
-          <div class="cloud-node vm-node">
-            <div class="vm-heading">
-              <span>VM Fleet</span>
-              <strong id="hudVm">local-demo</strong>
-            </div>
-            <div class="vm-summary">
-              <span>Observed nodes</span>
-              <strong id="hudVmCount">1</strong>
+          <div class="topology-connector"></div>
+          <div class="topology-vm-panel">
+            <div class="topology-vm-header">
+              <div class="topology-vm-title">
+                <svg class="topology-icon" aria-hidden="true" viewBox="0 0 24 24">
+                  <rect x="5" y="4" width="14" height="5" rx="1" />
+                  <rect x="5" y="15" width="14" height="5" rx="1" />
+                  <path d="M8 9v6" />
+                  <path d="M16 9v6" />
+                </svg>
+                <strong>VM Fleet</strong>
+                <span class="topology-chip">Nodes: <b id="hudVmCount">1</b></span>
+              </div>
+              <strong class="topology-active-vm" id="hudVm">Active: status unavailable</strong>
             </div>
             <div class="vm-metrics" aria-label="Active route metrics">
-              <div><span>Cores</span><strong id="hudCores">--</strong></div>
-              <div><span>CPU</span><strong id="hudCpu">--%</strong></div>
-              <div><span>RAM</span><strong id="hudRam">--%</strong></div>
-              <div><span id="hudDiskLabel">Disk</span><strong id="hudDisk">--</strong></div>
+              <div>
+                <span>Cores / CPU</span>
+                <strong><b id="hudCores">--</b> <em>cores</em> <i>/</i> <b id="hudCpu">--%</b> <em>load</em></strong>
+              </div>
+              <div>
+                <span>RAM / Usage</span>
+                <strong><b id="hudRam">--%</b> <em>used</em></strong>
+              </div>
+              <div>
+                <span id="hudDiskLabel">Disk I/O</span>
+                <strong id="hudDisk">--</strong>
+              </div>
+            </div>
+            <div class="vm-list-title" aria-hidden="true">
+              <span>Instance</span>
+              <span>Resources</span>
+              <span>Disk I/O</span>
             </div>
             <ol class="vm-list" id="hudVmList" aria-label="Observed VM fleet"></ol>
             <div class="stress-control" aria-label="Autoscaling stress control">
               <div>
-                <span>Autoscaling demo</span>
+                <span>Autoscaling</span>
                 <strong id="stressStatus">Idle</strong>
                 <small id="scaleState">Stable</small>
               </div>
@@ -343,6 +376,6 @@
       });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <script type="module" src="/src/main.js?v=20260521-hide-browser-demo-vm"></script>
+    <script type="module" src="/src/main.js?v=20260521-topology-redesign"></script>
   </body>
 </html>

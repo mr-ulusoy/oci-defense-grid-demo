@@ -859,7 +859,6 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .metric span,
-.cloud-node span,
 .section-title span {
   color: var(--muted);
   display: block;
@@ -873,107 +872,216 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .cloud-map {
-  border: 1px solid var(--line);
+  background: #05080c;
+  border: 1px solid rgba(145, 168, 166, 0.24);
   border-radius: 8px;
-  padding: 14px;
+  overflow: hidden;
+  padding: 0;
 }
 
-.cloud-node {
+.topology-eyebrow {
+  color: #a6abb4;
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  padding: 14px 16px 10px;
+  text-transform: uppercase;
+}
+
+.topology-row,
+.topology-vm-panel {
+  background: #090b0f;
+  border-top: 1px solid rgba(145, 168, 166, 0.22);
+}
+
+.topology-service-row {
   align-items: center;
-  background: #0d171f;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  display: flex;
-  justify-content: space-between;
-  min-height: 56px;
-  padding: 10px 12px;
-}
-
-.cloud-node.vm-node {
-  align-items: stretch;
-  flex-direction: column;
+  border-bottom: 1px solid rgba(145, 168, 166, 0.22);
+  border-radius: 0;
+  display: grid;
   gap: 12px;
+  grid-template-columns: 26px minmax(160px, auto) minmax(0, 1fr);
+  min-height: 64px;
+  padding: 0 18px;
 }
 
-.vm-heading {
-  align-items: center;
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
+.topology-icon {
+  color: #a6abb4;
+  height: 22px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  fill: none;
+  width: 22px;
 }
 
-.vm-heading strong {
-  font-size: 0.98rem;
-  max-width: 68%;
+.topology-service-row strong {
+  color: #f4f8f5;
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.topology-service-row code {
+  color: #777a84;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.86rem;
   overflow-wrap: anywhere;
   text-align: right;
 }
 
-.vm-summary {
+.topology-connector {
+  background: rgba(145, 168, 166, 0.28);
+  height: 24px;
+  margin-left: 38px;
+  width: 1px;
+}
+
+.topology-vm-panel {
+  border: 1px solid rgba(145, 168, 166, 0.24);
+  border-left: 0;
+  border-right: 0;
+}
+
+.topology-vm-header {
+  align-items: center;
+  border-bottom: 1px solid rgba(145, 168, 166, 0.2);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  min-height: 86px;
+  padding: 18px 20px;
+}
+
+.topology-vm-title {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.topology-vm-title > strong {
+  color: #f4f8f5;
+  font-size: 1.2rem;
+  font-weight: 850;
+}
+
+.topology-chip {
   align-items: center;
   background: rgba(61, 220, 151, 0.08);
-  border: 1px solid rgba(61, 220, 151, 0.18);
+  border: 1px solid rgba(61, 220, 151, 0.38);
   border-radius: 6px;
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 10px;
-}
-
-.vm-summary span {
-  color: var(--muted);
-  font-size: 0.76rem;
-}
-
-.vm-summary strong {
   color: var(--accent);
-  font-size: 1.1rem;
+  display: inline-flex;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.95rem;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 12px;
+}
+
+.topology-active-vm {
+  color: #f4f8f5;
+  font-size: 1.05rem;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.topology-active-vm::first-letter {
+  color: #a6abb4;
 }
 
 .vm-metrics {
   display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 20px;
 }
 
 .vm-metrics div {
-  background: rgba(124, 200, 255, 0.07);
-  border: 1px solid rgba(124, 200, 255, 0.16);
-  border-radius: 6px;
+  background: #090b0f;
+  border: 1px solid rgba(145, 168, 166, 0.2);
+  border-radius: 8px;
   min-width: 0;
-  padding: 8px;
+  padding: 16px 18px;
 }
 
 .vm-metrics span {
-  color: var(--muted);
+  color: #a6abb4;
   display: block;
-  font-size: 0.72rem;
+  font-size: 0.82rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
 }
 
 .vm-metrics strong {
+  align-items: baseline;
+  color: #f4f8f5;
   display: block;
-  font-size: 0.92rem;
+  font-size: 1.45rem;
+  font-weight: 750;
   line-height: 1.45;
   overflow-wrap: anywhere;
+  padding-top: 14px;
+}
+
+.vm-metrics strong b {
+  font: inherit;
+}
+
+.vm-metrics strong em,
+.vm-metrics strong i {
+  color: #777a84;
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.vm-list-title {
+  align-items: center;
+  border-top: 1px solid rgba(145, 168, 166, 0.2);
+  border-bottom: 1px solid rgba(145, 168, 166, 0.2);
+  color: #a6abb4;
+  display: grid;
+  font-size: 0.8rem;
+  font-weight: 800;
+  gap: 18px;
+  grid-template-columns: minmax(190px, 1.25fr) minmax(240px, 1.6fr) minmax(110px, 0.65fr);
+  letter-spacing: 0.14em;
+  padding: 16px 20px;
+  text-transform: uppercase;
+}
+
+.vm-list-title span:last-child {
+  text-align: right;
 }
 
 .vm-list {
   display: grid;
-  gap: 8px;
+  gap: 0;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
 .vm-list li {
-  background: rgba(7, 16, 23, 0.74);
-  border: 1px solid rgba(145, 168, 166, 0.22);
-  border-radius: 6px;
-  padding: 9px 10px;
+  align-items: center;
+  background: #070a0d;
+  border-bottom: 1px solid rgba(145, 168, 166, 0.18);
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(190px, 1.25fr) minmax(240px, 1.6fr) minmax(110px, 0.65fr);
+  min-height: 106px;
+  padding: 18px 20px;
 }
 
 .vm-list li.is-active {
-  border-color: rgba(61, 220, 151, 0.72);
-  box-shadow: inset 3px 0 0 var(--accent);
+  background:
+    linear-gradient(90deg, rgba(61, 220, 151, 0.08), transparent 34%),
+    #070a0d;
 }
 
 .vm-list li.is-stale {
@@ -984,34 +1092,98 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   align-items: center;
   display: flex;
   gap: 10px;
-  justify-content: space-between;
+  justify-content: flex-start;
+  min-width: 0;
 }
 
 .vm-list-header strong {
+  color: #f4f8f5;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.vm-list-status-dot {
+  background: var(--accent);
+  border-radius: 999px;
+  box-shadow: 0 0 12px rgba(61, 220, 151, 0.55);
+  flex: 0 0 auto;
+  height: 8px;
+  width: 8px;
+}
+
+.vm-list-age {
+  color: #777a84;
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  margin: 10px 0 0 28px;
+}
+
+.vm-list-resources {
+  display: grid;
+  gap: 10px;
+}
+
+.vm-resource-row {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 44px minmax(110px, 1fr) 46px;
+}
+
+.vm-resource-row span,
+.vm-disk-cell em {
+  color: #a6abb4;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+}
+
+.vm-resource-bar {
+  background: rgba(145, 168, 166, 0.18);
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.vm-resource-bar i {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+  min-width: 2px;
+}
+
+.vm-resource-row strong {
+  color: #a6abb4;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.vm-disk-cell {
+  color: #a6abb4;
+  display: grid;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.9rem;
-  overflow-wrap: anywhere;
+  gap: 8px;
+  justify-items: end;
 }
 
-.vm-list-header span,
-.vm-list-metrics {
-  color: var(--muted);
-  font-size: 0.72rem;
-}
-
-.vm-list-metrics {
-  margin-top: 5px;
-  overflow-wrap: anywhere;
+.vm-disk-cell span {
+  white-space: nowrap;
 }
 
 .stress-control {
   align-items: center;
-  background: rgba(255, 209, 102, 0.08);
-  border: 1px solid rgba(255, 209, 102, 0.22);
-  border-radius: 6px;
+  background: #070a0d;
+  border-top: 1px solid rgba(145, 168, 166, 0.18);
+  border-radius: 0;
   display: flex;
   gap: 10px;
   justify-content: space-between;
-  padding: 10px;
+  padding: 22px 20px 24px;
 }
 
 .stress-control > div:first-child {
@@ -1019,54 +1191,56 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .stress-control span {
-  color: var(--muted);
+  color: #a6abb4;
   display: block;
-  font-size: 0.72rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .stress-control strong {
-  color: var(--warning);
+  color: #a6abb4;
   display: block;
-  font-size: 0.84rem;
+  font-size: 1rem;
   margin-top: 2px;
   overflow-wrap: anywhere;
 }
 
 .stress-control small {
-  color: var(--text);
+  color: #777a84;
   display: block;
-  font-size: 0.7rem;
+  font-size: 0.78rem;
   margin-top: 4px;
   overflow-wrap: anywhere;
 }
 
 .stress-actions {
-  display: grid;
+  display: flex;
   flex: 0 0 auto;
-  gap: 6px;
-  min-width: 112px;
+  gap: 10px;
 }
 
 .stress-control button {
-  border-color: rgba(255, 209, 102, 0.45);
-  color: var(--warning);
-  width: 100%;
+  align-items: center;
+  background: transparent;
+  border-color: rgba(145, 168, 166, 0.24);
+  color: #f4f8f5;
+  display: inline-flex;
+  font-weight: 700;
+  min-height: 42px;
+  padding: 0 16px;
+}
+
+.stress-control button:first-child {
+  background: #f4f8f5;
+  border-color: #f4f8f5;
+  color: #090b0f;
 }
 
 .stress-control button:disabled {
   cursor: wait;
   opacity: 0.62;
-}
-
-.cloud-node.active {
-  border-color: var(--accent);
-}
-
-.cloud-link {
-  background: linear-gradient(180deg, transparent, var(--accent-2), transparent);
-  height: 28px;
-  margin-left: 24px;
-  width: 1px;
 }
 
 .insight-box,

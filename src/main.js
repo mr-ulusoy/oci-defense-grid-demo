@@ -1,4 +1,4 @@
-import { initOciRuntime } from "./ociRuntime.js?v=20260521-hide-browser-demo-vm";
+import { initOciRuntime } from "./ociRuntime.js?v=20260521-topology-redesign";
 import BootScene from "./scenes/BootScene.js";
 import MenuScene from "./scenes/MenuScene.js";
 import GameScene from "./scenes/GameScene.js?v=20260521-desktop-quiz-layout";

@@ -133,7 +133,7 @@ function renderStatus(status) {
   const diskIo = metrics?.diskIo;
   elements.diskLabel.textContent = diskIo?.source === "process" ? "Disk I/O*" : "Disk I/O";
   elements.disk.textContent = diskIo
-    ? `${formatThroughput(diskIo.readKbps)}/${formatThroughput(diskIo.writeKbps)}`
+    ? `${formatThroughput(diskIo.readKbps)} R / ${formatThroughput(diskIo.writeKbps)} W`
     : "--";
   renderArchitecture(status);
 }
@@ -642,26 +642,58 @@ function renderVmFleet() {
     const header = document.createElement("div");
     header.className = "vm-list-header";
 
+    const statusDot = document.createElement("span");
+    statusDot.className = "vm-list-status-dot";
+    statusDot.setAttribute("aria-hidden", "true");
+
     const name = document.createElement("strong");
     name.textContent = vm.name;
 
-    const status = document.createElement("span");
-    status.textContent = vm.id === activeVmKey ? "routing now" : `${secondsSince(vm.lastSeen)}s ago`;
+    header.append(statusDot, name);
 
-    header.append(name, status);
+    const age = document.createElement("span");
+    age.className = "vm-list-age";
+    age.textContent = vm.id === activeVmKey ? "routing now" : `${formatAge(vm.lastSeen)} ago`;
 
-    const metrics = document.createElement("div");
-    metrics.className = "vm-list-metrics";
-    metrics.textContent = [
-      `CPU ${formatPercent(vm.metrics?.cpuPercent)}`,
-      `RAM ${formatPercent(vm.metrics?.ramPercent)}`,
-      `${vm.metrics?.cpuCores ?? "--"} cores`,
-      `I/O ${formatDiskIo(vm.metrics?.diskIo)}`
-    ].join(" | ");
+    const instance = document.createElement("div");
+    instance.append(header, age);
 
-    item.append(header, metrics);
+    const resources = document.createElement("div");
+    resources.className = "vm-list-resources";
+    resources.append(
+      createResourceRow("CPU", vm.metrics?.cpuPercent),
+      createResourceRow("RAM", vm.metrics?.ramPercent)
+    );
+
+    const disk = document.createElement("div");
+    disk.className = "vm-disk-cell";
+    const diskIo = formatDiskIoParts(vm.metrics?.diskIo);
+    disk.innerHTML = `<span>${diskIo.read} <em>R</em></span><span>${diskIo.write} <em>W</em></span>`;
+
+    item.append(instance, resources, disk);
     elements.vmList.appendChild(item);
   }
+}
+
+function createResourceRow(label, value) {
+  const row = document.createElement("div");
+  row.className = "vm-resource-row";
+
+  const labelElement = document.createElement("span");
+  labelElement.textContent = label;
+
+  const bar = document.createElement("div");
+  bar.className = "vm-resource-bar";
+  const fill = document.createElement("i");
+  const percent = clampPercent(value);
+  fill.style.width = value == null ? "0%" : `${percent}%`;
+  bar.append(fill);
+
+  const valueElement = document.createElement("strong");
+  valueElement.textContent = formatPercent(value);
+
+  row.append(labelElement, bar, valueElement);
+  return row;
 }
 
 function recentVmCount() {
@@ -677,16 +709,33 @@ function secondsSince(timestamp) {
   return Math.max(0, Math.round((Date.now() - timestamp) / 1000));
 }
 
+function formatAge(timestamp) {
+  const seconds = secondsSince(timestamp);
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+  return `${Math.round(seconds / 60)}m`;
+}
+
 function formatPercent(value) {
   return value == null ? "--%" : `${value}%`;
 }
 
-function formatDiskIo(diskIo) {
-  if (!diskIo) {
-    return "--";
+function clampPercent(value) {
+  if (value == null || Number.isNaN(Number(value))) {
+    return 0;
   }
+  return Math.max(0, Math.min(100, Number(value)));
+}
 
-  return `${formatThroughput(diskIo.readKbps)}/${formatThroughput(diskIo.writeKbps)}`;
+function formatDiskIoParts(diskIo) {
+  if (!diskIo) {
+    return { read: "--", write: "--" };
+  }
+  return {
+    read: formatThroughput(diskIo.readKbps),
+    write: formatThroughput(diskIo.writeKbps)
+  };
 }
 
 function formatThroughput(kbps) {
