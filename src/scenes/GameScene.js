@@ -1807,10 +1807,11 @@ export default class GameScene extends Phaser.Scene {
         const overlay = this.add.container(0, 0).setDepth(1010).setAlpha(0);
         const height = this.scale.height;
         const extraY = Math.max(0, height - 640);
+        const desktopLayout = height <= 680;
         const tallLayout = height > 720;
-        const titleY = tallLayout ? 48 : 36;
-        const subtitleY = tallLayout ? 82 : 66;
-        const promptY = tallLayout ? 128 : 100;
+        const titleY = desktopLayout ? 34 : tallLayout ? 48 : 36;
+        const subtitleY = desktopLayout ? 62 : tallLayout ? 82 : 66;
+        const promptY = desktopLayout ? 96 : tallLayout ? 128 : 100;
         const continueY = Math.min(594 + extraY, height - 46);
         const blocker = this.add.rectangle(240, height / 2, 480, height, 0x030814, 0.9).setInteractive();
         const title = this.add.text(240, titleY, question.title, {
@@ -1829,37 +1830,44 @@ export default class GameScene extends Phaser.Scene {
         }).setOrigin(0.5);
         const prompt = this.add.text(48, promptY, question.prompt, {
             fontFamily: 'monospace',
-            fontSize: '18px',
+            fontSize: desktopLayout ? '15px' : '18px',
             fontStyle: 'bold',
             fill: '#d9faff',
             stroke: '#000000',
-            strokeThickness: 4,
-            lineSpacing: 5,
-            wordWrap: { width: 384 }
+            strokeThickness: desktopLayout ? 3 : 4,
+            lineSpacing: desktopLayout ? 3 : 5,
+            wordWrap: { width: desktopLayout ? 392 : 384 }
         });
-        const optionGap = tallLayout ? 90 : 84;
-        const optionHeight = tallLayout ? 78 : 70;
-        const optionLabelOffsetY = tallLayout ? 29 : 27;
+        const optionGap = desktopLayout ? 72 : tallLayout ? 90 : 84;
+        const optionHeight = desktopLayout ? 60 : tallLayout ? 78 : 70;
+        const optionLabelOffsetY = desktopLayout ? 22 : tallLayout ? 29 : 27;
         const promptBottom = prompt.y + prompt.height;
         const optionStartY = tallLayout
             ? 266
-            : Math.max(260, promptBottom + optionHeight / 2 + 28);
+            : desktopLayout
+                ? Math.max(220, promptBottom + optionHeight / 2 + 20)
+                : Math.max(260, promptBottom + optionHeight / 2 + 28);
         const lastOptionY = optionStartY + optionGap * (question.options.length - 1);
         const answerY = tallLayout
             ? Math.min(optionStartY + optionGap * 3 + 74, height - 300)
-            : Math.min(lastOptionY + optionHeight / 2 + 58, height - 120);
+            : desktopLayout
+                ? Math.min(lastOptionY + optionHeight / 2 + 28, height - 162)
+                : Math.min(lastOptionY + optionHeight / 2 + 58, height - 120);
         const guideY = tallLayout
             ? Math.min(answerY + 112, height - 198)
-            : Math.min(answerY + 84, height - 116);
-        const guide = this.add.image(82, guideY, 'briefing-storyteller').setDisplaySize(170, 170);
-        const statusText = this.add.text(158, answerY, 'Choose the strongest OCI answer.', {
+            : desktopLayout
+                ? Math.min(answerY + 92, height - 96)
+                : Math.min(answerY + 84, height - 116);
+        const guideSize = desktopLayout ? 140 : 170;
+        const guide = this.add.image(82, guideY, 'briefing-storyteller').setDisplaySize(guideSize, guideSize);
+        const statusText = this.add.text(desktopLayout ? 152 : 158, answerY, 'Choose the strongest OCI answer.', {
             fontFamily: 'monospace',
-            fontSize: '14px',
+            fontSize: desktopLayout ? '12px' : '14px',
             fill: '#d9faff',
             stroke: '#000000',
-            strokeThickness: 3,
-            lineSpacing: 5,
-            wordWrap: { width: 290 }
+            strokeThickness: desktopLayout ? 2 : 3,
+            lineSpacing: desktopLayout ? 3 : 5,
+            wordWrap: { width: desktopLayout ? 300 : 290 }
         });
         const continueButton = this.add.rectangle(330, continueY, 176, 42, 0xc74634, 0.95)
             .setInteractive({ useHandCursor: true })
@@ -1885,13 +1893,13 @@ export default class GameScene extends Phaser.Scene {
                 .setInteractive({ useHandCursor: true });
             const label = this.add.text(58, y - optionLabelOffsetY, `${String.fromCharCode(65 + index)}. ${option}`, {
                 fontFamily: 'monospace',
-                fontSize: '14px',
+                fontSize: desktopLayout ? '12px' : '14px',
                 fontStyle: 'bold',
                 fill: '#ffffff',
                 stroke: '#000000',
-                strokeThickness: 3,
-                lineSpacing: 4,
-                wordWrap: { width: 350, useAdvancedWrap: true }
+                strokeThickness: desktopLayout ? 2 : 3,
+                lineSpacing: desktopLayout ? 2 : 4,
+                wordWrap: { width: desktopLayout ? 358 : 350, useAdvancedWrap: true }
             });
 
             button.on('pointerover', () => {

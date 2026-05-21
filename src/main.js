@@ -1,7 +1,7 @@
 import { initOciRuntime } from "./ociRuntime.js?v=20260521-arch-idle-solid-lines";
 import BootScene from "./scenes/BootScene.js";
 import MenuScene from "./scenes/MenuScene.js";
-import GameScene from "./scenes/GameScene.js";
+import GameScene from "./scenes/GameScene.js?v=20260521-desktop-quiz-layout";
 import GameOverScene from "./scenes/GameOverScene.js";
 import VictoryScene from "./scenes/VictoryScene.js";
 

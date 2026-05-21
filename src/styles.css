@@ -391,16 +391,16 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   background: rgba(5, 13, 21, 0.94);
   border: 1px solid rgba(124, 200, 255, 0.42);
   border-radius: 6px;
-  bottom: 40px;
+  bottom: 12px;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
   display: grid;
   gap: 6px;
   left: 31%;
-  padding: 9px;
+  padding: 8px;
   pointer-events: auto;
   position: absolute;
   touch-action: manipulation;
-  right: 5%;
+  right: 4%;
   z-index: 20;
 }
 
