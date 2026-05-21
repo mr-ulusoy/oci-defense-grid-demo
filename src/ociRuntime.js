@@ -125,20 +125,6 @@ function renderStatus(status) {
   updateObservedVms(status.vm);
   renderVmFleet();
   renderScaleState(status.stress);
-
-  const metrics = status.vm?.metrics;
-  elements.cores.textContent = metrics?.cpuCores == null ? "--" : String(metrics.cpuCores);
-  elements.cpu.textContent = metrics?.cpuPercent == null ? "--%" : `${metrics.cpuPercent}%`;
-  elements.ram.textContent = metrics?.ramPercent == null ? "--%" : `${metrics.ramPercent}%`;
-  if (elements.ramTotal) {
-    elements.ramTotal.textContent = metrics?.ramTotalGb == null ? "--" : String(metrics.ramTotalGb);
-  }
-
-  const diskIo = metrics?.diskIo;
-  elements.diskLabel.textContent = diskIo?.source === "process" ? "Disk I/O*" : "Disk I/O";
-  elements.disk.textContent = diskIo
-    ? `${formatThroughput(diskIo.readKbps)} R / ${formatThroughput(diskIo.writeKbps)} W`
-    : "--";
   renderArchitecture(status);
 }
 
@@ -633,8 +619,10 @@ function renderVmFleet() {
   });
 
   const activeVm = vms.find((vm) => vm.id === activeVmKey);
-  elements.vm.textContent = activeVm ? `Active: ${activeVm.name}` : "Active: status unavailable";
+  const recentVms = recentObservedVms();
+  elements.vm.textContent = activeVm ? `Routing now: ${activeVm.name}` : "Routing now: status unavailable";
   elements.vmCount.textContent = String(recentVmCount());
+  renderFleetSummary(recentVms);
   elements.vmList.innerHTML = "";
 
   for (const vm of vms) {
@@ -657,7 +645,7 @@ function renderVmFleet() {
 
     const age = document.createElement("span");
     age.className = "vm-list-age";
-    age.textContent = vm.id === activeVmKey ? "routing now" : `${formatAge(vm.lastSeen)} ago`;
+    age.textContent = vm.id === activeVmKey ? "Routing now" : `${formatAge(vm.lastSeen)} ago`;
 
     const instance = document.createElement("div");
     instance.append(header, age);
@@ -677,6 +665,53 @@ function renderVmFleet() {
     item.append(instance, resources, disk);
     elements.vmList.appendChild(item);
   }
+}
+
+function renderFleetSummary(vms) {
+  const metrics = vms.map((vm) => vm.metrics ?? {});
+  const totalCores = sumMetric(metrics, "cpuCores");
+  const avgCpu = averageMetric(metrics, "cpuPercent");
+  const avgRam = averageMetric(metrics, "ramPercent");
+  const totalRamGb = sumMetric(metrics, "ramTotalGb");
+  const diskTotals = sumDiskIo(metrics);
+
+  elements.cores.textContent = totalCores == null ? "--" : String(totalCores);
+  elements.cpu.textContent = avgCpu == null ? "--%" : `${avgCpu}%`;
+  elements.ram.textContent = avgRam == null ? "--%" : `${avgRam}%`;
+  if (elements.ramTotal) {
+    elements.ramTotal.textContent = totalRamGb == null ? "--" : String(totalRamGb);
+  }
+  elements.diskLabel.textContent = diskTotals?.source === "process" ? "Disk I/O*" : "Disk I/O";
+  elements.disk.textContent = diskTotals
+    ? `${formatThroughput(diskTotals.readKbps)} R / ${formatThroughput(diskTotals.writeKbps)} W`
+    : "--";
+}
+
+function sumMetric(metrics, key) {
+  const values = metrics.map((item) => Number(item?.[key])).filter(Number.isFinite);
+  if (values.length === 0) return null;
+  return Math.round(values.reduce((sum, value) => sum + value, 0));
+}
+
+function averageMetric(metrics, key) {
+  const values = metrics.map((item) => Number(item?.[key])).filter(Number.isFinite);
+  if (values.length === 0) return null;
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+}
+
+function sumDiskIo(metrics) {
+  const diskEntries = metrics.map((item) => item?.diskIo).filter(Boolean);
+  if (diskEntries.length === 0) return null;
+
+  return {
+    source: diskEntries.some((disk) => disk.source === "process") ? "process" : "host",
+    readKbps: Math.round(
+      diskEntries.reduce((sum, disk) => sum + (Number.isFinite(Number(disk.readKbps)) ? Number(disk.readKbps) : 0), 0)
+    ),
+    writeKbps: Math.round(
+      diskEntries.reduce((sum, disk) => sum + (Number.isFinite(Number(disk.writeKbps)) ? Number(disk.writeKbps) : 0), 0)
+    )
+  };
 }
 
 function createResourceRow(label, value) {
@@ -701,8 +736,12 @@ function createResourceRow(label, value) {
 }
 
 function recentVmCount() {
+  return recentObservedVms().length;
+}
+
+function recentObservedVms() {
   const cutoff = Date.now() - VM_RECENT_MS;
-  return [...observedVms.values()].filter((vm) => vm.lastSeen >= cutoff).length;
+  return [...observedVms.values()].filter((vm) => vm.lastSeen >= cutoff);
 }
 
 function isSyntheticVm(vm) {

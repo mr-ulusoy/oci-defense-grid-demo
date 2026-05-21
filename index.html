@@ -196,17 +196,18 @@
                 </svg>
                 <strong>VM Fleet</strong>
                 <span class="topology-chip">Nodes: <b id="hudVmCount">1</b></span>
+                <span class="topology-chip topology-mode">Active-active</span>
               </div>
-              <strong class="topology-active-vm" id="hudVm">Active: status unavailable</strong>
+              <strong class="topology-active-vm" id="hudVm">Routing now: status unavailable</strong>
             </div>
-            <div class="vm-metrics" aria-label="Active route metrics">
+            <div class="vm-metrics" aria-label="VM fleet summary metrics">
               <div>
                 <span>Cores / CPU</span>
-                <strong><b id="hudCores">--</b> <em>cores</em> <i>/</i> <b id="hudCpu">--%</b> <em>load</em></strong>
+                <strong><b id="hudCores">--</b> <em>cores</em> <i>/</i> <b id="hudCpu">--%</b> <em>avg</em></strong>
               </div>
               <div>
                 <span>RAM / Usage</span>
-                <strong><b id="hudRam">--%</b> <em>used</em> <i>/</i> <b id="hudRamTotal">--</b> <em>GB total</em></strong>
+                <strong><b id="hudRam">--%</b> <em>avg</em> <i>/</i> <b id="hudRamTotal">--</b> <em>GB total</em></strong>
               </div>
               <div>
                 <span id="hudDiskLabel">Disk I/O</span>
@@ -376,6 +377,6 @@
       });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <script type="module" src="/src/main.js?v=20260521-topology-reference"></script>
+    <script type="module" src="/src/main.js?v=20260521-active-active-fleet"></script>
   </body>
 </html>
