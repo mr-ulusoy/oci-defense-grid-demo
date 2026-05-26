@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260521-topology-compact" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260526-browser-roles" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -90,7 +90,11 @@
 
               <div class="arch-node arch-pos-client" id="archPlayer">
                 <span>Browser</span>
-                <strong>Player + Ops</strong>
+                <strong class="arch-browser-roles">
+                  <b class="arch-role-player">Player</b>
+                  <i>+</i>
+                  <b class="arch-role-ops">Ops</b>
+                </strong>
               </div>
               <div class="arch-node arch-pos-public-lb" id="archPublicLb">
                 <span>Public Load Balancer</span>

@@ -620,6 +620,31 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   padding-right: 8px;
 }
 
+.arch-browser-roles {
+  align-items: center;
+  display: flex !important;
+  gap: 6px;
+}
+
+.arch-browser-roles b,
+.arch-browser-roles i {
+  font: inherit;
+}
+
+.arch-browser-roles i {
+  color: var(--muted);
+  font-style: normal;
+  opacity: 0.78;
+}
+
+.arch-role-player {
+  color: var(--accent-2);
+}
+
+.arch-role-ops {
+  color: var(--warning);
+}
+
 .arch-route-legend {
   display: flex;
   flex-wrap: wrap;
