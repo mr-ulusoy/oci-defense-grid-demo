@@ -264,7 +264,7 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   architecture.routeMode.textContent = functionMode ? "Functions ingest + reads" : "VM API fallback";
   architecture.eventRate.textContent = formatArchitectureEventActivity(eventActivity);
   architecture.publicLbState.textContent = status?.loadBalancer ?? "Frontend route";
-  architecture.vmState.textContent = `${recentNodes || 1} nodes observed`;
+  architecture.vmState.textContent = `HTML/CSS/JS game · ${recentNodes || 1} nodes`;
   architecture.apiState.textContent = status?.gateway ?? "/api/* routing";
   architecture.functionState.textContent = functionMode ? "Events + read APIs" : "Standby";
   architecture.vmAppState.textContent = activeVmKey ? `Active ${observedVms.get(activeVmKey)?.name ?? "VM"}` : "Node/Express APIs";
