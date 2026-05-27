@@ -59,6 +59,7 @@ write_files:
       EnvironmentFile=-/etc/oci-defense-adb.env
       Environment=API_GATEWAY_NAME=${api_gateway_name}
       Environment=LOAD_BALANCER_NAME=${load_balancer_name}
+      Environment=PRIVATE_LOAD_BALANCER_NAME=${private_load_balancer_name}
       Environment=OCI_STREAM_OCID=${stream_ocid}
       Environment=OCI_STREAM_MESSAGE_ENDPOINT=${stream_endpoint}
       Environment=OCI_BUCKET_NAME=${bucket_name}

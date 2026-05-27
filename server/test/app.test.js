@@ -29,6 +29,7 @@ test("status endpoint returns VM identity", async () => {
 
   assert.equal(response.status, 200);
   assert.equal(body.vm.name, "local-demo");
+  assert.equal(typeof body.privateLoadBalancer, "string");
   assert.equal(typeof body.vm.metrics.cpuCores, "number");
   assert.equal(typeof body.vm.metrics.cpuPercent, "number");
   assert.equal(typeof body.vm.metrics.ramPercent, "number");

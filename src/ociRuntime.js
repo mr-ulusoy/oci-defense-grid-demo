@@ -268,7 +268,7 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   architecture.apiState.textContent = status?.gateway ?? "/api/* routing";
   architecture.functionState.textContent = functionMode ? "Events + read APIs" : "Standby";
   architecture.vmAppState.textContent = activeVmKey ? `Active ${observedVms.get(activeVmKey)?.name ?? "VM"}` : "Node/Express APIs";
-  architecture.privateLbState.textContent = "VM App route";
+  architecture.privateLbState.textContent = status?.privateLoadBalancer ?? "Private API LB";
   architecture.cacheState.textContent = cacheStatus === "connected" ? "Live player state" : cacheStatus;
   architecture.streamState.textContent = serviceConfigured(streamStatus) ? "Durable event stream" : streamStatus;
   architecture.adbState.textContent = serviceConfigured(adbStatus) ? "Leaderboard + analytics" : adbStatus;

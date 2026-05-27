@@ -39,6 +39,18 @@ function clientIp(req) {
   return forwarded || req.ip || req.socket?.remoteAddress || "unknown";
 }
 
+function privateLoadBalancerName() {
+  const configured = process.env.PRIVATE_LOAD_BALANCER_NAME ?? process.env.API_LOAD_BALANCER_NAME;
+  if (configured) return configured;
+
+  const publicLoadBalancer = process.env.LOAD_BALANCER_NAME;
+  if (publicLoadBalancer?.endsWith("-web-lb")) {
+    return publicLoadBalancer.replace(/-web-lb$/, "-api-lb");
+  }
+
+  return "private-api-lb";
+}
+
 function requireOpsAccess(req, res, next) {
   if (req.body?.ops !== true) {
     res.status(403).json({ error: "Ops access is required." });
@@ -192,6 +204,7 @@ export function createApp({
     res.json({
       gateway: process.env.API_GATEWAY_NAME ?? "api-gateway",
       loadBalancer: process.env.LOAD_BALANCER_NAME ?? "healthy",
+      privateLoadBalancer: privateLoadBalancerName(),
       vm: await vmStatus(),
       sinks: await store.status(),
       streamConsumer: streamConsumer.status(),

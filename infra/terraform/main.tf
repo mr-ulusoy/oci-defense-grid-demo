@@ -33,30 +33,31 @@ locals {
   adb_app_connect_string = var.adb_connect_string != "" ? var.adb_connect_string : local.adb_generated_connect_string
   adb_whitelisted_ips    = length(var.adb_whitelisted_ips) > 0 ? var.adb_whitelisted_ips : (var.adb_is_mtls_connection_required ? [] : ["${oci_core_nat_gateway.demo.nat_ip}/32"])
   app_user_data = base64encode(templatefile("${path.module}/templates/cloud-init.yaml.tftpl", {
-    app_repo_url       = var.app_repo_url
-    app_git_ref        = var.app_git_ref
-    api_base_url       = local.api_base_url
-    api_gateway_name   = oci_apigateway_gateway.demo.display_name
-    load_balancer_name = oci_load_balancer_load_balancer.web.display_name
-    min_app_nodes      = var.instance_pool_min_size
-    stream_ocid        = oci_streaming_stream.events.id
-    stream_endpoint    = oci_streaming_stream.events.messages_endpoint
-    bucket_name        = oci_objectstorage_bucket.raw_events.name
-    namespace          = data.oci_objectstorage_namespace.namespace.namespace
-    genai_endpoint     = var.oci_genai_endpoint
-    genai_bearer_token = var.oci_genai_bearer_token
-    genai_model        = var.oci_genai_model
-    genai_coach_model  = var.oci_genai_coach_model
-    genai_compartment  = coalesce(var.oci_genai_compartment_ocid, var.compartment_ocid)
-    event_ingest_mode  = local.function_ingest_enabled ? "oci-functions" : "vm-api"
-    redis_host         = local.redis_host
-    redis_port         = local.redis_port
-    redis_tls          = local.redis_tls
-    live_player_ttl    = tostring(var.live_player_ttl_seconds)
-    adb_user           = var.adb_user
-    adb_password       = var.adb_admin_password
-    adb_connect_string = local.adb_app_connect_string
-    region             = var.region
+    app_repo_url               = var.app_repo_url
+    app_git_ref                = var.app_git_ref
+    api_base_url               = local.api_base_url
+    api_gateway_name           = oci_apigateway_gateway.demo.display_name
+    load_balancer_name         = oci_load_balancer_load_balancer.web.display_name
+    private_load_balancer_name = oci_load_balancer_load_balancer.api.display_name
+    min_app_nodes              = var.instance_pool_min_size
+    stream_ocid                = oci_streaming_stream.events.id
+    stream_endpoint            = oci_streaming_stream.events.messages_endpoint
+    bucket_name                = oci_objectstorage_bucket.raw_events.name
+    namespace                  = data.oci_objectstorage_namespace.namespace.namespace
+    genai_endpoint             = var.oci_genai_endpoint
+    genai_bearer_token         = var.oci_genai_bearer_token
+    genai_model                = var.oci_genai_model
+    genai_coach_model          = var.oci_genai_coach_model
+    genai_compartment          = coalesce(var.oci_genai_compartment_ocid, var.compartment_ocid)
+    event_ingest_mode          = local.function_ingest_enabled ? "oci-functions" : "vm-api"
+    redis_host                 = local.redis_host
+    redis_port                 = local.redis_port
+    redis_tls                  = local.redis_tls
+    live_player_ttl            = tostring(var.live_player_ttl_seconds)
+    adb_user                   = var.adb_user
+    adb_password               = var.adb_admin_password
+    adb_connect_string         = local.adb_app_connect_string
+    region                     = var.region
   }))
 }
 
