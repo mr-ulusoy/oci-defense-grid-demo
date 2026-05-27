@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260526-browser-roles" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260527-vm-static-label" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -84,6 +84,7 @@
                 <path class="arch-link arch-link-events" d="M 800 623 L 1038 623"></path>
               </svg>
               <div class="arch-flow-label arch-label-game">Player opens the URL</div>
+              <div class="arch-flow-label arch-label-static-game">HTML/CSS/JS game</div>
               <div class="arch-flow-label arch-label-api">/api/status, /api/coach, AI calls</div>
               <div class="arch-flow-label arch-label-events">/api/events + data APIs -> Functions</div>
               <div class="arch-flow-label arch-label-stream">Streaming buffers events</div>
@@ -102,7 +103,7 @@
               </div>
               <div class="arch-node arch-pos-vm-fleet" id="archVmFleet">
                 <span>VM Fleet / Nginx</span>
-                <strong id="archVmState">HTML/CSS/JS game</strong>
+                <strong id="archVmState">Observed 1</strong>
               </div>
               <div class="arch-node arch-pos-api-gateway" id="archApiGateway">
                 <span>API Gateway</span>
@@ -381,6 +382,6 @@
       });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <script type="module" src="/src/main.js?v=20260526-vm-static-game"></script>
+    <script type="module" src="/src/main.js?v=20260527-vm-static-label"></script>
   </body>
 </html>
