@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260527-arch-read-paths" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260527-ai-read-split" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -65,7 +65,8 @@
             <div class="architecture-map" id="architectureMap">
               <div class="arch-route-legend" aria-label="Traffic flow legend">
                 <span><i class="legend-game"></i>Game load</span>
-                <span><i class="legend-api"></i>APIs and AI</span>
+                <span><i class="legend-api"></i>App APIs</span>
+                <span><i class="legend-ai"></i>AI calls</span>
                 <span><i class="legend-read"></i>Read APIs</span>
                 <span><i class="legend-events"></i>Events and storage</span>
               </div>
@@ -86,7 +87,8 @@
                 <path class="arch-link arch-link-events" d="M 800 623 L 1038 623"></path>
               </svg>
               <div class="arch-flow-label arch-label-game">Player opens the URL</div>
-              <div class="arch-flow-label arch-label-api">/api/status, /api/coach, AI calls</div>
+              <div class="arch-flow-label arch-label-api">/api/status, /api/coach</div>
+              <div class="arch-flow-label arch-label-ai">VM App -> OCI GenAI</div>
               <div class="arch-flow-label arch-label-events">/api/events -> Functions</div>
               <div class="arch-flow-label arch-label-read">Read APIs -> Cache + ADB</div>
               <div class="arch-flow-label arch-label-stream">Streaming buffers events</div>
@@ -384,6 +386,6 @@
       });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <script type="module" src="/src/main.js?v=20260527-arch-read-paths"></script>
+    <script type="module" src="/src/main.js?v=20260527-ai-read-split"></script>
   </body>
 </html>

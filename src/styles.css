@@ -685,8 +685,12 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   background: var(--warning);
 }
 
-.legend-read {
+.legend-ai {
   background: rgb(181, 139, 255);
+}
+
+.legend-read {
+  background: rgb(93, 232, 216);
 }
 
 .legend-events {
@@ -713,6 +717,12 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   top: 355px;
 }
 
+.arch-label-ai {
+  color: rgb(203, 184, 255);
+  left: 86.5%;
+  top: 258px;
+}
+
 .arch-label-events {
   color: var(--accent);
   left: 59.8%;
@@ -720,7 +730,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .arch-label-read {
-  color: rgb(203, 184, 255);
+  color: rgb(150, 255, 244);
   left: 72%;
   top: 414px;
 }
@@ -762,7 +772,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .arch-link-read {
-  stroke: rgba(203, 184, 255, 0.9);
+  stroke: rgba(93, 232, 216, 0.9);
 }
 
 .arch-link-events {
