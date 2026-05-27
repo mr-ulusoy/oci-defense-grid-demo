@@ -690,7 +690,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .legend-read {
-  background: rgb(93, 232, 216);
+  background: var(--danger);
 }
 
 .legend-events {
@@ -730,7 +730,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .arch-label-read {
-  color: rgb(150, 255, 244);
+  color: rgb(255, 156, 156);
   left: 72%;
   top: 414px;
 }
@@ -772,7 +772,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 }
 
 .arch-link-read {
-  stroke: rgba(93, 232, 216, 0.9);
+  stroke: rgba(255, 107, 107, 0.92);
 }
 
 .arch-link-events {
