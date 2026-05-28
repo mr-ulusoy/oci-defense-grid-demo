@@ -2,8 +2,8 @@ import { initOciRuntime } from "./ociRuntime.js?v=20260521-active-active-fleet";
 import BootScene from "./scenes/BootScene.js";
 import MenuScene from "./scenes/MenuScene.js";
 import GameScene from "./scenes/GameScene.js?v=20260521-desktop-quiz-layout";
-import GameOverScene from "./scenes/GameOverScene.js";
-import VictoryScene from "./scenes/VictoryScene.js";
+import GameOverScene from "./scenes/GameOverScene.js?v=20260528-rank-end-screen";
+import VictoryScene from "./scenes/VictoryScene.js?v=20260528-rank-end-screen";
 
 const GAME_WIDTH = 480;
 const BASE_GAME_HEIGHT = 640;

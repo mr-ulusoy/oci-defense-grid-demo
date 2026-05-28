@@ -10,6 +10,45 @@ export function formatScore(value) {
   return new Intl.NumberFormat("en-US").format(Number(value ?? 0));
 }
 
+function rankFromLeaderboard(entries = [], target = {}, latestResult = null) {
+  const ranked = [...entries].sort(
+    (left, right) =>
+      Number(right.score ?? 0) - Number(left.score ?? 0) ||
+      Date.parse(left.createdAt ?? 0) - Date.parse(right.createdAt ?? 0)
+  );
+  const numericScore = Number(target.score);
+  const targetIndex = ranked.findIndex((entry) => {
+    if (target.runId && entry.runId) {
+      return entry.runId === target.runId;
+    }
+
+    return (
+      String(entry.callsign ?? "").toUpperCase() === String(target.callsign ?? "").toUpperCase() &&
+      Number(entry.score ?? 0) === numericScore
+    );
+  });
+
+  if (targetIndex >= 0) {
+    return {
+      rank: targetIndex + 1,
+      total: ranked.length,
+      source: "leaderboardFallback",
+      leader: ranked[0] ?? latestResult?.leader ?? null
+    };
+  }
+
+  if (!Number.isFinite(numericScore)) {
+    return null;
+  }
+
+  return {
+    rank: ranked.filter((entry) => Number(entry.score ?? 0) > numericScore).length + 1,
+    total: ranked.length + 1,
+    source: "scoreEstimate",
+    leader: ranked[0] ?? latestResult?.leader ?? null
+  };
+}
+
 export async function fetchGlobalLeaderboardRank(target = {}) {
   let latestResult = null;
   const query = new URLSearchParams();
@@ -33,9 +72,20 @@ export async function fetchGlobalLeaderboardRank(target = {}) {
     }
   }
 
+  try {
+    const entries = await telemetry.refreshLeaderboard();
+    const fallbackRank = rankFromLeaderboard(entries, target, latestResult);
+    if (fallbackRank?.rank) {
+      return fallbackRank;
+    }
+  } catch {
+    // The end screen still has the score, so keep the UI out of a permanent pending state.
+  }
+
   return {
-    rank: null,
-    total: latestResult?.total ?? 0,
+    rank: Number.isFinite(Number(target.score)) ? 1 : null,
+    total: Number.isFinite(Number(target.score)) ? 1 : latestResult?.total ?? 0,
+    source: "localScoreFallback",
     leader: latestResult?.leader ?? null
   };
 }

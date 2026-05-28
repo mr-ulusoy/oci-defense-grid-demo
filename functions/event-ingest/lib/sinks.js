@@ -384,6 +384,94 @@ async function leaderboardFromAutonomousDb() {
   }
 }
 
+async function leaderboardRankFromAutonomousDb({ runId, callsign, score } = {}) {
+  const connection = await createOracleConnection();
+  if (!connection) {
+    const entries = await leaderboardFromAutonomousDb();
+    const numericScore = Number(score);
+    return {
+      rank: Number.isFinite(numericScore)
+        ? entries.filter((entry) => Number(entry.score ?? 0) > numericScore).length + 1
+        : null,
+      total: Number.isFinite(numericScore) ? entries.length + 1 : entries.length,
+      source: "functionMemoryFallback",
+      leader: entries[0] ?? null
+    };
+  }
+
+  try {
+    await ensureAutonomousSchema(connection);
+    const options = await oracleObjectOptions();
+    let target = null;
+
+    if (runId) {
+      const targetResult = await connection.execute(
+        `select callsign, score, run_id
+         from high_scores
+         where run_id = :runId
+         fetch first 1 rows only`,
+        { runId },
+        options
+      );
+      target = targetResult.rows?.[0] ?? null;
+    }
+
+    if (!target && callsign && Number.isFinite(Number(score))) {
+      const targetResult = await connection.execute(
+        `select callsign, score, run_id
+         from high_scores
+         where upper(callsign) = upper(:callsign)
+           and score = :score
+         order by created_at desc
+         fetch first 1 rows only`,
+        { callsign, score: Number(score) },
+        options
+      );
+      target = targetResult.rows?.[0] ?? null;
+    }
+
+    const targetWasPersisted = Boolean(target);
+    const targetScore = Number(target?.SCORE ?? score);
+    if (!Number.isFinite(targetScore)) {
+      return { rank: null, total: 0, source: "autonomousDatabase", leader: null };
+    }
+
+    const rankResult = await connection.execute(
+      `select count(*) + 1 as rank_no
+       from high_scores
+       where score > :score`,
+      { score: targetScore },
+      options
+    );
+    const totalResult = await connection.execute("select count(*) as total_runs from high_scores", [], options);
+    const leaderResult = await connection.execute(
+      `select callsign, score, run_id
+       from high_scores
+       order by score desc, created_at asc
+       fetch first 1 rows only`,
+      [],
+      options
+    );
+
+    const leader = leaderResult.rows?.[0];
+    const totalRuns = toNumber(totalResult.rows?.[0]?.TOTAL_RUNS);
+    return {
+      rank: toNumber(rankResult.rows?.[0]?.RANK_NO),
+      total: targetWasPersisted ? totalRuns : totalRuns + 1,
+      source: "autonomousDatabase",
+      leader: leader
+        ? {
+            callsign: leader.CALLSIGN,
+            score: Number(leader.SCORE),
+            runId: leader.RUN_ID
+          }
+        : null
+    };
+  } finally {
+    await connection.close();
+  }
+}
+
 async function liveAnalyticsFromAutonomousDb(runId) {
   const connection = await createOracleConnection();
   if (!connection) {
@@ -626,6 +714,10 @@ export function createIngestSinks() {
 
     async leaderboard() {
       return leaderboardFromAutonomousDb();
+    },
+
+    async leaderboardRank(target = {}) {
+      return leaderboardRankFromAutonomousDb(target);
     },
 
     async livePlayers() {

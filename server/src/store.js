@@ -444,6 +444,7 @@ export function createStore() {
         target = targetResult.rows?.[0] ?? null;
       }
 
+      const targetWasPersisted = Boolean(target);
       const targetScore = Number(target?.SCORE ?? score);
       if (!Number.isFinite(targetScore)) {
         return null;
@@ -471,9 +472,10 @@ export function createStore() {
       );
 
       const leader = leaderResult.rows?.[0];
+      const totalRuns = toNumber(totalResult.rows?.[0]?.TOTAL_RUNS);
       return {
         rank: toNumber(rankResult.rows?.[0]?.RANK_NO),
-        total: toNumber(totalResult.rows?.[0]?.TOTAL_RUNS),
+        total: targetWasPersisted ? totalRuns : totalRuns + 1,
         source: "autonomousDatabase",
         leader: leader
           ? {
@@ -516,7 +518,7 @@ export function createStore() {
       rank: Number.isFinite(numericScore)
         ? ranked.filter((entry) => Number(entry.score ?? 0) > numericScore).length + 1
         : null,
-      total: ranked.length,
+      total: Number.isFinite(numericScore) ? ranked.length + 1 : ranked.length,
       source: "memory",
       leader: ranked[0] ?? null
     };

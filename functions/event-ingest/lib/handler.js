@@ -163,6 +163,15 @@ export function createIngestHandler({ recordEvents, identity = functionIdentity 
         if (path === "/api/leaderboard") {
           return { entries: (await readApi.leaderboard?.()) ?? [] };
         }
+        if (path === "/api/leaderboard/rank") {
+          return (
+            (await readApi.leaderboardRank?.({
+              runId: queryParam(ctx, "runId"),
+              callsign: queryParam(ctx, "callsign"),
+              score: queryParam(ctx, "score")
+            })) ?? { rank: null, total: 0, leader: null }
+          );
+        }
         if (path === "/api/players/live") {
           return { players: (await readApi.livePlayers?.()) ?? [] };
         }

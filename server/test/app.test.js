@@ -154,6 +154,13 @@ test("leaderboard rank endpoint returns global placement", async () => {
   assert.equal(body.rank, 2);
   assert.equal(body.total, 2);
   assert.equal(body.leader.callsign, "TOP PILOT");
+
+  const estimate = await request(app, "/api/leaderboard/rank?score=30000&callsign=New Pilot");
+
+  assert.equal(estimate.response.status, 200);
+  assert.equal(estimate.body.rank, 2);
+  assert.equal(estimate.body.total, 3);
+  assert.equal(estimate.body.leader.callsign, "TOP PILOT");
 });
 
 test("leaderboard insight endpoint is ops-only and returns card copy", async () => {

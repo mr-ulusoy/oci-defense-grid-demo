@@ -1,4 +1,4 @@
-import { fetchGlobalLeaderboardRank, formatScore } from "../globalLeaderboardRank.js";
+import { fetchGlobalLeaderboardRank, formatScore } from "../globalLeaderboardRank.js?v=20260528-rank-end-screen";
 
 export default class GameOverScene extends Phaser.Scene {
     constructor() {
@@ -186,17 +186,18 @@ export default class GameOverScene extends Phaser.Scene {
         });
 
         if (result.rank) {
-            rankText.setText(`GLOBAL RANK: #${result.rank}`);
+            const total = result.total ? ` OF ${result.total}` : '';
+            rankText.setText(`GLOBAL RANK: #${result.rank}${total}`);
             rankText.setFill(result.rank <= 3 ? '#40f0a0' : '#7cc8ff');
             return;
         }
 
         if (result.leader) {
-            rankText.setText(`GLOBAL RANK PENDING  TOP: ${result.leader.callsign} ${formatScore(result.leader.score)}`);
+            rankText.setText(`TOP RUN: ${result.leader.callsign} ${formatScore(result.leader.score)}`);
             return;
         }
 
-        rankText.setText('GLOBAL RANK: PENDING');
+        rankText.setText('GLOBAL RANK: CHECK LEADERBOARD');
     }
 
     update() {

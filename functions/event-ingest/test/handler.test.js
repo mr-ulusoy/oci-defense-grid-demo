@@ -118,6 +118,28 @@ test("function handler serves leaderboard read route", async () => {
   assert.equal(response.entries[0].callsign, "ADA");
 });
 
+test("function handler serves leaderboard rank read route", async () => {
+  const handler = createIngestHandler({
+    recordEvents: {
+      leaderboardRank: async (target) => ({
+        rank: target.score === "23000" ? 2 : null,
+        total: 4,
+        leader: { callsign: "TOP", score: 50000 }
+      })
+    }
+  });
+  const ctx = createHttpContext("GET", "/api/leaderboard/rank", {
+    callsign: "Zizo",
+    score: "23000"
+  });
+  const response = await handler({}, ctx);
+
+  assert.equal(ctx.httpGateway.statusCode, 200);
+  assert.equal(response.rank, 2);
+  assert.equal(response.total, 4);
+  assert.equal(response.leader.callsign, "TOP");
+});
+
 test("function handler serves live player read route", async () => {
   const handler = createIngestHandler({
     recordEvents: {
