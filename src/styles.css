@@ -711,6 +711,12 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   top: 128px;
 }
 
+.arch-label-static-game {
+  color: var(--accent-2);
+  left: 62%;
+  top: 128px;
+}
+
 .arch-label-api {
   color: var(--warning);
   left: 35.5%;
