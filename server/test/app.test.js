@@ -354,6 +354,66 @@ test("stress endpoint rejects non-ops callers", async () => {
   assert.equal(body.error, "Ops access is required.");
 });
 
+test("full demo reset rejects non-ops callers", async () => {
+  const app = createApp();
+  const { response, body } = await request(app, "/api/admin/reset-demo", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ confirmationCode: "!Oracle#2026!" })
+  });
+
+  assert.equal(response.status, 403);
+  assert.equal(body.error, "Ops access is required.");
+});
+
+test("full demo reset requires the confirmation code", async () => {
+  let resetCalled = false;
+  const app = createApp({
+    store: {
+      resetDemoData: async () => {
+        resetCalled = true;
+        return {};
+      }
+    }
+  });
+  const { response, body } = await request(app, "/api/admin/reset-demo", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ops: true, confirmationCode: "wrong-code" })
+  });
+
+  assert.equal(response.status, 403);
+  assert.equal(body.error, "Invalid reset confirmation code.");
+  assert.equal(resetCalled, false);
+});
+
+test("full demo reset clears demo data with confirmed ops access", async () => {
+  let resetCalled = false;
+  const app = createApp({
+    store: {
+      resetDemoData: async () => {
+        resetCalled = true;
+        return {
+          memory: "cleared",
+          redisLivePlayers: "memory",
+          autonomousDatabase: "disabled",
+          objectStorage: "retained-raw-archive"
+        };
+      }
+    }
+  });
+  const { response, body } = await request(app, "/api/admin/reset-demo", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ops: true, confirmationCode: "!Oracle#2026!" })
+  });
+
+  assert.equal(response.status, 202);
+  assert.equal(body.ok, true);
+  assert.equal(body.reset.memory, "cleared");
+  assert.equal(resetCalled, true);
+});
+
 test("ops endpoints allow ops callers without browser tokens", async () => {
   const previousToken = process.env.OPS_ACCESS_TOKEN;
   process.env.OPS_ACCESS_TOKEN = "test-ops-token";

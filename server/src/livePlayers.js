@@ -142,12 +142,37 @@ export function createMemoryLivePlayers() {
 
     async status() {
       return redisConfigured() ? "fallback-memory" : "memory";
+    },
+
+    async reset() {
+      players.clear();
+      recentEvents.clear();
+      return "memory";
     }
   };
 }
 
 export function createRedisLivePlayers() {
   const memory = createMemoryLivePlayers();
+
+  async function scanKeys(client, pattern) {
+    const keys = [];
+    for await (const value of client.scanIterator({ MATCH: pattern, COUNT: 100 })) {
+      if (Array.isArray(value)) {
+        keys.push(...value);
+      } else {
+        keys.push(value);
+      }
+    }
+    return keys;
+  }
+
+  async function deleteKeys(client, keys) {
+    const uniqueKeys = [...new Set(keys.filter(Boolean))];
+    for (let index = 0; index < uniqueKeys.length; index += 500) {
+      await client.del(uniqueKeys.slice(index, index + 500));
+    }
+  }
 
   async function updateRedis(batch) {
     const client = await redisClient();
@@ -234,6 +259,31 @@ export function createRedisLivePlayers() {
         await client.ping();
         return "connected";
       } catch {
+        return "fallback-memory";
+      }
+    },
+
+    async reset() {
+      await memory.reset();
+      if (!redisConfigured()) {
+        return "memory";
+      }
+
+      try {
+        const client = await redisClient();
+        const sessionIds = await client.zRange(playerIndexKey(), 0, -1).catch(() => []);
+        const indexedKeys = sessionIds.flatMap((sessionId) => [
+          playerKey(sessionId),
+          playerEventsKey(sessionId)
+        ]);
+        const scannedKeys = [
+          ...(await scanKeys(client, `${redisPrefix()}:player:*`)),
+          ...(await scanKeys(client, `${redisPrefix()}:player-events:*`))
+        ];
+        await deleteKeys(client, [playerIndexKey(), ...indexedKeys, ...scannedKeys]);
+        return "connected";
+      } catch (error) {
+        console.warn("Redis live player reset failed; memory fallback was cleared.", error.message);
         return "fallback-memory";
       }
     }

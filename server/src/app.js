@@ -22,6 +22,7 @@ const VALID_EVENTS = new Set([
   "heartbeat"
 ]);
 const COPILOT_MODES = new Set(["live", "leaderboard", "players", "run", "demo_summary"]);
+const DEMO_RESET_CONFIRMATION_CODE = "!Oracle#2026!";
 const DEFAULT_OPS_AI_RATE_LIMIT_PER_MINUTE = 30;
 const DEFAULT_COACH_AI_RATE_LIMIT_PER_MINUTE = 12;
 const DEFAULT_OPS_CONTROL_RATE_LIMIT_PER_MINUTE = 8;
@@ -271,6 +272,25 @@ export function createApp({
         workers: req.body?.workers
       })
     );
+  });
+
+  app.post("/api/admin/reset-demo", requireOpsAccess, opsControlRateLimit, async (req, res) => {
+    if (String(req.body?.confirmationCode ?? "") !== DEMO_RESET_CONFIRMATION_CODE) {
+      res.status(403).json({ error: "Invalid reset confirmation code." });
+      return;
+    }
+
+    try {
+      const reset = await store.resetDemoData();
+      res.status(202).json({
+        ok: true,
+        reset,
+        resetAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.warn("Full demo reset failed.", error.message);
+      res.status(500).json({ error: "Full demo reset failed." });
+    }
   });
 
   app.post("/api/copilot", requireOpsAccess, opsAiRateLimit, async (req, res) => {

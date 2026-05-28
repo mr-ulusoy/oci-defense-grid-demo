@@ -303,6 +303,27 @@ export function createStore() {
     }
   }
 
+  async function resetAutonomousDemoData() {
+    const connection = await createOracleConnection();
+    if (!connection) {
+      return "disabled";
+    }
+
+    try {
+      await ensureAutonomousSchema(connection);
+      await connection.execute("delete from ai_insights");
+      await connection.execute("delete from high_scores");
+      await connection.execute("delete from game_events");
+      await connection.commit();
+      return "cleared";
+    } catch (error) {
+      await connection.rollback().catch(() => {});
+      throw error;
+    } finally {
+      await connection.close();
+    }
+  }
+
   async function eventAnalyticsFromAutonomousDb() {
     const connection = await createOracleConnection();
     if (!connection) {
@@ -586,7 +607,7 @@ export function createStore() {
       try {
         const persisted = await leaderboardFromAutonomousDb();
         if (persisted) {
-          entries = mergeLeaderboards(persisted, leaderboard);
+          entries = persisted.length > 0 ? mergeLeaderboards(persisted, leaderboard) : [];
         }
       } catch (error) {
         console.warn("Autonomous Database leaderboard read failed, using memory fallback.", error.message);
@@ -648,6 +669,28 @@ export function createStore() {
     async recordInsight(insight) {
       insights.push(insight);
       insights.splice(0, Math.max(0, insights.length - 50));
+    },
+
+    async resetDemoData() {
+      events.splice(0, events.length);
+      leaderboard.splice(0, leaderboard.length);
+      insights.splice(0, insights.length);
+
+      const [livePlayersResult, autonomousResult] = await Promise.allSettled([
+        livePlayers.reset(),
+        resetAutonomousDemoData()
+      ]);
+
+      if (autonomousResult.status === "rejected") {
+        throw autonomousResult.reason;
+      }
+
+      return {
+        memory: "cleared",
+        redisLivePlayers: livePlayersResult.status === "fulfilled" ? livePlayersResult.value : "failed",
+        autonomousDatabase: autonomousResult.value,
+        objectStorage: "retained-raw-archive"
+      };
     }
   };
 }

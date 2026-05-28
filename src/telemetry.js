@@ -303,6 +303,21 @@ export class OciTelemetry {
     };
   }
 
+  async resetDemoData(confirmationCode) {
+    try {
+      const result = await fetch(`${this.apiBase}/admin/reset-demo`, {
+        method: "POST",
+        headers: this.jsonHeaders(),
+        body: JSON.stringify({ ops: true, confirmationCode })
+      }).then(readJson);
+      this.offline = false;
+      return result;
+    } catch (error) {
+      this.offline = true;
+      throw error;
+    }
+  }
+
   async askCopilot(snapshot, options = {}) {
     if (!this.config.copilotEnabled) {
       return {

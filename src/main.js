@@ -1,4 +1,4 @@
-import { initOciRuntime } from "./ociRuntime.js?v=20260521-active-active-fleet";
+import { initOciRuntime } from "./ociRuntime.js?v=20260528-demo-reset";
 import BootScene from "./scenes/BootScene.js";
 import MenuScene from "./scenes/MenuScene.js";
 import GameScene from "./scenes/GameScene.js?v=20260528-lvl3-boss-v2";

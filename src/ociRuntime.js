@@ -48,6 +48,8 @@ const elements = {
   copilotMeta: document.getElementById("copilotMeta"),
   startStress: document.getElementById("startStress"),
   stopStress: document.getElementById("stopStress"),
+  resetDemoData: document.getElementById("resetDemoData"),
+  resetDemoStatus: document.getElementById("resetDemoStatus"),
   refreshLeaderboard: document.getElementById("refreshLeaderboard")
 };
 
@@ -1196,6 +1198,49 @@ export async function stopStress() {
   }
 }
 
+export async function resetDemoData() {
+  if (!isOpsView || !elements.resetDemoData) return;
+
+  const confirmationCode = window.prompt("Type !Oracle#2026! to permanently clear demo leaderboard, analytics and live player state.");
+  if (!confirmationCode) {
+    if (elements.resetDemoStatus) elements.resetDemoStatus.textContent = "Reset cancelled";
+    return;
+  }
+
+  elements.resetDemoData.disabled = true;
+  if (elements.resetDemoStatus) elements.resetDemoStatus.textContent = "Resetting...";
+  try {
+    const result = await telemetry.resetDemoData(confirmationCode);
+    leaderboardCardInsights.clear();
+    liveCopilotInsights.clear();
+    latestLeaderboardEntries = [];
+    latestLiveCopilotSignature = "";
+    renderCopilotResult({
+      insight: "Demo data was reset. Waiting for new live telemetry.",
+      source: "local",
+      mode: activeCopilotMode()
+    });
+    renderLivePlayers([]);
+    renderEventAnalytics({
+      source: "autonomousDatabase",
+      windows: { last1m: 0, last5m: 0, last15m: 0 },
+      eventTypes: []
+    });
+    await refreshLeaderboardBoard({ forceInsights: true });
+    if (elements.resetDemoStatus) {
+      elements.resetDemoStatus.textContent = result?.ok ? "Demo data cleared" : "Reset completed";
+    }
+  } catch (error) {
+    if (elements.resetDemoStatus) {
+      elements.resetDemoStatus.textContent = error?.message ?? "Reset failed";
+    }
+  } finally {
+    window.setTimeout(() => {
+      elements.resetDemoData.disabled = false;
+    }, 3000);
+  }
+}
+
 export async function emitGameEvent(type, snapshot = {}) {
   await telemetry.emit(type, snapshot);
   updateHud(snapshot);
@@ -1228,6 +1273,10 @@ export async function initOciRuntime() {
     if (elements.stopStress && elements.stopStress.dataset.stressBound !== "true") {
       elements.stopStress.dataset.stressBound = "true";
       elements.stopStress.addEventListener("click", () => stopStress());
+    }
+    if (elements.resetDemoData && elements.resetDemoData.dataset.resetBound !== "true") {
+      elements.resetDemoData.dataset.resetBound = "true";
+      elements.resetDemoData.addEventListener("click", () => resetDemoData());
     }
     elements.refreshLeaderboard.addEventListener("click", async () => {
       await refreshLeaderboardBoard({ forceInsights: true });

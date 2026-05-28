@@ -236,9 +236,15 @@
                 <strong id="stressStatus">Idle</strong>
                 <small id="scaleState">Stable</small>
               </div>
+              <div class="demo-reset-copy">
+                <span>Demo data</span>
+                <strong id="resetDemoStatus">Ready</strong>
+                <small>Requires confirmation code</small>
+              </div>
               <div class="stress-actions">
                 <button type="button" id="startStress" title="Start controlled CPU stress">Stress VMs</button>
                 <button type="button" id="stopStress" title="Release CPU stress and wait for scale-in">Scale Down</button>
+                <button type="button" id="resetDemoData" class="danger-action" title="Clear leaderboard, analytics and live player state">Full Demo Reset</button>
               </div>
             </div>
           </div>
@@ -387,6 +393,6 @@
       });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <script type="module" src="/src/main.js?v=20260528-lvl3-boss-v2"></script>
+    <script type="module" src="/src/main.js?v=20260528-demo-reset"></script>
   </body>
 </html>
