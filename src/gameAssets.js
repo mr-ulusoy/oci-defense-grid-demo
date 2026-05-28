@@ -145,6 +145,7 @@ export function loadLevelAssets(scene, level) {
         loadSpritesheet(scene, 'fire-skull', 'assets/sprites/level2/fire-skull.png', {
             frameWidth: 96, frameHeight: 112
         });
+        loadImage(scene, 'lvl2-boss', 'assets/sprites/bosses/lvl2_boss.png');
         loadImage(scene, 'briefing-api-lb', 'assets/briefings/api-lb.png');
         return;
     }
@@ -170,6 +171,7 @@ export function loadLevelAssets(scene, level) {
         loadSpritesheet(scene, 'demon-attack', 'assets/sprites/level3/demon-attack.png', {
             frameWidth: 240, frameHeight: 192
         });
+        loadImage(scene, 'lvl3-boss', 'assets/sprites/bosses/lvl3_boss.png');
         loadImage(scene, 'briefing-compute', 'assets/briefings/compute.png');
         return;
     }

@@ -1057,16 +1057,16 @@ export default class GameScene extends Phaser.Scene {
                 hitbox: { w: 160, h: 100, ox: 16, oy: 22 }
             },
             2: {
-                key: 'fire-skull',
-                anim: 'fire-skull-idle',
-                scale: 2.25,
-                hitbox: { w: 120, h: 135, ox: -12, oy: -12 }
+                key: 'lvl2-boss',
+                anim: null,
+                scale: 0.86,
+                hitbox: { w: 185, h: 175, ox: 32, oy: 36 }
             },
             3: {
-                key: 'demon-idle',
-                anim: 'demon-idle',
-                scale: 1.8,
-                hitbox: { w: 200, h: 180, ox: -20, oy: -18 }
+                key: 'lvl3-boss',
+                anim: null,
+                scale: 0.28,
+                hitbox: { w: 650, h: 510, ox: 125, oy: 95 }
             },
             4: {
                 key: 'final-enemy-boss',
@@ -1081,7 +1081,9 @@ export default class GameScene extends Phaser.Scene {
         // Create boss and add to dedicated boss group
         this.boss = this.bossGroup.create(240, -100, config.key);
         this.boss.setScale(config.scale);
-        this.boss.play(config.anim);
+        if (config.anim) {
+            this.boss.play(config.anim);
+        }
         this.boss.setDepth(5);
 
         // Store boss type for later reference
