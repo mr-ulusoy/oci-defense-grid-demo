@@ -1,5 +1,5 @@
 import { askCoach, askCopilot, emitGameEvent, telemetry, updateHud } from "../ociRuntime.js";
-import { createLevelAnimations, loadLevelAssets } from "../gameAssets.js";
+import { createLevelAnimations, loadLevelAssets } from "../gameAssets.js?v=20260528-lvl3-boss-v2";
 
 const BRIEFINGS_BY_LEVEL = {
     1: {
@@ -1065,8 +1065,8 @@ export default class GameScene extends Phaser.Scene {
             3: {
                 key: 'lvl3-boss',
                 anim: null,
-                scale: 0.28,
-                hitbox: { w: 650, h: 510, ox: 125, oy: 95 }
+                scale: 0.44,
+                hitbox: { w: 415, h: 326, ox: 80, oy: 61 }
             },
             4: {
                 key: 'final-enemy-boss',

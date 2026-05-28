@@ -171,7 +171,7 @@ export function loadLevelAssets(scene, level) {
         loadSpritesheet(scene, 'demon-attack', 'assets/sprites/level3/demon-attack.png', {
             frameWidth: 240, frameHeight: 192
         });
-        loadImage(scene, 'lvl3-boss', 'assets/sprites/bosses/lvl3_boss.png');
+        loadImage(scene, 'lvl3-boss', 'assets/sprites/bosses/lvl3_boss-v2.png');
         loadImage(scene, 'briefing-compute', 'assets/briefings/compute.png');
         return;
     }
