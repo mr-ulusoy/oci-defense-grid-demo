@@ -12,10 +12,12 @@ const DEFAULT_GENAI_MODEL = "openai.gpt-oss-120b";
 const DEFAULT_COACH_GENAI_MODEL = "google.gemini-2.5-flash-lite";
 const DEFAULT_GENAI_TIMEOUT_MS = 25000;
 const DEFAULT_COACH_GENAI_TIMEOUT_MS = 12000;
-const DEFAULT_CARD_INSIGHT_TIMEOUT_MS = 25000;
+const DEFAULT_CARD_INSIGHT_TIMEOUT_MS = 15000;
 const COPILOT_GATEWAY_SAFE_TIMEOUT_MS = 7600;
 const COACH_REPLY_WORD_LIMIT = 45;
 const COPILOT_REPLY_WORD_LIMIT = 220;
+const CARD_INSIGHT_REPLY_WORD_LIMIT = 90;
+const CARD_INSIGHT_MAX_TOKENS = 1200;
 const CARD_INSIGHT_CACHE_MAX_ENTRIES = 50;
 
 const cardInsightCache = new Map();
@@ -590,68 +592,45 @@ function buildAnalysisPrompt(context) {
   ].join("\n");
 }
 
-function buildCardInsightPrompt(entries = []) {
+function buildCardInsightPrompt(entry = {}, index = 0) {
   return [
-    "You are a gameplay analyst for OCI Defense Grid leaderboard cards.",
-    "Return compact valid JSON only. Do not explain your reasoning. No markdown, comments, prose, code fences or trailing commas.",
-    "Start the response with {\"cards\": and return one JSON object with a cards array.",
-    "Example shape: {\"cards\":[{\"rank\":1,\"callsign\":\"NAME\",\"title\":\"Clean Run\",\"headline\":\"Short sentence.\",\"detail\":\"Two or three short sentences.\",\"tone\":\"clean\"}]}",
-    "Create one mini run analysis for each player in the input array. Each object represents one completed run.",
-    "Each cards item must include: rank, callsign, title, headline, detail, tone.",
-    "title: 1-3 words, title case. headline: one short sentence under 16 words. detail: two or three short sentences under 65 words total.",
-    "The detail must explain strength, risk or pressure, and one next benchmark or coaching point.",
-    "tone must be one of: clean, controlled, recovery, risk, aggressive.",
+    "You are the OCI Defense Grid gameplay analyst for one leaderboard card.",
+    "Return exactly these four labeled lines and nothing else:",
+    "Title: 1-3 words, title case",
+    "Headline: one short sentence under 18 words",
+    "Detail: two or three short sentences under 90 words total",
+    "Tone: clean | controlled | recovery | risk | aggressive",
     "Use only the provided metrics. Do not invent numbers.",
     "extraLivesCollected means extra lives collected, not used. Never write 'used extra lives'.",
     "Mention collected extra lives only when extraLivesCollected is greater than 0.",
-    "Analyze the full run using score, level, kills, hits, powerups, extra lives collected and boss phases.",
-    "Focus on playing style, risk, control, recovery and efficiency.",
-    `Input JSON: ${JSON.stringify(entries.slice(0, 2).map(cardMetrics))}`
+    "The detail must explain playing style, strength, risk or pressure, and one concrete coaching benchmark.",
+    "No markdown, bullets or OCI architecture references.",
+    `Metrics JSON: ${JSON.stringify(cardMetrics(entry, index))}`
   ].join("\n");
 }
 
-function jsonArrayFromParsedValue(value) {
-  if (Array.isArray(value)) {
-    return value;
-  }
-  if (typeof value === "object" && value !== null) {
-    if (Array.isArray(value.cards)) {
-      return value.cards;
-    }
-    if (Array.isArray(value.insights)) {
-      return value.insights;
-    }
-    if (Array.isArray(value.results)) {
-      return value.results;
-    }
-    return null;
-  }
-
-  return null;
-}
-
-function parseJsonArray(value) {
-  const direct = jsonArrayFromParsedValue(value);
-  if (direct) {
-    return direct;
-  }
-
+function parseCardInsightText(value) {
   const text = String(value ?? "").trim();
   try {
     const parsed = JSON.parse(text);
-    return jsonArrayFromParsedValue(parsed);
-  } catch {
-    const match = text.match(/\[[\s\S]*\]/);
-    if (!match) {
-      return null;
+    if (Array.isArray(parsed?.cards)) {
+      return parsed.cards[0] ?? null;
     }
-    try {
-      const parsed = JSON.parse(match[0]);
-      return jsonArrayFromParsedValue(parsed);
-    } catch {
-      return null;
+    if (typeof parsed === "object" && parsed !== null) {
+      return parsed;
+    }
+  } catch {
+    // Continue with the lightweight labeled-line parser.
+  }
+
+  const fields = {};
+  for (const line of text.split(/\n+/)) {
+    const match = line.match(/^\s*(title|headline|detail|tone)\s*:\s*(.+)$/i);
+    if (match) {
+      fields[match[1].toLowerCase()] = match[2].trim();
     }
   }
+  return Object.keys(fields).length > 0 ? fields : null;
 }
 
 function jsonPreview(value) {
@@ -695,7 +674,7 @@ function sanitizeCardInsight(rawInsight, entry, index) {
   const fallback = deterministicCardInsight(entry, index);
   const title = compactSentence(rawInsight?.title, 3);
   const headline = compactSentence(rawInsight?.headline, 16);
-  const detail = compactSentence(rawInsight?.detail, 70);
+  const detail = compactSentence(rawInsight?.detail, CARD_INSIGHT_REPLY_WORD_LIMIT);
 
   if (!title || !headline || !detail) {
     return fallback;
@@ -957,24 +936,36 @@ export async function createLeaderboardCardInsights(entries = []) {
   const started = Date.now();
   const model = getCardInsightModel();
   const fastModel = getCoachModel();
-  const prompt = buildCardInsightPrompt(topEntries);
   const timeoutMs = Number(process.env.OCI_GENAI_CARD_TIMEOUT_MS ?? DEFAULT_CARD_INSIGHT_TIMEOUT_MS);
 
-  const analyzeCardsWithModel = async (modelId, source, timeout) => {
+  const analyzeCardWithModel = async (entry, index, modelId, timeout) => {
+    const prompt = buildCardInsightPrompt(entry, index);
     const externalInsight = await withTimeout(
       callExternalCopilot(prompt, {
         model: modelId,
-        maxTokens: 6000,
-        temperature: 0.1
+        maxTokens: CARD_INSIGHT_MAX_TOKENS,
+        temperature: 0.2
       }),
       timeout
     );
-    const parsed = parseJsonArray(externalInsight);
+    const parsed = parseCardInsightText(externalInsight);
     if (!parsed) {
-      throw new Error(`Leaderboard card GenAI did not return JSON: ${jsonPreview(externalInsight)}`);
+      throw new Error(`Leaderboard card GenAI did not return labeled copy: ${jsonPreview(externalInsight)}`);
     }
 
-    const cards = topEntries.map((entry, index) => sanitizeCardInsight(parsed[index], entry, index));
+    return sanitizeCardInsight(parsed, entry, index);
+  };
+
+  const analyzeCardsWithModel = async (modelId, source, timeout) => {
+    const results = await Promise.allSettled(
+      topEntries.map((entry, index) => analyzeCardWithModel(entry, index, modelId, timeout))
+    );
+    const failed = results.find((result) => result.status === "rejected");
+    if (failed) {
+      throw failed.reason;
+    }
+
+    const cards = results.map((result) => result.value);
     return {
       cards,
       source,
