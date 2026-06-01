@@ -111,6 +111,7 @@ POST /api/ops/logout
 ```
 
 `POST /api/copilot` is for the presenter/ops view only. The ops page requires an admin login and receives an HTTP-only session cookie before it can call presenter APIs. The default demo password is `OCI2026`; override it with `OPS_ADMIN_PASSWORD` and set `OPS_SESSION_SECRET` for a stable shared cookie secret across VM backends.
+The player view uses the API Gateway endpoint from `config.js`. The presenter/ops view intentionally uses same-origin `/api` through the public Load Balancer/VM app so the HTTP-only admin session cookie stays first-party and works reliably in browsers.
 `POST /api/stress` follows the same ops-only login pattern and starts short, bounded CPU load on VM API backends so autoscaling can be demonstrated without real player volume.
 `POST /api/coach` is the player-facing OCI Guide helper used during level-unlock quizzes. It accepts a known `level/questionId`, a short player message and returns a guarded hint from OCI GenAI or deterministic fallback. It is rate-limited so public players cannot use it as a general-purpose GenAI proxy.
 
@@ -181,7 +182,7 @@ terraform -chdir=infra/terraform plan -var-file=demo.tfvars
 terraform -chdir=infra/terraform apply -var-file=demo.tfvars
 ```
 
-Terraform outputs `game_url` and `api_gateway_endpoint`. The VM cloud-init writes `config.js` so the browser calls API Gateway rather than bypassing it.
+Terraform outputs `game_url` and `api_gateway_endpoint`. The VM cloud-init writes `config.js` so the player browser calls API Gateway rather than bypassing it. The ops dashboard overrides that at runtime and calls same-origin `/api` for session-protected presenter endpoints.
 
 ## Manual IAM Prerequisites
 

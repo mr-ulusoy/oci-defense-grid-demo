@@ -27,6 +27,10 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function isOpsView() {
+  return new URLSearchParams(window.location.search).get("ops") === "1";
+}
+
 class ApiRequestError extends Error {
   constructor(response, body) {
     const message = typeof body?.error === "string"
@@ -58,6 +62,10 @@ async function readJson(response) {
 export class OciTelemetry {
   constructor(config = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+    // Keep ops session cookies first-party. The player view can still use an
+    // API Gateway apiBase from config.js, but the locked ops HUD uses /api on
+    // the same Load Balancer origin for login and presenter-only endpoints.
+    this.resolvedApiBase = (isOpsView() ? "/api" : this.config.apiBase).replace(/\/$/, "");
     this.runId = uuid();
     this.sessionId = uuid();
     this.pending = [];
@@ -69,7 +77,7 @@ export class OciTelemetry {
   }
 
   get apiBase() {
-    return this.config.apiBase.replace(/\/$/, "");
+    return this.resolvedApiBase;
   }
 
   jsonHeaders() {
