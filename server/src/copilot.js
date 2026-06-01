@@ -593,8 +593,9 @@ function buildAnalysisPrompt(context) {
 function buildCardInsightPrompt(entries = []) {
   return [
     "You are a gameplay analyst for OCI Defense Grid leaderboard cards.",
-    "Return valid JSON only. No markdown, comments, prose, code fences or trailing commas.",
-    "The response must be one JSON object with a cards array. Example shape: {\"cards\":[{\"rank\":1,\"callsign\":\"NAME\",\"title\":\"Clean Run\",\"headline\":\"Short sentence.\",\"detail\":\"Two or three short sentences.\",\"tone\":\"clean\"}]}",
+    "Return compact valid JSON only. Do not explain your reasoning. No markdown, comments, prose, code fences or trailing commas.",
+    "Start the response with {\"cards\": and return one JSON object with a cards array.",
+    "Example shape: {\"cards\":[{\"rank\":1,\"callsign\":\"NAME\",\"title\":\"Clean Run\",\"headline\":\"Short sentence.\",\"detail\":\"Two or three short sentences.\",\"tone\":\"clean\"}]}",
     "Create one mini run analysis for each player in the input array. Each object represents one completed run.",
     "Each cards item must include: rank, callsign, title, headline, detail, tone.",
     "title: 1-3 words, title case. headline: one short sentence under 16 words. detail: two or three short sentences under 65 words total.",
@@ -963,8 +964,7 @@ export async function createLeaderboardCardInsights(entries = []) {
     const externalInsight = await withTimeout(
       callExternalCopilot(prompt, {
         model: modelId,
-        maxTokens: 1600,
-        jsonObject: true,
+        maxTokens: 3200,
         reasoningEffort: "NONE",
         verbosity: "LOW",
         temperature: 0.1
