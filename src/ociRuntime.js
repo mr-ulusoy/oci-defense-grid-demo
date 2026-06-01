@@ -500,7 +500,7 @@ function fallbackReserveInsight(entry = {}, index = 0) {
     return {
       title: "Recovery analysis",
       headline,
-      detail: `Collected ${formatNumber(extraLives)} extra ${livesLabel}; strong output, but damage pressure is high.`,
+      detail: `The run produced strong offense, but ${formatNumber(hits)} hits show real pressure. Collected ${formatNumber(extraLives)} extra ${livesLabel}, which helped keep the run alive through damage spikes.`,
       tone: "risk",
       modelLabel
     };
@@ -510,7 +510,7 @@ function fallbackReserveInsight(entry = {}, index = 0) {
     return {
       title: "Run analysis",
       headline,
-      detail: `Collected ${formatNumber(extraLives)} extra ${livesLabel}; recovery resources helped sustain pressure.`,
+      detail: `Collected ${formatNumber(extraLives)} extra ${livesLabel}, giving the pilot a strong recovery buffer. The next benchmark is keeping the same score pace with fewer rescue pickups needed.`,
       tone: "recovery",
       modelLabel
     };
@@ -520,7 +520,7 @@ function fallbackReserveInsight(entry = {}, index = 0) {
     return {
       title: "Clean analysis",
       headline,
-      detail: "Low damage and strong progress show controlled survival.",
+      detail: "Low damage and deep progress show strong control. The pilot can push the score ceiling by keeping that survival profile while taking more aggressive kill routes.",
       tone: "clean",
       modelLabel
     };
@@ -530,7 +530,7 @@ function fallbackReserveInsight(entry = {}, index = 0) {
     return {
       title: "Risk analysis",
       headline,
-      detail: "No extra-life buffer was collected, so the run had limited recovery margin.",
+      detail: "The run survived pressure, but high damage left little margin for mistakes. Without an extra-life buffer, one bad wave could quickly collapse the attempt.",
       tone: "risk",
       modelLabel
     };
@@ -539,7 +539,7 @@ function fallbackReserveInsight(entry = {}, index = 0) {
   return {
     title: index === 0 ? "Leader analysis" : "Contender analysis",
     headline,
-    detail: "Score, level and damage pattern show steady control.",
+    detail: "Score, level and damage pattern show steady control. The next improvement is turning that stability into more kills, powerups and cleaner boss phases.",
     tone: "controlled",
     modelLabel
   };

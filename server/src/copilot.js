@@ -198,7 +198,7 @@ function deterministicCardInsight(entry = {}, index = 0) {
       ...metrics,
       title: "Recovery analysis",
       headline: `${killText}, ${hitText}.`,
-      detail: `Collected ${metrics.extraLivesCollected} extra ${livesLabel}; strong output, but damage pressure is high.`,
+      detail: `The run produced strong offense, but ${metrics.hits} hits show real pressure. Collected ${metrics.extraLivesCollected} extra ${livesLabel}, which helped keep the run alive through damage spikes.`,
       tone: "risk"
     };
   }
@@ -208,7 +208,7 @@ function deterministicCardInsight(entry = {}, index = 0) {
       ...metrics,
       title: "Run analysis",
       headline: `${killText}, ${hitText}.`,
-      detail: `Collected ${metrics.extraLivesCollected} extra ${livesLabel}; recovery resources helped sustain pressure.`,
+      detail: `Collected ${metrics.extraLivesCollected} extra ${livesLabel}, giving the pilot a strong recovery buffer. The next benchmark is keeping the same score pace with fewer rescue pickups needed.`,
       tone: "recovery"
     };
   }
@@ -218,7 +218,7 @@ function deterministicCardInsight(entry = {}, index = 0) {
       ...metrics,
       title: "Clean analysis",
       headline: `${killText}, ${hitText}.`,
-      detail: "Low damage and strong progress show controlled survival.",
+      detail: "Low damage and deep progress show strong control. The pilot can push the score ceiling by keeping that survival profile while taking more aggressive kill routes.",
       tone: "clean"
     };
   }
@@ -228,7 +228,7 @@ function deterministicCardInsight(entry = {}, index = 0) {
       ...metrics,
       title: "Risk analysis",
       headline: `${killText}, ${hitText}.`,
-      detail: "No extra-life buffer was collected, so the run had limited recovery margin.",
+      detail: "The run survived pressure, but high damage left little margin for mistakes. Without an extra-life buffer, one bad wave could quickly collapse the attempt.",
       tone: "risk"
     };
   }
@@ -237,7 +237,7 @@ function deterministicCardInsight(entry = {}, index = 0) {
     ...metrics,
     title: index === 0 ? "Leader analysis" : "Contender analysis",
     headline: `${killText}, ${hitText}.`,
-    detail: "Score, level and damage pattern show steady control.",
+    detail: "Score, level and damage pattern show steady control. The next improvement is turning that stability into more kills, powerups and cleaner boss phases.",
     tone: "controlled"
   };
 }
@@ -590,10 +590,11 @@ function buildCardInsightPrompt(entries = []) {
   return [
     "You are a gameplay analyst for OCI Defense Grid leaderboard cards.",
     "Return valid JSON only. No markdown, comments, prose, code fences or trailing commas.",
-    "The response must be one JSON object with a cards array. Example shape: {\"cards\":[{\"rank\":1,\"callsign\":\"NAME\",\"title\":\"Clean Run\",\"headline\":\"Short sentence.\",\"detail\":\"Short sentence.\",\"tone\":\"clean\"}]}",
-    "Create one short run analysis for each player in the input array. Each object represents one completed run.",
+    "The response must be one JSON object with a cards array. Example shape: {\"cards\":[{\"rank\":1,\"callsign\":\"NAME\",\"title\":\"Clean Run\",\"headline\":\"Short sentence.\",\"detail\":\"Two or three short sentences.\",\"tone\":\"clean\"}]}",
+    "Create one mini run analysis for each player in the input array. Each object represents one completed run.",
     "Each cards item must include: rank, callsign, title, headline, detail, tone.",
-    "title: 1-3 words, title case. headline: one short sentence under 10 words. detail: one short sentence under 20 words.",
+    "title: 1-3 words, title case. headline: one short sentence under 16 words. detail: two or three short sentences under 65 words total.",
+    "The detail must explain strength, risk or pressure, and one next benchmark or coaching point.",
     "tone must be one of: clean, controlled, recovery, risk, aggressive.",
     "Use only the provided metrics. Do not invent numbers.",
     "extraLivesCollected means extra lives collected, not used. Never write 'used extra lives'.",
@@ -688,8 +689,8 @@ function normalizeTone(value, fallback) {
 function sanitizeCardInsight(rawInsight, entry, index) {
   const fallback = deterministicCardInsight(entry, index);
   const title = compactSentence(rawInsight?.title, 3);
-  const headline = compactSentence(rawInsight?.headline, 10);
-  const detail = compactSentence(rawInsight?.detail, 22);
+  const headline = compactSentence(rawInsight?.headline, 16);
+  const detail = compactSentence(rawInsight?.detail, 70);
 
   if (!title || !headline || !detail) {
     return fallback;

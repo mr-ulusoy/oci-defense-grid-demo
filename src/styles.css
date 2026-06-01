@@ -1939,10 +1939,13 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .leaderboard-reserve em {
   color: var(--text);
   font-style: normal;
+  line-height: 1.35;
 }
 
 .leaderboard-reserve em {
   color: var(--muted);
+  display: block;
+  max-width: 68ch;
 }
 
 .leaderboard-reserve small {
