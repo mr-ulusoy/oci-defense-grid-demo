@@ -964,9 +964,7 @@ export async function createLeaderboardCardInsights(entries = []) {
     const externalInsight = await withTimeout(
       callExternalCopilot(prompt, {
         model: modelId,
-        maxTokens: 3200,
-        reasoningEffort: "NONE",
-        verbosity: "LOW",
+        maxTokens: 6000,
         temperature: 0.1
       }),
       timeout
