@@ -81,6 +81,27 @@ export class OciTelemetry {
     await this.refreshLeaderboard();
   }
 
+  async checkOpsSession() {
+    try {
+      const result = await fetch(`${this.apiBase}/ops/session`, {
+        credentials: "same-origin"
+      }).then(readJson);
+      return result.authenticated === true;
+    } catch {
+      return false;
+    }
+  }
+
+  async loginOps(password) {
+    const result = await fetch(`${this.apiBase}/ops/login`, {
+      method: "POST",
+      headers: this.jsonHeaders(),
+      credentials: "same-origin",
+      body: JSON.stringify({ password })
+    }).then(readJson);
+    return result.authenticated === true;
+  }
+
   eventRate() {
     const cutoff = Date.now() - 10000;
     this.recentEvents = this.recentEvents.filter((event) => event.ts >= cutoff);
@@ -176,6 +197,7 @@ export class OciTelemetry {
       fetch(url, {
         method: "POST",
         headers: this.jsonHeaders({ ops: true }),
+        credentials: "same-origin",
         body: JSON.stringify({ ops: true })
       }).then(readJson);
 
@@ -204,7 +226,9 @@ export class OciTelemetry {
 
   async refreshLivePlayers() {
     try {
-      const result = await fetch(`${this.apiBase}/players/live`).then(readJson);
+      const result = await fetch(`${this.apiBase}/players/live`, {
+        credentials: "same-origin"
+      }).then(readJson);
       this.offline = false;
       return result.players ?? [];
     } catch {
@@ -215,7 +239,9 @@ export class OciTelemetry {
 
   async analytics() {
     try {
-      return await fetch(`${this.apiBase}/analytics/live?runId=${this.runId}`).then(readJson);
+      return await fetch(`${this.apiBase}/analytics/live?runId=${this.runId}`, {
+        credentials: "same-origin"
+      }).then(readJson);
     } catch {
       return {
         runId: this.runId,
@@ -228,7 +254,9 @@ export class OciTelemetry {
 
   async eventAnalytics() {
     try {
-      return await fetch(`${this.apiBase}/analytics/events`).then(readJson);
+      return await fetch(`${this.apiBase}/analytics/events`, {
+        credentials: "same-origin"
+      }).then(readJson);
     } catch {
       const eventsPerSecond = this.eventRate();
       return {
@@ -254,6 +282,7 @@ export class OciTelemetry {
       fetch(`${this.apiBase}/stress`, {
         method: "POST",
         headers: this.jsonHeaders({ ops: true }),
+        credentials: "same-origin",
         body: JSON.stringify(payload)
       }).then(readJson)
     );
@@ -283,6 +312,7 @@ export class OciTelemetry {
       fetch(`${this.apiBase}/stress`, {
         method: "POST",
         headers: this.jsonHeaders({ ops: true }),
+        credentials: "same-origin",
         body: JSON.stringify(payload)
       }).then(readJson)
     );
@@ -308,6 +338,7 @@ export class OciTelemetry {
       const result = await fetch(`${this.apiBase}/admin/reset-demo`, {
         method: "POST",
         headers: this.jsonHeaders(),
+        credentials: "same-origin",
         body: JSON.stringify({ ops: true, confirmationCode })
       }).then(readJson);
       this.offline = false;
@@ -340,6 +371,7 @@ export class OciTelemetry {
       const result = await fetch(`${this.apiBase}/copilot`, {
         method: "POST",
         headers: this.jsonHeaders({ ops: true }),
+        credentials: "same-origin",
         body: JSON.stringify(payload)
       }).then(readJson);
       this.offline = false;

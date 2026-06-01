@@ -14,6 +14,7 @@ const opsPanel = document.getElementById("opsPanel");
 if (isOpsView) {
   appShell?.classList.add("ops-visible");
   opsPanel?.removeAttribute("hidden");
+  opsPanel?.classList.add("is-locked");
 }
 
 const elements = {
@@ -50,6 +51,11 @@ const elements = {
   stopStress: document.getElementById("stopStress"),
   resetDemoData: document.getElementById("resetDemoData"),
   resetDemoStatus: document.getElementById("resetDemoStatus"),
+  opsLogin: document.getElementById("opsLogin"),
+  opsLoginForm: document.getElementById("opsLoginForm"),
+  opsPassword: document.getElementById("opsPassword"),
+  opsLoginButton: document.getElementById("opsLoginButton"),
+  opsLoginStatus: document.getElementById("opsLoginStatus"),
   refreshLeaderboard: document.getElementById("refreshLeaderboard")
 };
 
@@ -115,6 +121,68 @@ function setConnection(offline) {
   if (!elements.connectionStatus) return;
   elements.connectionStatus.textContent = offline ? "Offline fallback" : "Live API";
   elements.connectionStatus.classList.toggle("offline", offline);
+}
+
+function unlockOpsPanel() {
+  opsPanel?.classList.remove("is-locked");
+  if (elements.opsLogin) {
+    elements.opsLogin.hidden = true;
+  }
+}
+
+function showOpsLogin(message = "Enter the demo ops password.") {
+  opsPanel?.classList.add("is-locked");
+  if (elements.opsLogin) {
+    elements.opsLogin.hidden = false;
+  }
+  if (elements.opsLoginStatus) {
+    elements.opsLoginStatus.textContent = message;
+  }
+  window.setTimeout(() => elements.opsPassword?.focus(), 0);
+}
+
+function bindOpsLogin() {
+  if (!elements.opsLoginForm || elements.opsLoginForm.dataset.bound === "true") return;
+
+  elements.opsLoginForm.dataset.bound = "true";
+  elements.opsLoginForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const password = elements.opsPassword?.value ?? "";
+    if (!password) {
+      showOpsLogin("Enter the demo ops password.");
+      return;
+    }
+
+    if (elements.opsLoginButton) elements.opsLoginButton.disabled = true;
+    if (elements.opsLoginStatus) elements.opsLoginStatus.textContent = "Checking password...";
+    try {
+      await telemetry.loginOps(password);
+      if (elements.opsLoginStatus) elements.opsLoginStatus.textContent = "Access granted. Loading ops...";
+      window.location.reload();
+    } catch {
+      if (elements.opsLoginStatus) elements.opsLoginStatus.textContent = "Wrong password.";
+      if (elements.opsPassword) {
+        elements.opsPassword.select();
+      }
+    } finally {
+      if (elements.opsLoginButton) elements.opsLoginButton.disabled = false;
+    }
+  });
+}
+
+async function ensureOpsAuthenticated() {
+  if (!isOpsView) return true;
+
+  bindOpsLogin();
+  showOpsLogin("Checking ops session...");
+  const authenticated = await telemetry.checkOpsSession();
+  if (authenticated) {
+    unlockOpsPanel();
+    return true;
+  }
+
+  showOpsLogin("Enter the demo ops password.");
+  return false;
 }
 
 function renderStatus(status) {
@@ -1247,6 +1315,11 @@ export async function emitGameEvent(type, snapshot = {}) {
 }
 
 export async function initOciRuntime() {
+  if (isOpsView && !(await ensureOpsAuthenticated())) {
+    setConnection(true);
+    return;
+  }
+
   await telemetry.init();
   if (isOpsView) {
     renderStatus(telemetry.status);

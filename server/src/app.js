@@ -2,7 +2,7 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import {
   createCoachReply,
   createCopilotInsight,
@@ -23,6 +23,9 @@ const VALID_EVENTS = new Set([
 ]);
 const COPILOT_MODES = new Set(["live", "leaderboard", "players", "run", "demo_summary"]);
 const DEMO_RESET_CONFIRMATION_CODE = "!Oracle#2026!";
+const OPS_SESSION_COOKIE = "oci_ops_session";
+const DEFAULT_OPS_ADMIN_PASSWORD = "OCI2026";
+const DEFAULT_OPS_SESSION_TTL_MINUTES = 480;
 const DEFAULT_OPS_AI_RATE_LIMIT_PER_MINUTE = 30;
 const DEFAULT_COACH_AI_RATE_LIMIT_PER_MINUTE = 12;
 const DEFAULT_OPS_CONTROL_RATE_LIMIT_PER_MINUTE = 8;
@@ -52,9 +55,101 @@ function privateLoadBalancerName() {
   return "private-api-lb";
 }
 
+function opsAdminPassword() {
+  return process.env.OPS_ADMIN_PASSWORD || DEFAULT_OPS_ADMIN_PASSWORD;
+}
+
+function opsSessionSecret() {
+  return process.env.OPS_SESSION_SECRET || opsAdminPassword();
+}
+
+function opsSessionTtlMs() {
+  return positiveInteger(process.env.OPS_SESSION_TTL_MINUTES, DEFAULT_OPS_SESSION_TTL_MINUTES) * 60_000;
+}
+
+function safeStringEqual(left, right) {
+  const leftBuffer = Buffer.from(String(left));
+  const rightBuffer = Buffer.from(String(right));
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function signOpsPayload(payload) {
+  return createHmac("sha256", opsSessionSecret()).update(payload).digest("base64url");
+}
+
+function createOpsSessionToken() {
+  const payload = Buffer.from(JSON.stringify({
+    role: "ops",
+    exp: Date.now() + opsSessionTtlMs(),
+    nonce: randomUUID()
+  })).toString("base64url");
+  return `${payload}.${signOpsPayload(payload)}`;
+}
+
+function parseCookies(req) {
+  return Object.fromEntries(
+    String(req.headers.cookie ?? "")
+      .split(";")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const separator = part.indexOf("=");
+        const name = separator >= 0 ? part.slice(0, separator) : part;
+        const value = separator >= 0 ? part.slice(separator + 1) : "";
+        try {
+          return [name, decodeURIComponent(value)];
+        } catch {
+          return [name, value];
+        }
+      })
+  );
+}
+
+function verifyOpsSessionToken(token) {
+  const [payload, signature] = String(token ?? "").split(".");
+  if (!payload || !signature || !safeStringEqual(signature, signOpsPayload(payload))) {
+    return false;
+  }
+
+  try {
+    const session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    return session.role === "ops" && Number(session.exp) > Date.now();
+  } catch {
+    return false;
+  }
+}
+
+function hasOpsSession(req) {
+  return verifyOpsSessionToken(parseCookies(req)[OPS_SESSION_COOKIE]);
+}
+
+function opsCookieSecure(req) {
+  if (process.env.OPS_COOKIE_SECURE === "true") return true;
+  if (process.env.OPS_COOKIE_SECURE === "false") return false;
+  return Boolean(req.secure);
+}
+
+function setOpsSessionCookie(req, res) {
+  const cookie = [
+    `${OPS_SESSION_COOKIE}=${encodeURIComponent(createOpsSessionToken())}`,
+    "HttpOnly",
+    "SameSite=Lax",
+    "Path=/",
+    `Max-Age=${Math.floor(opsSessionTtlMs() / 1000)}`
+  ];
+  if (opsCookieSecure(req)) {
+    cookie.push("Secure");
+  }
+  res.setHeader("Set-Cookie", cookie.join("; "));
+}
+
+function clearOpsSessionCookie(res) {
+  res.setHeader("Set-Cookie", `${OPS_SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`);
+}
+
 function requireOpsAccess(req, res, next) {
-  if (req.body?.ops !== true) {
-    res.status(403).json({ error: "Ops access is required." });
+  if (!hasOpsSession(req)) {
+    res.status(401).json({ error: "Ops login is required." });
     return;
   }
 
@@ -201,6 +296,25 @@ export function createApp({
     res.json({ ok: true, vm: vmIdentity() });
   });
 
+  app.get("/api/ops/session", (req, res) => {
+    res.json({ authenticated: hasOpsSession(req) });
+  });
+
+  app.post("/api/ops/login", opsControlRateLimit, (req, res) => {
+    if (!safeStringEqual(req.body?.password ?? "", opsAdminPassword())) {
+      res.status(401).json({ error: "Invalid ops password." });
+      return;
+    }
+
+    setOpsSessionCookie(req, res);
+    res.json({ authenticated: true });
+  });
+
+  app.post("/api/ops/logout", (req, res) => {
+    clearOpsSessionCookie(res);
+    res.json({ authenticated: false });
+  });
+
   app.get("/api/status", async (req, res) => {
     res.json({
       gateway: process.env.API_GATEWAY_NAME ?? "api-gateway",
@@ -244,19 +358,19 @@ export function createApp({
     res.json(await createCardInsights(await store.leaderboard()));
   });
 
-  app.get("/api/players/live", async (req, res) => {
+  app.get("/api/players/live", requireOpsAccess, async (req, res) => {
     res.json({ players: await store.livePlayers() });
   });
 
-  app.get("/api/analytics/live", async (req, res) => {
+  app.get("/api/analytics/live", requireOpsAccess, async (req, res) => {
     res.json(await store.liveAnalytics(req.query.runId));
   });
 
-  app.get("/api/analytics/events", async (req, res) => {
+  app.get("/api/analytics/events", requireOpsAccess, async (req, res) => {
     res.json(await store.eventAnalytics());
   });
 
-  app.get("/api/stress", (req, res) => {
+  app.get("/api/stress", requireOpsAccess, (req, res) => {
     res.json(stressController.status());
   });
 

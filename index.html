@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260528-static-game-label" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260601-ops-login" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -46,6 +46,22 @@
       </section>
 
       <aside class="ops-panel" id="opsPanel" aria-label="Cloud operations dashboard" hidden>
+        <section class="ops-login" id="opsLogin" aria-label="Ops admin login" hidden>
+          <div>
+            <span class="eyebrow">Ops access</span>
+            <h2>Admin login</h2>
+            <p>Unlock live architecture, AI insights, autoscaling controls and demo reset.</p>
+          </div>
+          <form class="ops-login-form" id="opsLoginForm">
+            <label for="opsPassword">Password</label>
+            <div class="ops-login-row">
+              <input id="opsPassword" name="password" type="password" autocomplete="current-password" placeholder="Enter ops password" />
+              <button type="submit" id="opsLoginButton">Unlock</button>
+            </div>
+            <small id="opsLoginStatus">Enter the demo ops password.</small>
+          </form>
+        </section>
+
         <header class="panel-header">
           <span class="eyebrow">Cloud Ops HUD</span>
           <h2>Region Defense</h2>
@@ -393,6 +409,6 @@
       });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <script type="module" src="/src/main.js?v=20260528-demo-reset"></script>
+    <script type="module" src="/src/main.js?v=20260601-ops-login"></script>
   </body>
 </html>

@@ -105,16 +105,19 @@ GET /api/stress
 POST /api/stress
 POST /api/copilot
 POST /api/coach
+GET /api/ops/session
+POST /api/ops/login
+POST /api/ops/logout
 ```
 
-`POST /api/copilot` is for the presenter/ops view only. The browser sends it only when `?ops=1` is active, and the API requires `"ops": true` in the JSON body. It supports analysis modes such as `live`, `leaderboard`, `players`, `run` and `demo_summary`, and returns `source`, `modelLabel` and `latencyMs` so presenters can see whether the answer came from OCI GenAI or deterministic fallback.
-`POST /api/stress` follows the same ops-only pattern and starts short, bounded CPU load on VM API backends so autoscaling can be demonstrated without real player volume.
+`POST /api/copilot` is for the presenter/ops view only. The ops page requires an admin login and receives an HTTP-only session cookie before it can call presenter APIs. The default demo password is `OCI2026`; override it with `OPS_ADMIN_PASSWORD` and set `OPS_SESSION_SECRET` for a stable shared cookie secret across VM backends.
+`POST /api/stress` follows the same ops-only login pattern and starts short, bounded CPU load on VM API backends so autoscaling can be demonstrated without real player volume.
 `POST /api/coach` is the player-facing OCI Guide helper used during level-unlock quizzes. It accepts a known `level/questionId`, a short player message and returns a guarded hint from OCI GenAI or deterministic fallback. It is rate-limited so public players cannot use it as a general-purpose GenAI proxy.
 
 ### API security controls
 
 - GenAI credentials are server-side only. They are not written to `config.js` or bundled into the frontend.
-- Presenter-only endpoints are `/api/copilot`, `/api/leaderboard/insights` and `/api/stress`. In the current demo build they require `"ops": true` and rely on strict rate limits while the admin-login design is being finalized.
+- Presenter-only endpoints are `/api/copilot`, `/api/leaderboard/insights`, `/api/players/live`, `/api/analytics/live`, `/api/analytics/events`, `/api/stress` and `/api/admin/reset-demo`. They require the ops session cookie created by `/api/ops/login`.
 - Leaderboard card AI copy is cached in VM memory per leaderboard signature, so it regenerates after API restarts or redeploys.
 - GenAI routes have in-memory rate limits: `OPS_AI_RATE_LIMIT_PER_MINUTE` for ops AI, `COACH_AI_RATE_LIMIT_PER_MINUTE` for player quiz coaching and `OPS_CONTROL_RATE_LIMIT_PER_MINUTE` for stress controls.
 - `/api/coach` only accepts known quiz `level/questionId` combinations and caps messages at 300 characters.
@@ -467,6 +470,6 @@ The customer-facing demo checks are:
 - Autonomous Database receives `game_events` from the background consumer/processor.
 - Ops HUD Event Analytics reads from Autonomous Database and falls back to memory locally.
 - Ops HUD updates score, active VM, CPU, RAM, cores, disk throughput, latency, events/sec and copilot insight.
-- `/api/copilot` returns `403` without the ops flag and `200` for ops callers.
+- `/api/copilot` returns `401` without the ops session cookie and `200` after ops login.
 - Ops copilot returns an OCI GenAI insight when GenAI auth/policy is configured, otherwise a deterministic fallback.
 - The game remains playable when one instance is removed from the pool or fails health checks.

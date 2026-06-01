@@ -23,6 +23,23 @@ function request(app, path, options = {}) {
   });
 }
 
+async function opsCookie(app, password = "OCI2026") {
+  const { response } = await request(app, "/api/ops/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password })
+  });
+  assert.equal(response.status, 200);
+  return response.headers.get("set-cookie").split(";")[0];
+}
+
+function jsonHeaders(cookie) {
+  return {
+    "Content-Type": "application/json",
+    ...(cookie ? { Cookie: cookie } : {})
+  };
+}
+
 test("status endpoint returns VM identity", async () => {
   const app = createApp();
   const { response, body } = await request(app, "/api/status");
@@ -187,14 +204,14 @@ test("leaderboard insight endpoint is ops-only and returns card copy", async () 
 
   const forbidden = await request(app, "/api/leaderboard/insights", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(),
     body: JSON.stringify({})
   });
-  assert.equal(forbidden.response.status, 403);
+  assert.equal(forbidden.response.status, 401);
 
   await request(app, "/api/events", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(),
     body: JSON.stringify({
       type: "run_end",
       runId: "run-card-copy",
@@ -206,9 +223,10 @@ test("leaderboard insight endpoint is ops-only and returns card copy", async () 
     })
   });
 
+  const cookie = await opsCookie(app);
   const { response, body } = await request(app, "/api/leaderboard/insights", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(cookie),
     body: JSON.stringify({ ops: true })
   });
 
@@ -248,19 +266,24 @@ test("live players lists latest player snapshots", async () => {
 
   await request(app, "/api/events", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(),
     body: JSON.stringify({ events })
   });
 
-  const { response, body } = await request(app, "/api/players/live");
+  const cookie = await opsCookie(app);
+  const unauthorized = await request(app, "/api/players/live");
+  const liveResponse = await request(app, "/api/players/live", {
+    headers: { Cookie: cookie }
+  });
 
-  assert.equal(response.status, 200);
-  assert.equal(body.players.length, 2);
-  assert.equal(body.players[0].callsign, "ALI");
-  assert.equal(body.players[0].score, 7200);
-  assert.equal(body.players[0].eventCounts.enemy_killed, 1);
-  assert.equal(body.players[1].callsign, "SARA");
-  assert.equal(body.players[1].eventCounts.heartbeat, 1);
+  assert.equal(unauthorized.response.status, 401);
+  assert.equal(liveResponse.response.status, 200);
+  assert.equal(liveResponse.body.players.length, 2);
+  assert.equal(liveResponse.body.players[0].callsign, "ALI");
+  assert.equal(liveResponse.body.players[0].score, 7200);
+  assert.equal(liveResponse.body.players[0].eventCounts.enemy_killed, 1);
+  assert.equal(liveResponse.body.players[1].callsign, "SARA");
+  assert.equal(liveResponse.body.players[1].eventCounts.heartbeat, 1);
 });
 
 test("event analytics summarizes live game events", async () => {
@@ -314,11 +337,14 @@ test("event analytics summarizes live game events", async () => {
 
   await request(app, "/api/events", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(),
     body: JSON.stringify({ events })
   });
 
-  const { response, body } = await request(app, "/api/analytics/events");
+  const cookie = await opsCookie(app);
+  const { response, body } = await request(app, "/api/analytics/events", {
+    headers: { Cookie: cookie }
+  });
 
   assert.equal(response.status, 200);
   assert.equal(body.source, "memory");
@@ -334,36 +360,53 @@ test("copilot endpoint rejects non-ops callers", async () => {
   const app = createApp();
   const { response, body } = await request(app, "/api/copilot", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(),
     body: JSON.stringify({ snapshot: { score: 1000 } })
   });
 
-  assert.equal(response.status, 403);
-  assert.equal(body.error, "Ops access is required.");
+  assert.equal(response.status, 401);
+  assert.equal(body.error, "Ops login is required.");
 });
 
 test("stress endpoint rejects non-ops callers", async () => {
   const app = createApp();
   const { response, body } = await request(app, "/api/stress", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(),
     body: JSON.stringify({ durationSeconds: 15 })
   });
 
-  assert.equal(response.status, 403);
-  assert.equal(body.error, "Ops access is required.");
+  assert.equal(response.status, 401);
+  assert.equal(body.error, "Ops login is required.");
 });
 
 test("full demo reset rejects non-ops callers", async () => {
   const app = createApp();
   const { response, body } = await request(app, "/api/admin/reset-demo", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(),
     body: JSON.stringify({ confirmationCode: "!Oracle#2026!" })
   });
 
-  assert.equal(response.status, 403);
-  assert.equal(body.error, "Ops access is required.");
+  assert.equal(response.status, 401);
+  assert.equal(body.error, "Ops login is required.");
+});
+
+test("ops login creates a reusable session cookie", async () => {
+  const app = createApp();
+  const denied = await request(app, "/api/ops/login", {
+    method: "POST",
+    headers: jsonHeaders(),
+    body: JSON.stringify({ password: "bad-password" })
+  });
+  assert.equal(denied.response.status, 401);
+
+  const cookie = await opsCookie(app);
+  const session = await request(app, "/api/ops/session", {
+    headers: { Cookie: cookie }
+  });
+  assert.equal(session.response.status, 200);
+  assert.equal(session.body.authenticated, true);
 });
 
 test("full demo reset requires the confirmation code", async () => {
@@ -376,9 +419,10 @@ test("full demo reset requires the confirmation code", async () => {
       }
     }
   });
+  const cookie = await opsCookie(app);
   const { response, body } = await request(app, "/api/admin/reset-demo", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(cookie),
     body: JSON.stringify({ ops: true, confirmationCode: "wrong-code" })
   });
 
@@ -402,9 +446,10 @@ test("full demo reset clears demo data with confirmed ops access", async () => {
       }
     }
   });
+  const cookie = await opsCookie(app);
   const { response, body } = await request(app, "/api/admin/reset-demo", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(cookie),
     body: JSON.stringify({ ops: true, confirmationCode: "!Oracle#2026!" })
   });
 
@@ -414,25 +459,19 @@ test("full demo reset clears demo data with confirmed ops access", async () => {
   assert.equal(resetCalled, true);
 });
 
-test("ops endpoints allow ops callers without browser tokens", async () => {
-  const previousToken = process.env.OPS_ACCESS_TOKEN;
-  process.env.OPS_ACCESS_TOKEN = "test-ops-token";
+test("ops endpoints allow callers with an ops session cookie", async () => {
   const app = createApp({
     createInsight: async () => ({ insight: "authorized", source: "test" })
   });
 
-  try {
-    const authorized = await request(app, "/api/copilot", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ops: true, snapshot: { score: 1000 } })
-    });
-    assert.equal(authorized.response.status, 200);
-    assert.equal(authorized.body.insight, "authorized");
-  } finally {
-    if (previousToken === undefined) delete process.env.OPS_ACCESS_TOKEN;
-    else process.env.OPS_ACCESS_TOKEN = previousToken;
-  }
+  const cookie = await opsCookie(app);
+  const authorized = await request(app, "/api/copilot", {
+    method: "POST",
+    headers: jsonHeaders(cookie),
+    body: JSON.stringify({ ops: true, snapshot: { score: 1000 } })
+  });
+  assert.equal(authorized.response.status, 200);
+  assert.equal(authorized.body.insight, "authorized");
 });
 
 test("stress endpoint starts bounded ops stress", async () => {
@@ -450,9 +489,10 @@ test("stress endpoint starts bounded ops stress", async () => {
       })
     }
   });
+  const cookie = await opsCookie(app);
   const { response, body } = await request(app, "/api/stress", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(cookie),
     body: JSON.stringify({ ops: true, durationSeconds: 30, workers: 2 })
   });
 
@@ -470,9 +510,10 @@ test("stress endpoint stops bounded ops stress", async () => {
       stop: () => ({ active: false, status: "stopped", stopped: true, stoppedWorkers: 2 })
     }
   });
+  const cookie = await opsCookie(app);
   const { response, body } = await request(app, "/api/stress", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(cookie),
     body: JSON.stringify({ ops: true, action: "stop" })
   });
 
@@ -486,9 +527,10 @@ test("copilot endpoint accepts ops callers", async () => {
   const app = createApp({
     createInsight: async () => "Ops insight"
   });
+  const cookie = await opsCookie(app);
   const { response, body } = await request(app, "/api/copilot", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(cookie),
     body: JSON.stringify({ ops: true, snapshot: { score: 1000 } })
   });
 
@@ -513,9 +555,10 @@ test("copilot endpoint supports deep analysis modes", async () => {
       };
     }
   });
+  const cookie = await opsCookie(app);
   const { response, body } = await request(app, "/api/copilot", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(cookie),
     body: JSON.stringify({ ops: true, mode: "leaderboard", snapshot: { topScore: 1000 } })
   });
 
@@ -547,9 +590,10 @@ test("live copilot can use active players from ops snapshot", async () => {
     }
   });
 
+  const cookie = await opsCookie(app);
   const { response, body } = await request(app, "/api/copilot", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(cookie),
     body: JSON.stringify({
       ops: true,
       mode: "live",
