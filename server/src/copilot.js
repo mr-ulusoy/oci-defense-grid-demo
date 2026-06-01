@@ -12,7 +12,7 @@ const DEFAULT_GENAI_MODEL = "openai.gpt-oss-120b";
 const DEFAULT_COACH_GENAI_MODEL = "google.gemini-2.5-flash-lite";
 const DEFAULT_GENAI_TIMEOUT_MS = 25000;
 const DEFAULT_COACH_GENAI_TIMEOUT_MS = 12000;
-const DEFAULT_CARD_INSIGHT_TIMEOUT_MS = 7000;
+const DEFAULT_CARD_INSIGHT_TIMEOUT_MS = 10000;
 const COPILOT_GATEWAY_SAFE_TIMEOUT_MS = 7600;
 const COACH_REPLY_WORD_LIMIT = 45;
 const COPILOT_REPLY_WORD_LIMIT = 220;
@@ -443,7 +443,7 @@ function modelLabel(model) {
   return value.startsWith("ocid1.generativeaimodel") ? `OCI model ...${value.slice(-6)}` : value;
 }
 
-function buildCopilotRequest(prompt, model = getCopilotModel(), maxTokens = 80) {
+function buildCopilotRequest(prompt, model = getCopilotModel(), maxTokens = 80, options = {}) {
   const endpoint = process.env.OCI_GENAI_ENDPOINT ?? "";
 
   if (endpoint.includes("/chat/completions")) {
@@ -460,7 +460,8 @@ function buildCopilotRequest(prompt, model = getCopilotModel(), maxTokens = 80) 
         }
       ],
       max_tokens: maxTokens,
-      temperature: 0.2
+      temperature: options.temperature ?? 0.2,
+      ...(options.jsonObject ? { response_format: { type: "json_object" } } : {})
     };
   }
 
@@ -469,18 +470,18 @@ function buildCopilotRequest(prompt, model = getCopilotModel(), maxTokens = 80) 
       model,
       input: prompt,
       max_output_tokens: maxTokens,
-      temperature: 0.2
+      temperature: options.temperature ?? 0.2
     };
   }
 
   return {
     prompt,
     maxTokens,
-    temperature: 0.2
+    temperature: options.temperature ?? 0.2
   };
 }
 
-function buildSdkChatRequest(prompt, model = getCopilotModel(), maxTokens = 1200) {
+function buildSdkChatRequest(prompt, model = getCopilotModel(), maxTokens = 1200, options = {}) {
   return {
     chatDetails: {
       compartmentId: process.env.OCI_GENAI_COMPARTMENT_OCID,
@@ -502,11 +503,12 @@ function buildSdkChatRequest(prompt, model = getCopilotModel(), maxTokens = 1200
         ],
         apiFormat: "GENERIC",
         maxTokens,
-        temperature: 0.2,
+        temperature: options.temperature ?? 0.2,
         frequencyPenalty: 0,
         presencePenalty: 0,
         topK: 1,
-        topP: 0.95
+        topP: 0.95,
+        ...(options.jsonObject ? { responseFormat: { type: "JSON_OBJECT" } } : {})
       }
     }
   };
@@ -588,9 +590,9 @@ function buildCardInsightPrompt(entries = []) {
   return [
     "You are a gameplay analyst for OCI Defense Grid leaderboard cards.",
     "Return valid JSON only. No markdown, comments, prose, code fences or trailing commas.",
-    "The response must start with [ and end with ]. Do not wrap the array in an object.",
+    "The response must be one JSON object with a cards array. Example shape: {\"cards\":[{\"rank\":1,\"callsign\":\"NAME\",\"title\":\"Clean Run\",\"headline\":\"Short sentence.\",\"detail\":\"Short sentence.\",\"tone\":\"clean\"}]}",
     "Create one short run analysis for each player in the input array. Each object represents one completed run.",
-    "The JSON must be an array with objects: rank, callsign, title, headline, detail, tone.",
+    "Each cards item must include: rank, callsign, title, headline, detail, tone.",
     "title: 1-3 words, title case. headline: one short sentence under 10 words. detail: one short sentence under 20 words.",
     "tone must be one of: clean, controlled, recovery, risk, aggressive.",
     "Use only the provided metrics. Do not invent numbers.",
@@ -656,6 +658,19 @@ function jsonPreview(value) {
   return String(text ?? value ?? "null")
     .replace(/\s+/g, " ")
     .slice(0, 240);
+}
+
+function genAiResponseShape(payload) {
+  const chatResponse = payload?.chatResult?.chatResponse;
+  const choice = chatResponse?.choices?.[0] ?? payload?.choices?.[0];
+  return {
+    topKeys: Object.keys(payload ?? {}).slice(0, 12),
+    chatResultKeys: Object.keys(payload?.chatResult ?? {}).slice(0, 12),
+    chatResponseKeys: Object.keys(chatResponse ?? {}).slice(0, 12),
+    choiceKeys: Object.keys(choice ?? {}).slice(0, 12),
+    messageKeys: Object.keys(choice?.message ?? {}).slice(0, 12),
+    finishReason: choice?.finishReason ?? choice?.finish_reason ?? chatResponse?.finishReason
+  };
 }
 
 function compactSentence(value, wordLimit) {
@@ -775,10 +790,14 @@ async function callSdkCopilot(prompt, options = {}) {
   const client = await getSdkClient();
   const common = await import("oci-common");
   const response = await client.chat({
-    ...buildSdkChatRequest(prompt, options.model, options.maxTokens),
+    ...buildSdkChatRequest(prompt, options.model, options.maxTokens, options),
     retryConfiguration: common.NoRetryConfigurationDetails
   });
-  return extractCopilotText(response);
+  const text = extractCopilotText(response);
+  if (!text) {
+    console.warn("OCI GenAI SDK response did not expose text.", genAiResponseShape(response));
+  }
+  return text;
 }
 
 async function callBearerCopilot(prompt, options = {}) {
@@ -793,7 +812,7 @@ async function callBearerCopilot(prompt, options = {}) {
       Authorization: `Bearer ${process.env.OCI_GENAI_BEARER_TOKEN}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(buildCopilotRequest(prompt, options.model, options.maxTokens))
+    body: JSON.stringify(buildCopilotRequest(prompt, options.model, options.maxTokens, options))
   });
 
   if (!response.ok) {
@@ -801,7 +820,11 @@ async function callBearerCopilot(prompt, options = {}) {
   }
 
   const payload = await response.json();
-  return extractCopilotText(payload);
+  const text = extractCopilotText(payload);
+  if (!text) {
+    console.warn("OCI GenAI bearer response did not expose text.", genAiResponseShape(payload));
+  }
+  return text;
 }
 
 async function callExternalCopilot(prompt, options = {}) {
@@ -935,7 +958,9 @@ export async function createLeaderboardCardInsights(entries = []) {
     const externalInsight = await withTimeout(
       callExternalCopilot(prompt, {
         model: modelId,
-        maxTokens: 420
+        maxTokens: 900,
+        jsonObject: true,
+        temperature: 0.1
       }),
       timeout
     );
