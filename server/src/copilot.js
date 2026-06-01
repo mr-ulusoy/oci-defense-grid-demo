@@ -12,7 +12,7 @@ const DEFAULT_GENAI_MODEL = "openai.gpt-oss-120b";
 const DEFAULT_COACH_GENAI_MODEL = "google.gemini-2.5-flash-lite";
 const DEFAULT_GENAI_TIMEOUT_MS = 25000;
 const DEFAULT_COACH_GENAI_TIMEOUT_MS = 12000;
-const DEFAULT_CARD_INSIGHT_TIMEOUT_MS = 10000;
+const DEFAULT_CARD_INSIGHT_TIMEOUT_MS = 25000;
 const COPILOT_GATEWAY_SAFE_TIMEOUT_MS = 7600;
 const COACH_REPLY_WORD_LIMIT = 45;
 const COPILOT_REPLY_WORD_LIMIT = 220;
@@ -989,7 +989,7 @@ export async function createLeaderboardCardInsights(entries = []) {
     const result = await analyzeCardsWithModel(
       model,
       "oci-genai",
-      Math.min(timeoutMs, COPILOT_GATEWAY_SAFE_TIMEOUT_MS)
+      timeoutMs
     );
     cacheCardInsight(signature, result);
     return result;
