@@ -461,6 +461,8 @@ function buildCopilotRequest(prompt, model = getCopilotModel(), maxTokens = 80, 
       ],
       max_tokens: maxTokens,
       temperature: options.temperature ?? 0.2,
+      ...(options.reasoningEffort ? { reasoning_effort: options.reasoningEffort.toLowerCase() } : {}),
+      ...(options.verbosity ? { verbosity: options.verbosity.toLowerCase() } : {}),
       ...(options.jsonObject ? { response_format: { type: "json_object" } } : {})
     };
   }
@@ -506,6 +508,8 @@ function buildSdkChatRequest(prompt, model = getCopilotModel(), maxTokens = 1200
         temperature: options.temperature ?? 0.2,
         frequencyPenalty: 0,
         presencePenalty: 0,
+        ...(options.reasoningEffort ? { reasoningEffort: options.reasoningEffort } : {}),
+        ...(options.verbosity ? { verbosity: options.verbosity } : {}),
         topK: 1,
         topP: 0.95,
         ...(options.jsonObject ? { responseFormat: { type: "JSON_OBJECT" } } : {})
@@ -959,8 +963,10 @@ export async function createLeaderboardCardInsights(entries = []) {
     const externalInsight = await withTimeout(
       callExternalCopilot(prompt, {
         model: modelId,
-        maxTokens: 900,
+        maxTokens: 1600,
         jsonObject: true,
+        reasoningEffort: "NONE",
+        verbosity: "LOW",
         temperature: 0.1
       }),
       timeout
