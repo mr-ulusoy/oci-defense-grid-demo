@@ -23,7 +23,6 @@ const elements = {
   level: document.getElementById("hudLevel"),
   latency: document.getElementById("hudLatency"),
   events: document.getElementById("hudEvents"),
-  gateway: document.getElementById("hudGateway"),
   loadBalancer: document.getElementById("hudLoadBalancer"),
   vm: document.getElementById("hudVm"),
   vmCount: document.getElementById("hudVmCount"),
@@ -188,7 +187,6 @@ async function ensureOpsAuthenticated() {
 function renderStatus(status) {
   if (!isOpsView) return;
 
-  elements.gateway.textContent = status.gateway ?? "public";
   elements.loadBalancer.textContent = status.loadBalancer ?? "healthy";
   elements.livePlayersStatus.textContent = status.sinks?.redisLivePlayers ?? "memory";
   renderStress(status.stress);

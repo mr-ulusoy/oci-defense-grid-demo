@@ -1,4 +1,4 @@
-import { initOciRuntime } from "./ociRuntime.js?v=20260601-ops-same-origin";
+import { initOciRuntime } from "./ociRuntime.js?v=20260601-topology-lb-only";
 import BootScene from "./scenes/BootScene.js";
 import MenuScene from "./scenes/MenuScene.js";
 import GameScene from "./scenes/GameScene.js?v=20260528-lvl3-boss-v2";
