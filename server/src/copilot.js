@@ -602,23 +602,36 @@ function buildCardInsightPrompt(entries = []) {
   ].join("\n");
 }
 
+function jsonArrayFromParsedValue(value) {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (typeof value === "object" && value !== null) {
+    if (Array.isArray(value.cards)) {
+      return value.cards;
+    }
+    if (Array.isArray(value.insights)) {
+      return value.insights;
+    }
+    if (Array.isArray(value.results)) {
+      return value.results;
+    }
+    return null;
+  }
+
+  return null;
+}
+
 function parseJsonArray(value) {
+  const direct = jsonArrayFromParsedValue(value);
+  if (direct) {
+    return direct;
+  }
+
   const text = String(value ?? "").trim();
   try {
     const parsed = JSON.parse(text);
-    if (Array.isArray(parsed)) {
-      return parsed;
-    }
-    if (Array.isArray(parsed?.cards)) {
-      return parsed.cards;
-    }
-    if (Array.isArray(parsed?.insights)) {
-      return parsed.insights;
-    }
-    if (Array.isArray(parsed?.results)) {
-      return parsed.results;
-    }
-    return null;
+    return jsonArrayFromParsedValue(parsed);
   } catch {
     const match = text.match(/\[[\s\S]*\]/);
     if (!match) {
@@ -626,11 +639,23 @@ function parseJsonArray(value) {
     }
     try {
       const parsed = JSON.parse(match[0]);
-      return Array.isArray(parsed) ? parsed : null;
+      return jsonArrayFromParsedValue(parsed);
     } catch {
       return null;
     }
   }
+}
+
+function jsonPreview(value) {
+  let text;
+  try {
+    text = typeof value === "string" ? value : JSON.stringify(value);
+  } catch {
+    text = String(value);
+  }
+  return String(text ?? value ?? "null")
+    .replace(/\s+/g, " ")
+    .slice(0, 240);
 }
 
 function compactSentence(value, wordLimit) {
@@ -664,25 +689,39 @@ function sanitizeCardInsight(rawInsight, entry, index) {
   };
 }
 
-function extractCopilotText(payload) {
-  const responseText = payload.output
-    ?.flatMap((item) => item.content ?? [])
-    ?.map((content) => content.text)
-    ?.filter(Boolean)
-    ?.join(" ");
-  const sdkChoiceContent = payload.chatResult?.chatResponse?.choices?.[0]?.message?.content
-    ?.map((content) => content.text)
-    ?.filter(Boolean)
-    ?.join(" ");
+function textFromContent(value) {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value
+      .map(textFromContent)
+      .filter(Boolean)
+      .join(" ");
+  }
+  if (typeof value === "object" && value !== null) {
+    return (
+      textFromContent(value.text) ??
+      textFromContent(value.content) ??
+      textFromContent(value.message) ??
+      textFromContent(value.output_text) ??
+      textFromContent(value.outputText) ??
+      null
+    );
+  }
+  return null;
+}
 
+function extractCopilotText(payload) {
   return (
-    payload.insight ??
-    payload.text ??
-    payload.output_text ??
-    payload.choices?.[0]?.message?.content ??
-    payload.choices?.[0]?.text ??
-    sdkChoiceContent ??
-    responseText ??
+    textFromContent(payload.insight) ??
+    textFromContent(payload.text) ??
+    textFromContent(payload.output_text) ??
+    textFromContent(payload.outputText) ??
+    textFromContent(payload.choices?.[0]?.message?.content) ??
+    textFromContent(payload.choices?.[0]?.text) ??
+    textFromContent(payload.chatResult?.chatResponse?.choices?.[0]?.message?.content) ??
+    textFromContent(payload.output) ??
     null
   );
 }
@@ -902,7 +941,7 @@ export async function createLeaderboardCardInsights(entries = []) {
     );
     const parsed = parseJsonArray(externalInsight);
     if (!parsed) {
-      throw new Error("Leaderboard card GenAI did not return JSON");
+      throw new Error(`Leaderboard card GenAI did not return JSON: ${jsonPreview(externalInsight)}`);
     }
 
     const cards = topEntries.map((entry, index) => sanitizeCardInsight(parsed[index], entry, index));
