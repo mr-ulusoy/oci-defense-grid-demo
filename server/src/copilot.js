@@ -587,7 +587,8 @@ function buildAnalysisPrompt(context) {
 function buildCardInsightPrompt(entries = []) {
   return [
     "You are a gameplay analyst for OCI Defense Grid leaderboard cards.",
-    "Return strict JSON only, no markdown, no comments.",
+    "Return valid JSON only. No markdown, comments, prose, code fences or trailing commas.",
+    "The response must start with [ and end with ]. Do not wrap the array in an object.",
     "Create one short run analysis for each player in the input array. Each object represents one completed run.",
     "The JSON must be an array with objects: rank, callsign, title, headline, detail, tone.",
     "title: 1-3 words, title case. headline: one short sentence under 10 words. detail: one short sentence under 20 words.",
@@ -605,7 +606,19 @@ function parseJsonArray(value) {
   const text = String(value ?? "").trim();
   try {
     const parsed = JSON.parse(text);
-    return Array.isArray(parsed) ? parsed : null;
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+    if (Array.isArray(parsed?.cards)) {
+      return parsed.cards;
+    }
+    if (Array.isArray(parsed?.insights)) {
+      return parsed.insights;
+    }
+    if (Array.isArray(parsed?.results)) {
+      return parsed.results;
+    }
+    return null;
   } catch {
     const match = text.match(/\[[\s\S]*\]/);
     if (!match) {
