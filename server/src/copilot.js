@@ -17,7 +17,7 @@ const COPILOT_GATEWAY_SAFE_TIMEOUT_MS = 7600;
 const COACH_REPLY_WORD_LIMIT = 45;
 const COPILOT_REPLY_WORD_LIMIT = 220;
 const CARD_INSIGHT_REPLY_WORD_LIMIT = 90;
-const CARD_INSIGHT_MAX_TOKENS = 1200;
+const CARD_INSIGHT_MAX_TOKENS = 1100;
 const CARD_INSIGHT_CACHE_MAX_ENTRIES = 50;
 
 const cardInsightCache = new Map();
@@ -968,7 +968,7 @@ export async function createLeaderboardCardInsights(entries = []) {
     const externalInsight = await withTimeout(
       callExternalCopilot(prompt, {
         model: modelId,
-        maxTokens: CARD_INSIGHT_MAX_TOKENS * 2,
+        maxTokens: CARD_INSIGHT_MAX_TOKENS,
         temperature: 0.2
       }),
       timeout
