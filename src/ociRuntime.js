@@ -104,6 +104,7 @@ let activeVmKey = null;
 let scaleIntent = null;
 let latestLeaderboardEntries = [];
 let latestActivePlayers = [];
+let latestVisiblePlayers = [];
 let latestVisiblePlayerCount = 0;
 let latestVisibleTopScore = 0;
 let latestLiveCopilotSignature = "";
@@ -270,6 +271,7 @@ function renderLivePlayers(players = [], analytics = {}) {
   }
 
   const visiblePlayers = activePlayers.length > 0 ? activePlayers : latestActivePlayers;
+  latestVisiblePlayers = visiblePlayers.slice(0, 12);
   const topScore = visiblePlayers.reduce((max, player) => Math.max(max, Number(player.score ?? 0)), 0);
   const eventRate =
     visiblePlayers.reduce((sum, player) => sum + Number(player.eventsPerSecond ?? 0), 0) ||
@@ -1087,7 +1089,7 @@ function setActiveCopilotMode(mode = "live") {
 }
 
 function activePlayerCount() {
-  return latestActivePlayers.length || latestVisiblePlayerCount;
+  return liveInsightPlayers().length || latestVisiblePlayerCount;
 }
 
 function liveScoreBucket(score) {
@@ -1098,8 +1100,14 @@ function livePlayerKey(player = {}) {
   return player.runId || player.sessionId || player.callsign || "unknown";
 }
 
+function liveInsightPlayers() {
+  if (latestActivePlayers.length > 0) return latestActivePlayers;
+  const hasRecentVisiblePlayers = Date.now() - lastLivePlayerHeartbeatAt <= 20000;
+  return hasRecentVisiblePlayers ? latestVisiblePlayers : [];
+}
+
 function sortedActivePlayersForInsight() {
-  return latestActivePlayers
+  return liveInsightPlayers()
     .filter((player) => player.callsign && player.callsign !== "UNKNOWN")
     .slice()
     .sort((left, right) => Number(right.score ?? 0) - Number(left.score ?? 0));
@@ -1145,9 +1153,10 @@ function liveCopilotTrigger() {
 }
 
 function copilotSnapshot() {
+  const activePlayers = liveInsightPlayers();
   return {
     livePlayers: activePlayerCount(),
-    activePlayers: latestActivePlayers.slice(0, 8).map((player) => ({
+    activePlayers: activePlayers.slice(0, 8).map((player) => ({
       callsign: player.callsign,
       score: Number(player.score ?? 0),
       level: Number(player.level ?? 1),
@@ -1311,6 +1320,10 @@ export async function resetDemoData() {
     leaderboardCardInsights.clear();
     liveCopilotInsights.clear();
     latestLeaderboardEntries = [];
+    latestActivePlayers = [];
+    latestVisiblePlayers = [];
+    latestVisiblePlayerCount = 0;
+    lastLivePlayerHeartbeatAt = 0;
     latestLiveCopilotSignature = "";
     renderCopilotResult({
       insight: "Demo data was reset. Waiting for new live telemetry.",
