@@ -65,62 +65,62 @@ const QUIZ_BY_LEVEL = {
     1: {
         id: 'region-fault-domains',
         title: 'REGION CHECK',
-        prompt: 'Why does this demo use one OCI region with fault-domain-aware placement?',
+        prompt: 'What do realms, regions, and fault domains provide in OCI?',
         options: [
-            'A region keeps services close, and fault domains reduce shared hardware failure risk.',
-            'A region is only a billing label, and fault domains are used for public DNS.',
-            'Fault domains replace the Load Balancer and route all traffic directly to one VM.'
+            'Realms isolate cloud environments, regions host workloads, and fault domains spread VMs across separate hardware.',
+            'Realms are only billing labels, regions replace Load Balancers, and fault domains store raw event files.',
+            'Fault domains route all traffic directly to one VM and remove the need for regions.'
         ],
         correctIndex: 0,
-        explanation: 'Correct. The selected region keeps the stack close to game traffic, while fault domains help spread VMs across separate physical hardware.'
+        explanation: 'Correct. Realms separate cloud environments, regions host the stack, and fault domains reduce shared hardware failure risk.'
     },
     2: {
         id: 'api-lb-route',
         title: 'ROUTING CHECK',
-        prompt: 'Which traffic path is correct in this demo?',
+        prompt: 'How do the Load Balancer and API Gateway work together here?',
         options: [
-            'The game loads through the public Load Balancer, while /api/* calls go through API Gateway.',
+            'The Load Balancer serves the game across healthy VMs, while API Gateway protects and routes API calls.',
             'All browser and API traffic bypasses API Gateway and talks directly to every VM.',
             'Object Storage serves the live game and sends player controls to the Load Balancer.'
         ],
         correctIndex: 0,
-        explanation: 'Correct. Public LB is the game entry point; API Gateway is the controlled front door for telemetry, leaderboard and coach calls.'
+        explanation: 'Correct. The Load Balancer handles the playable entry point; API Gateway controls telemetry, leaderboard, and AI API requests.'
     },
     3: {
         id: 'compute-instance-pool',
         title: 'COMPUTE CHECK',
-        prompt: 'What does the instance pool demonstrate?',
+        prompt: 'What do Compute VMs and Instance Pools provide for this demo?',
         options: [
-            'Multiple VMs managed as one fleet, attached to the Load Balancer and able to scale.',
+            'Customizable VM capacity managed as a scalable fleet for the game servers and APIs.',
             'One permanent VM that manually stores every raw event on local disk.',
             'A database feature that replaces Compute when player traffic grows.'
         ],
         correctIndex: 0,
-        explanation: 'Correct. The pool treats multiple VMs as one fleet, so the demo can show health, failover and autoscaling.'
+        explanation: 'Correct. Flexible VMs run the workload, while Instance Pools manage the fleet and scale capacity with demand.'
     },
     4: {
         id: 'functions-cache-streaming',
         title: 'EVENT FLOW CHECK',
-        prompt: 'Which service keeps live player state fast?',
+        prompt: 'How do Functions, Cache, and Streaming support the event flow?',
         options: [
-            'OCI Cache keeps live player state fast; Functions processes events and Streaming buffers event flow.',
+            'Functions process telemetry, Cache keeps live state fast, and Streaming preserves durable event flow.',
             'Streaming stores only the final high score, while Cache archives all raw payload files.',
             'Functions is the long-term SQL database for leaderboard analytics.'
         ],
         correctIndex: 0,
-        explanation: 'Correct. Cache is the fast live-state layer, Functions handles event code, and Streaming keeps telemetry durable and decoupled.'
+        explanation: 'Correct. Functions process signals, Cache keeps the dashboard fresh, and Streaming decouples downstream analytics and storage.'
     },
     5: {
         id: 'adb-object-storage',
         title: 'DATA CHECK',
-        prompt: 'Where do curated analytics and raw events go?',
+        prompt: 'Where do leaderboards, analytics, and raw event archives belong?',
         options: [
-            'Autonomous Database stores game_events and highscores; Object Storage archives raw NDJSON events.',
-            'Object Storage runs SQL analytics, while Autonomous Database stores only background images.',
+            'Autonomous AI Database stores leaderboards and analytics; Object Storage archives raw gameplay events.',
+            'Object Storage runs SQL analytics, while Autonomous AI Database stores only background images.',
             'Both curated analytics and raw event archives are kept only in browser memory.'
         ],
         correctIndex: 0,
-        explanation: 'Correct. ADB is the queryable source of truth; Object Storage keeps durable raw event archives.'
+        explanation: 'Correct. Autonomous AI Database is the queryable source of truth; Object Storage keeps durable raw event archives.'
     }
 };
 
