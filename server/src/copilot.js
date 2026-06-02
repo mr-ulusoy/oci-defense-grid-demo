@@ -595,17 +595,13 @@ function buildAnalysisPrompt(context) {
 function buildCardInsightPrompt(entries = []) {
   return [
     "You are the OCI Defense Grid gameplay analyst for the top leaderboard cards.",
-    "Return exactly one labeled block per player and nothing else.",
-    "Use this block shape:",
-    "Card 1",
-    "Title: 1-3 words, title case",
-    "Headline: one short sentence under 18 words",
-    "Detail: two or three short sentences under 90 words total",
-    "Tone: clean | controlled | recovery | risk | aggressive",
+    "Return one short paragraph per player and nothing else.",
+    "Use this exact format for each paragraph: CALLSIGN [1-3 word title]: two or three short sentences.",
+    "Keep each player paragraph under 90 words total.",
     "Use only the provided metrics. Do not invent numbers.",
     "extraLivesCollected means extra lives collected, not used. Never write 'used extra lives'.",
     "Mention collected extra lives only when extraLivesCollected is greater than 0.",
-    "The detail must explain playing style, strength, risk or pressure, and one concrete coaching benchmark.",
+    "Each paragraph must explain playing style, strength, risk or pressure, and one concrete coaching benchmark.",
     "No markdown, bullets or OCI architecture references.",
     `Input JSON: ${JSON.stringify(entries.slice(0, 2).map(cardMetrics))}`
   ].join("\n");
@@ -633,6 +629,35 @@ function parseCardInsightText(value) {
     }
   }
   return Object.keys(fields).length > 0 ? fields : null;
+}
+
+function escapeRegExp(value) {
+  return String(value ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function parseCardInsightParagraphs(value, entries = []) {
+  const text = String(value ?? "").trim();
+  const cards = entries.map((entry) => {
+    const callsign = String(entry.callsign ?? "").trim();
+    if (!callsign) {
+      return null;
+    }
+    const pattern = new RegExp(
+      `(?:^|\\n)\\s*${escapeRegExp(callsign)}\\s*(?:\\[([^\\]]+)\\])?\\s*:\\s*([\\s\\S]*?)(?=\\n\\s*[A-Z0-9][A-Z0-9 _-]{1,24}\\s*(?:\\[[^\\]]+\\])?\\s*:|$)`,
+      "i"
+    );
+    const match = text.match(pattern);
+    if (!match) {
+      return null;
+    }
+
+    return {
+      title: match[1],
+      detail: match[2].trim()
+    };
+  });
+
+  return cards.every(Boolean) ? cards : null;
 }
 
 function parseCardInsightBlocks(value, expectedCount) {
@@ -688,6 +713,11 @@ function compactSentence(value, wordLimit) {
   return text || null;
 }
 
+function firstSentence(value) {
+  const text = String(value ?? "").replace(/\s+/g, " ").trim();
+  return text.match(/^[^.!?]+[.!?]/)?.[0] ?? text;
+}
+
 function normalizeTone(value, fallback) {
   const tone = String(value ?? "").toLowerCase();
   return ["clean", "controlled", "recovery", "risk", "aggressive"].includes(tone)
@@ -698,17 +728,17 @@ function normalizeTone(value, fallback) {
 function sanitizeCardInsight(rawInsight, entry, index) {
   const fallback = deterministicCardInsight(entry, index);
   const title = compactSentence(rawInsight?.title, 3);
-  const headline = compactSentence(rawInsight?.headline, 16);
   const detail = compactSentence(rawInsight?.detail, CARD_INSIGHT_REPLY_WORD_LIMIT);
+  const headline = compactSentence(rawInsight?.headline ?? firstSentence(detail), 16);
 
-  if (!title || !headline || !detail) {
+  if (!detail) {
     return fallback;
   }
 
   return {
     ...fallback,
-    title,
-    headline,
+    title: title ?? fallback.title,
+    headline: headline ?? fallback.headline,
     detail,
     tone: normalizeTone(rawInsight?.tone, fallback.tone)
   };
@@ -973,7 +1003,9 @@ export async function createLeaderboardCardInsights(entries = []) {
       }),
       timeout
     );
-    const parsed = parseCardInsightBlocks(externalInsight, topEntries.length);
+    const parsed =
+      parseCardInsightParagraphs(externalInsight, topEntries) ??
+      parseCardInsightBlocks(externalInsight, topEntries.length);
     if (!parsed) {
       throw new Error(`Leaderboard card GenAI did not return labeled copy: ${jsonPreview(externalInsight)}`);
     }
