@@ -358,15 +358,15 @@ function renderArchitecture(status = {}, eventAnalytics = {}) {
   architecture.map.classList.toggle("flow-idle", eventActivity.lastMinuteEvents <= 0 && eventRate <= 0.05);
   architecture.map.style.setProperty("--arch-flow-speed", flowSpeed);
 
-  architecture.routeMode.textContent = functionMode ? "Functions ingest + cache writes" : "VM API fallback";
+  architecture.routeMode.textContent = functionMode ? "Functions ingest + reads" : "VM API fallback";
   architecture.eventRate.textContent = formatArchitectureEventActivity(eventActivity);
   architecture.publicLbState.textContent = status?.loadBalancer ?? "Frontend route";
   architecture.vmState.textContent = `${recentNodes || 1} nodes observed`;
   architecture.apiState.textContent = status?.gateway ?? "/api/* routing";
-  architecture.functionState.textContent = functionMode ? "Events + cache writes" : "Standby";
+  architecture.functionState.textContent = functionMode ? "Events + read APIs" : "Standby";
   architecture.vmAppState.textContent = activeVmKey ? `Active ${observedVms.get(activeVmKey)?.name ?? "VM"}` : "Node/Express APIs";
   architecture.privateLbState.textContent = status?.privateLoadBalancer ?? "Private API LB";
-  architecture.cacheState.textContent = cacheStatus === "connected" ? "Live state + AI cache" : cacheStatus;
+  architecture.cacheState.textContent = cacheStatus === "connected" ? "Live player state" : cacheStatus;
   architecture.streamState.textContent = serviceConfigured(streamStatus) ? "Durable event stream" : streamStatus;
   architecture.adbState.textContent = serviceConfigured(adbStatus) ? "Leaderboard + analytics" : adbStatus;
   architecture.objectState.textContent = serviceConfigured(objectStatus) ? "Raw event files" : objectStatus;
