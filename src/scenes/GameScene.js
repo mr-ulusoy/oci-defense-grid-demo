@@ -1,5 +1,5 @@
-import { askCoach, askCopilot, emitGameEvent, telemetry, updateHud } from "../ociRuntime.js";
-import { createLevelAnimations, loadLevelAssets } from "../gameAssets.js?v=20260528-lvl3-boss-v2";
+import { askCoach, askCopilot, emitGameEvent, telemetry, updateHud } from "../ociRuntime.js?v=20260602-briefings-v2";
+import { createLevelAnimations, loadLevelAssets } from "../gameAssets.js?v=20260602-briefings-v2";
 
 const BRIEFINGS_BY_LEVEL = {
     1: {

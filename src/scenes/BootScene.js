@@ -1,4 +1,4 @@
-import { createInitialAnimations, loadInitialAssets } from "../gameAssets.js";
+import { createInitialAnimations, loadInitialAssets } from "../gameAssets.js?v=20260602-briefings-v2";
 
 export default class BootScene extends Phaser.Scene {
     constructor() {
