@@ -299,7 +299,17 @@ export default class MenuScene extends Phaser.Scene {
             this.pilotBar?.classList.remove('needs-name');
         };
 
-        this.launchHandler = () => this.handlePilotAction();
+        this.lastPilotPointerActionAt = 0;
+        this.launchHandler = (event) => {
+            const now = performance.now();
+            if (event?.type === 'click' && now - this.lastPilotPointerActionAt < 650) return;
+            this.handlePilotAction();
+        };
+        this.pointerPilotHandler = (event) => {
+            event.preventDefault();
+            this.lastPilotPointerActionAt = performance.now();
+            this.handlePilotAction();
+        };
         this.inputKeyHandler = (event) => {
             if (event.key === 'Enter') {
                 event.preventDefault();
@@ -309,11 +319,13 @@ export default class MenuScene extends Phaser.Scene {
 
         this.callsignInput.addEventListener('input', this.inputHandler);
         this.callsignInput.addEventListener('keydown', this.inputKeyHandler);
+        this.startButton.addEventListener('pointerup', this.pointerPilotHandler);
         this.startButton.addEventListener('click', this.launchHandler);
 
         this.events.once('shutdown', () => {
             this.callsignInput?.removeEventListener('input', this.inputHandler);
             this.callsignInput?.removeEventListener('keydown', this.inputKeyHandler);
+            this.startButton?.removeEventListener('pointerup', this.pointerPilotHandler);
             this.startButton?.removeEventListener('click', this.launchHandler);
         });
     }
