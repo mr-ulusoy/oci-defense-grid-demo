@@ -19,10 +19,6 @@ if (isOpsView) {
 
 const elements = {
   connectionStatus: document.getElementById("connectionStatus"),
-  score: document.getElementById("hudScore"),
-  level: document.getElementById("hudLevel"),
-  latency: document.getElementById("hudLatency"),
-  events: document.getElementById("hudEvents"),
   loadBalancer: document.getElementById("hudLoadBalancer"),
   vm: document.getElementById("hudVm"),
   vmCount: document.getElementById("hudVmCount"),
@@ -37,6 +33,7 @@ const elements = {
   stressStatus: document.getElementById("stressStatus"),
   scaleState: document.getElementById("scaleState"),
   livePlayers: document.getElementById("livePlayersList"),
+  livePlayersCount: document.getElementById("livePlayersCount"),
   livePlayersStatus: document.getElementById("livePlayersStatus"),
   eventAnalyticsStatus: document.getElementById("eventAnalyticsStatus"),
   eventRate1m: document.getElementById("eventRate1m"),
@@ -107,6 +104,8 @@ let activeVmKey = null;
 let scaleIntent = null;
 let latestLeaderboardEntries = [];
 let latestActivePlayers = [];
+let latestVisiblePlayerCount = 0;
+let latestVisibleTopScore = 0;
 let latestLiveCopilotSignature = "";
 let lastLivePlayerHeartbeatAt = 0;
 let latestLivePlayerEventRate = 0;
@@ -272,22 +271,17 @@ function renderLivePlayers(players = [], analytics = {}) {
 
   const visiblePlayers = activePlayers.length > 0 ? activePlayers : latestActivePlayers;
   const topScore = visiblePlayers.reduce((max, player) => Math.max(max, Number(player.score ?? 0)), 0);
-  const latencySamples = visiblePlayers
-    .map((player) => Number(player.latencyMs ?? 0))
-    .filter((latency) => latency > 0);
-  const avgLatency = latencySamples.length
-    ? Math.round(latencySamples.reduce((sum, latency) => sum + latency, 0) / latencySamples.length)
-    : null;
   const eventRate =
     visiblePlayers.reduce((sum, player) => sum + Number(player.eventsPerSecond ?? 0), 0) ||
     analytics.eventsPerSecond ||
     telemetry.eventRate();
   latestLivePlayerEventRate = Number(eventRate) || 0;
+  latestVisiblePlayerCount = visiblePlayers.length;
+  latestVisibleTopScore = topScore;
 
-  elements.score.textContent = String(visiblePlayers.length);
-  elements.level.textContent = String(topScore);
-  elements.latency.textContent = avgLatency == null ? "-- ms" : `${avgLatency} ms`;
-  elements.events.textContent = Number(eventRate).toFixed(1);
+  if (elements.livePlayersCount) {
+    elements.livePlayersCount.textContent = `${visiblePlayers.length} active`;
+  }
 
   elements.livePlayers.innerHTML = "";
   if (visiblePlayers.length === 0) {
@@ -1093,7 +1087,7 @@ function setActiveCopilotMode(mode = "live") {
 }
 
 function activePlayerCount() {
-  return latestActivePlayers.length || Number(elements.score.textContent || 0);
+  return latestActivePlayers.length || latestVisiblePlayerCount;
 }
 
 function liveScoreBucket(score) {
@@ -1166,7 +1160,7 @@ function copilotSnapshot() {
     })),
     liveSignature: liveCopilotSignature(),
     liveTrigger: liveCopilotTrigger(),
-    topScore: Number(elements.level.textContent),
+    topScore: latestVisibleTopScore,
     eventsPerSecond: telemetry.eventRate()
   };
 }

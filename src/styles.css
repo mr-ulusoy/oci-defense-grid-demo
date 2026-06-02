@@ -1061,35 +1061,29 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   }
 }
 
-.metric-grid {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: 1fr 1fr;
-}
-
-.app-shell.ops-visible .metric-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.metric {
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  min-height: 82px;
-  padding: 12px;
-}
-
-.metric span,
 .section-title span {
   color: var(--muted);
   display: block;
   font-size: 0.82rem;
 }
 
-.metric strong {
-  display: block;
-  font-size: 1.55rem;
-  line-height: 1.8;
+.section-title-with-badge {
+  align-items: center;
+  display: inline-flex !important;
+  gap: 8px;
+}
+
+.section-title-with-badge b {
+  background: rgba(61, 220, 151, 0.1);
+  border: 1px solid rgba(61, 220, 151, 0.34);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+  padding: 4px 8px;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .cloud-map {
@@ -2206,10 +2200,6 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
   body.game-active .app-shell:not(.ops-visible) .mobile-register-hero {
     display: none;
-  }
-
-  .metric-grid {
-    grid-template-columns: 1fr;
   }
 
   .architecture-map {

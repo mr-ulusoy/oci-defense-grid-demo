@@ -174,25 +174,6 @@
           </section>
         </header>
 
-        <section class="metric-grid">
-          <article class="metric">
-            <span>Live Players</span>
-            <strong id="hudScore">0</strong>
-          </article>
-          <article class="metric">
-            <span>Top Score</span>
-            <strong id="hudLevel">0</strong>
-          </article>
-          <article class="metric">
-            <span>Avg Latency</span>
-            <strong id="hudLatency">-- ms</strong>
-          </article>
-          <article class="metric">
-            <span>Events/sec</span>
-            <strong id="hudEvents">0.0</strong>
-          </article>
-        </section>
-
         <section class="cloud-map" aria-label="OCI topology and VM fleet">
           <span class="topology-eyebrow">Topology</span>
           <div class="topology-row topology-service-row">
@@ -265,7 +246,7 @@
 
         <section class="live-players">
           <div class="section-title">
-            <span>Live Players</span>
+            <span class="section-title-with-badge">Live Players <b id="livePlayersCount">0 active</b></span>
             <strong id="livePlayersStatus">Redis live state</strong>
           </div>
           <div class="live-player-table" id="livePlayersList" aria-label="Live players"></div>
