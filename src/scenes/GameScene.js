@@ -3,16 +3,14 @@ import { createLevelAnimations, loadLevelAssets } from "../gameAssets.js?v=20260
 
 const BRIEFINGS_BY_LEVEL = {
     1: {
-        title: 'REGIONS AND FAULT DOMAINS',
+        title: 'REALMS, REGIONS AND FAULT DOMAINS',
         imageKey: 'briefing-region',
         guideKey: 'briefing-storyteller',
         durationMs: 45000,
         lines: [
-            'Oracle Cloud Infrastructure is hosted in regions across the world, giving workloads geographic separation from other cities, power grids, network paths, and natural disaster zones.',
-            'This demo is deployed into one selected OCI region. The Terraform region variable decides where the full stack lands, so another team can run the same architecture in their own preferred region.',
-            'Inside the region, the demo builds a VCN with public and private subnets. The public entry points expose the Load Balancer and API Gateway, while the Compute VM fleet runs privately behind them.',
-            'Fault domains provide anti-affinity: they let the VM fleet spread across separate physical hardware, reducing the chance that one hardware failure affects every game server.',
-            'Regional services such as Functions, Streaming, OCI Cache, Autonomous Database, and Object Storage stay close to the game traffic, keeping the architecture compact, repeatable, and easy to tear down after the demo.'
+            'Oracle Cloud Infrastructure is built around realms and regions. A realm is an isolated collection of regions that provides strong separation between cloud environments such as commercial, government, and dedicated clouds.',
+            'This demo is deployed in a selected OCI region. Within that region, Fault Domains provide anti-affinity by distributing the VM fleet across separate physical hardware, reducing the risk that a single hardware failure impacts all game servers.',
+            'By combining realms, regions, and fault domains, OCI delivers multiple layers of isolation, resiliency, availability, and security for modern cloud applications.'
         ]
     },
     2: {
@@ -21,10 +19,9 @@ const BRIEFINGS_BY_LEVEL = {
         guideKey: 'briefing-storyteller',
         durationMs: 43000,
         lines: [
-            'The Load Balancer serves the game from one public entry point and distributes player traffic across healthy Compute VMs inside the VCN.',
-            'Health checks make the fleet resilient: unhealthy instances stop receiving traffic, while healthy VMs continue serving the mission.',
-            'API Gateway is the controlled front door for /api/* calls. It can validate requests, handle CORS, enforce authentication and authorization, apply request limits, and route traffic to Functions or VM APIs.',
-            'Together they split the paths: the browser loads the game through the Load Balancer, while telemetry, leaderboard, and copilot calls go through API Gateway.'
+            'The Load Balancer provides a public entry point to the game and distributes player traffic across multiple Compute VMs. Health checks automatically route traffic away from unhealthy servers, helping keep the application highly available.',
+            'The API Gateway is the secure front door for API calls. It validates requests, enforces authentication and authorization, applies traffic controls, and routes requests to Functions or VM-based APIs. It handles telemetry, leaderboard, and AI service requests throughout the game.',
+            'Together, these services create a scalable, secure, and resilient architecture for modern cloud applications.'
         ]
     },
     3: {
@@ -33,22 +30,22 @@ const BRIEFINGS_BY_LEVEL = {
         guideKey: 'briefing-storyteller',
         durationMs: 40000,
         lines: [
-            'OCI Compute VMs run the game servers and Node APIs behind the Load Balancer. In this demo, each VM can serve the frontend and answer health, status, and gameplay API requests.',
-            'Flexible shapes let us choose the OCPUs and memory each VM needs. Network bandwidth and VNIC capacity scale with the selected OCPU count, so the shape can match the workload.',
-            'Instance pools manage multiple VMs as one fleet. The pool can attach to the Load Balancer, place instances across fault domains or subnets, and grow or shrink during autoscaling.',
-            'When demand rises, the fleet adds workers. When the mission calms down, it scales back so the demo keeps performance high without leaving idle capacity behind.'
+            'OCI Compute VMs run the game servers and APIs that power OCI Defense Grid.',
+            'Flexible VM shapes allow you to customize the number of OCPUs and the amount of memory, so resources can be matched to the workload.',
+            'Instance Pools manage multiple VMs as a single fleet and can automatically scale capacity up or down based on demand.',
+            'This enables a scalable, resilient, and cost-efficient architecture.'
         ]
     },
     4: {
-        title: 'FUNCTIONS CACHE AND STREAMING',
+        title: 'FUNCTIONS, CACHE AND STREAMING',
         imageKey: 'briefing-fn-cache-stream',
         guideKey: 'briefing-storyteller',
         durationMs: 43000,
         lines: [
-            'OCI Functions runs event-handling code without managing servers. In this demo, gameplay telemetry can arrive through API Gateway and be processed by a serverless function.',
-            'OCI Cache keeps live state fast. Active pilots, current scores, and presenter dashboard data can be read quickly without waiting for permanent database writes.',
-            'OCI Streaming is the durable event stream. It ingests high-volume messages in real time and decouples producers from consumers, so analytics and storage can move at their own pace.',
-            'Together they make the mission responsive: Functions process signals, Cache keeps the live battlefield fresh, and Streaming preserves the event flow for downstream services.'
+            'OCI Functions runs event-handling code without managing servers. In this demo, gameplay telemetry arrives through API Gateway and is processed by serverless functions.',
+            'OCI Cache keeps live state fast. Active pilots, current scores, and presenter dashboard data can be retrieved quickly without waiting for permanent database writes.',
+            'OCI Streaming is the durable event stream. It ingests high-volume messages in real time and decouples producers from consumers, allowing analytics, AI services, and storage systems to process events independently.',
+            'Together, these services keep the mission responsive: Functions process signals, Cache keeps the live battlefield fresh, and Streaming preserves the event flow for downstream services.'
         ]
     },
     5: {
@@ -57,10 +54,9 @@ const BRIEFINGS_BY_LEVEL = {
         guideKey: 'briefing-storyteller',
         durationMs: 45000,
         lines: [
-            'Autonomous Database is the source of truth for leaderboard, run summaries, and Event Analytics. It automates provisioning, backups, patching, upgrades, and elastic scaling.',
-            'Compute and storage can grow or shrink without downtime or service interruption. With Autonomous Data Guard enabled, Oracle highlights a 99.995% availability SLA for mission-critical deployments.',
+            'Autonomous AI Database is the source of truth for leaderboards, run summaries, and event analytics. It automates provisioning, backups, patching, upgrades, and scaling, while allowing storage and performance to grow as demand increases.',
             'Object Storage archives raw gameplay events as durable objects. It stores unstructured data at internet scale and is not tied to any single Compute instance.',
-            'For durability, Object Storage is designed for 99.999999999% annual durability. It stores data redundantly across availability domains or fault domains, monitors integrity with checksums, and repairs corrupt data automatically.'
+            'For durability, Object Storage is designed for eleven 9s of durability. Data is stored redundantly across fault domains, continuously verified with checksums, and automatically repaired if corruption is detected.'
         ]
     }
 };
