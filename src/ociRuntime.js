@@ -55,7 +55,9 @@ const elements = {
   opsPassword: document.getElementById("opsPassword"),
   opsLoginButton: document.getElementById("opsLoginButton"),
   opsLoginStatus: document.getElementById("opsLoginStatus"),
-  refreshLeaderboard: document.getElementById("refreshLeaderboard")
+  refreshLeaderboard: document.getElementById("refreshLeaderboard"),
+  gameQrCanvas: document.getElementById("gameQrCanvas"),
+  gameQrLink: document.getElementById("gameQrLink")
 };
 
 const architecture = {
@@ -167,6 +169,47 @@ function bindOpsLogin() {
       if (elements.opsLoginButton) elements.opsLoginButton.disabled = false;
     }
   });
+}
+
+function resolvePublicGameUrl() {
+  const configuredUrl =
+    window.OCI_DEFENSE_CONFIG?.publicGameUrl ?? window.OCI_DEFENSE_CONFIG?.gameUrl ?? "";
+  if (configuredUrl) {
+    return new window.URL(configuredUrl, window.location.href).href;
+  }
+
+  const gameUrl = new window.URL(window.location.href);
+  gameUrl.pathname = "/";
+  gameUrl.search = "";
+  gameUrl.hash = "";
+  return gameUrl.href;
+}
+
+async function renderGameQrCode() {
+  if (!isOpsView || !elements.gameQrCanvas) return;
+
+  const gameUrl = resolvePublicGameUrl();
+  if (elements.gameQrLink) {
+    elements.gameQrLink.href = gameUrl;
+    elements.gameQrLink.textContent = gameUrl.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  }
+
+  try {
+    const qrModule = await import("qrcode");
+    const qrCode = qrModule.default ?? qrModule;
+    await qrCode.toCanvas(elements.gameQrCanvas, gameUrl, {
+      color: {
+        dark: "#071017",
+        light: "#f4fbf7"
+      },
+      errorCorrectionLevel: "M",
+      margin: 2,
+      width: 132
+    });
+  } catch (error) {
+    console.warn("Unable to render game QR code.", error);
+    elements.gameQrCanvas.hidden = true;
+  }
 }
 
 async function ensureOpsAuthenticated() {
@@ -1320,6 +1363,7 @@ export async function initOciRuntime() {
 
   await telemetry.init();
   if (isOpsView) {
+    renderGameQrCode();
     renderStatus(telemetry.status);
     renderLivePlayers(await telemetry.refreshLivePlayers());
     renderEventAnalytics(await telemetry.eventAnalytics());

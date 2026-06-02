@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260601-ops-same-origin" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260602-ops-qr-code" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -43,6 +43,14 @@
           <button type="button" id="startMission">Register</button>
         </div>
         <div id="gameRoot" class="game-root"></div>
+        <section class="game-qr-panel" aria-label="Mobile game QR code">
+          <div class="game-qr-copy">
+            <span>Mobile join</span>
+            <strong>Scan to play</strong>
+            <a id="gameQrLink" href="/" target="_blank" rel="noreferrer">Public Load Balancer</a>
+          </div>
+          <canvas id="gameQrCanvas" width="132" height="132" aria-label="QR code for the playable URL"></canvas>
+        </section>
       </section>
 
       <aside class="ops-panel" id="opsPanel" aria-label="Cloud operations dashboard" hidden>
@@ -398,6 +406,6 @@
       });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <script type="module" src="/src/main.js?v=20260601-topology-lb-only"></script>
+    <script type="module" src="/src/main.js?v=20260602-ops-qr-code"></script>
   </body>
 </html>
