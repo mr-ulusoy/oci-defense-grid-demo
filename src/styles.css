@@ -654,9 +654,10 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .live-architecture {
   background:
-    linear-gradient(180deg, rgba(7, 16, 23, 0.72), rgba(5, 13, 21, 0.9)),
-    rgba(7, 16, 23, 0.58);
-  border: 1px solid rgba(124, 200, 255, 0.22);
+    radial-gradient(circle at 16% 10%, rgba(124, 200, 255, 0.1), transparent 34%),
+    linear-gradient(180deg, rgba(16, 38, 49, 0.9), rgba(10, 27, 37, 0.94)),
+    rgba(13, 31, 41, 0.82);
+  border: 1px solid rgba(124, 200, 255, 0.3);
   border-radius: 8px;
   margin-top: 16px;
   padding: 14px;
