@@ -714,6 +714,13 @@ function compactSentence(value, wordLimit) {
   return text || null;
 }
 
+function wordCount(value) {
+  return String(value ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+}
+
 function firstSentence(value) {
   const text = String(value ?? "").replace(/\s+/g, " ").trim();
   return text.match(/^[^.!?]+[.!?]/)?.[0] ?? text;
@@ -736,10 +743,14 @@ function sanitizeCardInsight(rawInsight, entry, index) {
   const fallback = deterministicCardInsight(entry, index);
   const title = compactSentence(rawInsight?.title, 3);
   const rawDetail = String(rawInsight?.detail ?? "").replace(/\s+/g, " ").trim();
-  const generatedHeadline = rawInsight?.headline ?? firstSentence(rawDetail);
+  const generatedHeadline = firstSentence(rawDetail);
   const detailSource = rawInsight?.headline ? rawDetail : afterFirstSentence(rawDetail) || rawDetail;
   const detail = compactSentence(detailSource, CARD_INSIGHT_REPLY_WORD_LIMIT);
-  const headline = compactSentence(generatedHeadline, 16);
+  const headline = rawInsight?.headline
+    ? compactSentence(rawInsight.headline, 16)
+    : wordCount(generatedHeadline) <= 18
+      ? generatedHeadline
+      : fallback.headline;
 
   if (!detail) {
     return fallback;
