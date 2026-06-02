@@ -599,6 +599,7 @@ function buildCardInsightPrompt(entries = []) {
     "Use this exact format for each paragraph: CALLSIGN [1-3 word title]: two or three short sentences.",
     "Keep each player paragraph under 90 words total.",
     "Use only the provided metrics. Do not invent numbers.",
+    "hits means player damage taken; lower hits are better. Never recommend increasing hits or targeting a higher hit count.",
     "extraLivesCollected means extra lives collected, not used. Never write 'used extra lives'.",
     "Mention collected extra lives only when extraLivesCollected is greater than 0.",
     "Each paragraph must explain playing style, strength, risk or pressure, and one concrete coaching benchmark.",
@@ -718,6 +719,12 @@ function firstSentence(value) {
   return text.match(/^[^.!?]+[.!?]/)?.[0] ?? text;
 }
 
+function afterFirstSentence(value) {
+  const text = String(value ?? "").replace(/\s+/g, " ").trim();
+  const first = firstSentence(text);
+  return text.slice(first.length).trim();
+}
+
 function normalizeTone(value, fallback) {
   const tone = String(value ?? "").toLowerCase();
   return ["clean", "controlled", "recovery", "risk", "aggressive"].includes(tone)
@@ -728,8 +735,11 @@ function normalizeTone(value, fallback) {
 function sanitizeCardInsight(rawInsight, entry, index) {
   const fallback = deterministicCardInsight(entry, index);
   const title = compactSentence(rawInsight?.title, 3);
-  const detail = compactSentence(rawInsight?.detail, CARD_INSIGHT_REPLY_WORD_LIMIT);
-  const headline = compactSentence(rawInsight?.headline ?? firstSentence(detail), 16);
+  const rawDetail = String(rawInsight?.detail ?? "").replace(/\s+/g, " ").trim();
+  const generatedHeadline = rawInsight?.headline ?? firstSentence(rawDetail);
+  const detailSource = rawInsight?.headline ? rawDetail : afterFirstSentence(rawDetail) || rawDetail;
+  const detail = compactSentence(detailSource, CARD_INSIGHT_REPLY_WORD_LIMIT);
+  const headline = compactSentence(generatedHeadline, 16);
 
   if (!detail) {
     return fallback;
