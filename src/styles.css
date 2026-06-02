@@ -232,10 +232,10 @@ body.game-active .app-shell:not(.ops-visible) .pilot-bar {
   border: 1px solid rgba(124, 200, 255, 0.42);
   border-radius: 10px;
   display: block;
-  height: 220px;
+  height: 250px;
   image-rendering: pixelated;
   padding: 10px;
-  width: 220px;
+  width: 250px;
 }
 
 .top-strip {
