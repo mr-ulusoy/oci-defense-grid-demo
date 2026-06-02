@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import os from "node:os";
+import { getSharedJson, setSharedJson } from "./redisCache.js";
 
 const FALLBACK_INSIGHTS = [
   "Traffic pressure is steady. Preserve shields for the next spike and watch for players taking unnecessary hits.",
@@ -19,6 +21,8 @@ const COPILOT_REPLY_WORD_LIMIT = 220;
 const CARD_INSIGHT_REPLY_WORD_LIMIT = 90;
 const CARD_INSIGHT_MAX_TOKENS = 1100;
 const CARD_INSIGHT_CACHE_MAX_ENTRIES = 50;
+const CARD_INSIGHT_SHARED_CACHE_TTL_SECONDS = 3600;
+const CARD_INSIGHT_SHARED_CACHE_SCOPE = "leaderboard-card-insight";
 
 const cardInsightCache = new Map();
 
@@ -178,6 +182,10 @@ function cardInsightSignature(entries = []) {
     .join("|");
 }
 
+function cardInsightSharedKey(signature) {
+  return createHash("sha256").update(signature).digest("hex");
+}
+
 function cacheCardInsight(signature, result) {
   if (!signature || !String(result?.source ?? "").startsWith("oci-genai")) {
     return;
@@ -186,6 +194,36 @@ function cacheCardInsight(signature, result) {
   cardInsightCache.set(signature, result);
   while (cardInsightCache.size > CARD_INSIGHT_CACHE_MAX_ENTRIES) {
     cardInsightCache.delete(cardInsightCache.keys().next().value);
+  }
+}
+
+async function readSharedCardInsight(signature) {
+  if (!signature) {
+    return null;
+  }
+
+  try {
+    return await getSharedJson(CARD_INSIGHT_SHARED_CACHE_SCOPE, cardInsightSharedKey(signature));
+  } catch (error) {
+    console.warn("Redis leaderboard card insight read failed.", error.message);
+    return null;
+  }
+}
+
+async function writeSharedCardInsight(signature, result) {
+  if (!signature || !String(result?.source ?? "").startsWith("oci-genai")) {
+    return;
+  }
+
+  try {
+    await setSharedJson(
+      CARD_INSIGHT_SHARED_CACHE_SCOPE,
+      cardInsightSharedKey(signature),
+      result,
+      CARD_INSIGHT_SHARED_CACHE_TTL_SECONDS
+    );
+  } catch (error) {
+    console.warn("Redis leaderboard card insight write failed.", error.message);
   }
 }
 
@@ -684,6 +722,78 @@ function parseCardInsightBlocks(value, expectedCount) {
   return null;
 }
 
+function parseLooseCardInsightChunk(chunk, entry = {}) {
+  const callsign = String(entry.callsign ?? "").trim();
+  let text = String(chunk ?? "").replace(/\s+/g, " ").trim();
+  let title = null;
+
+  if (callsign) {
+    const prefix = new RegExp(
+      `^\\s*(?:\\d+[.)]\\s*)?${escapeRegExp(callsign)}\\b\\s*(?:\\[([^\\]]+)\\])?\\s*(?:[:\\-–—])?\\s*`,
+      "i"
+    );
+    const match = text.match(prefix);
+    if (match) {
+      title = match[1]?.trim() ?? null;
+      text = text.slice(match[0].length).trim();
+    }
+  }
+
+  const titleMatch = text.match(/^([A-Z][A-Za-z0-9 /-]{2,28}):\s+(.+)$/);
+  if (!title && titleMatch && wordCount(titleMatch[1]) <= 4) {
+    title = titleMatch[1].trim();
+    text = titleMatch[2].trim();
+  }
+
+  return text ? { title, detail: text } : null;
+}
+
+function parseLooseCardInsightParagraphs(value, entries = []) {
+  const text = String(value ?? "").trim();
+  if (!text || entries.length === 0) {
+    return null;
+  }
+
+  const cards = entries.map((entry, index) => {
+    const callsign = String(entry.callsign ?? "").trim();
+    if (!callsign) {
+      return null;
+    }
+
+    const nextCallsigns = entries
+      .slice(index + 1)
+      .map((nextEntry) => String(nextEntry.callsign ?? "").trim())
+      .filter(Boolean)
+      .map(escapeRegExp);
+    const lookahead = nextCallsigns.length > 0
+      ? `(?=\\s*(?:\\n+|$)(?:\\d+[.)]\\s*)?(?:${nextCallsigns.join("|")})\\b|$)`
+      : "$";
+    const pattern = new RegExp(
+      `(?:^|\\n+)\\s*(?:\\d+[.)]\\s*)?${escapeRegExp(callsign)}\\b\\s*(?:\\[[^\\]]+\\])?\\s*(?:[:\\-–—])?\\s*([\\s\\S]*?)${lookahead}`,
+      "i"
+    );
+    const match = text.match(pattern);
+    return match ? parseLooseCardInsightChunk(`${callsign}: ${match[1]}`, entry) : null;
+  });
+
+  if (cards.every(Boolean)) {
+    return cards;
+  }
+
+  const paragraphChunks = text
+    .split(/\n{2,}/)
+    .map((chunk) => chunk.trim())
+    .filter(Boolean);
+  if (paragraphChunks.length >= entries.length) {
+    const paragraphCards = entries.map((entry, index) => parseLooseCardInsightChunk(paragraphChunks[index], entry));
+    if (paragraphCards.every(Boolean)) {
+      return paragraphCards;
+    }
+  }
+
+  return null;
+}
+
 function jsonPreview(value) {
   let text;
   try {
@@ -1009,6 +1119,16 @@ export async function createLeaderboardCardInsights(entries = []) {
     };
   }
 
+  const sharedCached = await readSharedCardInsight(signature);
+  if (sharedCached) {
+    cacheCardInsight(signature, sharedCached);
+    return {
+      ...sharedCached,
+      cached: true,
+      sharedCache: true
+    };
+  }
+
   const started = Date.now();
   const model = getCardInsightModel();
   const fastModel = getCoachModel();
@@ -1026,7 +1146,8 @@ export async function createLeaderboardCardInsights(entries = []) {
     );
     const parsed =
       parseCardInsightParagraphs(externalInsight, topEntries) ??
-      parseCardInsightBlocks(externalInsight, topEntries.length);
+      parseCardInsightBlocks(externalInsight, topEntries.length) ??
+      parseLooseCardInsightParagraphs(externalInsight, topEntries);
     if (!parsed) {
       throw new Error(`Leaderboard card GenAI did not return labeled copy: ${jsonPreview(externalInsight)}`);
     }
@@ -1049,6 +1170,7 @@ export async function createLeaderboardCardInsights(entries = []) {
       timeoutMs
     );
     cacheCardInsight(signature, result);
+    await writeSharedCardInsight(signature, result);
     return result;
   } catch (error) {
     console.warn("Leaderboard card primary GenAI call failed, trying fast model.", error.message);
@@ -1062,6 +1184,7 @@ export async function createLeaderboardCardInsights(entries = []) {
         Math.min(5000, timeoutMs, COPILOT_GATEWAY_SAFE_TIMEOUT_MS)
       );
       cacheCardInsight(signature, result);
+      await writeSharedCardInsight(signature, result);
       return result;
     } catch (error) {
       console.warn(
