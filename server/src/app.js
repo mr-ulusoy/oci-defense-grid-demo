@@ -3,6 +3,7 @@ import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import QRCode from "qrcode";
 import {
   createCoachReply,
   createCopilotInsight,
@@ -53,6 +54,25 @@ function privateLoadBalancerName() {
   }
 
   return "private-api-lb";
+}
+
+function publicGameUrl(req) {
+  const configured = process.env.PUBLIC_GAME_URL ?? process.env.OCI_PUBLIC_GAME_URL;
+  if (configured) {
+    return new globalThis.URL(configured, "http://localhost").href;
+  }
+
+  const forwardedProto = String(req.headers["x-forwarded-proto"] ?? "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)[0];
+  const forwardedHost = String(req.headers["x-forwarded-host"] ?? "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)[0];
+  const proto = forwardedProto || req.protocol || "http";
+  const host = forwardedHost || req.get("host") || "localhost";
+  return `${proto}://${host}/`;
 }
 
 function opsAdminPassword() {
@@ -294,6 +314,23 @@ export function createApp({
 
   app.get("/healthz", (req, res) => {
     res.json({ ok: true, vm: vmIdentity() });
+  });
+
+  app.get("/api/qr/game.svg", async (req, res) => {
+    const svg = await QRCode.toString(publicGameUrl(req), {
+      color: {
+        dark: "#071017",
+        light: "#f4fbf7"
+      },
+      errorCorrectionLevel: "M",
+      margin: 2,
+      type: "svg",
+      width: 260
+    });
+    res
+      .type("image/svg+xml")
+      .set("Cache-Control", "no-store")
+      .send(svg);
   });
 
   app.get("/api/ops/session", (req, res) => {

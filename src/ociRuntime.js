@@ -194,25 +194,8 @@ async function renderGameQrCode() {
     elements.gameQrLink.textContent = gameUrl.replace(/^https?:\/\//, "").replace(/\/$/, "");
   }
 
-  try {
-    const qrModule = await import("qrcode");
-    const qrCode = qrModule.default ?? qrModule;
-    const svg = await qrCode.toString(gameUrl, {
-      color: {
-        dark: "#071017",
-        light: "#f4fbf7"
-      },
-      errorCorrectionLevel: "M",
-      margin: 2,
-      type: "svg",
-      width: 240
-    });
-    elements.gameQrImage.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-    elements.gameQrImage.hidden = false;
-  } catch (error) {
-    console.warn("Unable to render game QR code.", error);
-    elements.gameQrImage.hidden = true;
-  }
+  elements.gameQrImage.src = `/api/qr/game.svg?v=${Date.now()}`;
+  elements.gameQrImage.hidden = false;
 }
 
 async function ensureOpsAuthenticated() {

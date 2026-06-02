@@ -23,6 +23,25 @@ function request(app, path, options = {}) {
   });
 }
 
+function requestText(app, path, options = {}) {
+  const server = createServer(app);
+
+  return new Promise((resolve, reject) => {
+    server.listen(0, "127.0.0.1", async () => {
+      const { port } = server.address();
+      try {
+        const response = await fetch(`http://127.0.0.1:${port}${path}`, options);
+        const body = await response.text();
+        resolve({ response, body });
+      } catch (error) {
+        reject(error);
+      } finally {
+        server.close();
+      }
+    });
+  });
+}
+
 async function opsCookie(app, password = "OCI2026") {
   const { response } = await request(app, "/api/ops/login", {
     method: "POST",
@@ -53,6 +72,21 @@ test("status endpoint returns VM identity", async () => {
   assert.equal(typeof body.vm.metrics.diskIo.readKbps, "number");
   assert.equal(typeof body.vm.metrics.diskIo.writeKbps, "number");
   assert.equal(body.eventIngestRouteMode, "vm-api");
+});
+
+test("game QR endpoint returns an SVG image", async () => {
+  const app = createApp();
+  const { response, body } = await requestText(app, "/api/qr/game.svg", {
+    headers: {
+      Host: "demo.example.com",
+      "X-Forwarded-Proto": "https"
+    }
+  });
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type"), /image\/svg\+xml/);
+  assert.match(body, /<svg/);
+  assert.match(body, /path/);
 });
 
 test("events endpoint accepts valid telemetry batch", async () => {
