@@ -1494,7 +1494,6 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .insight-box,
 .leaderboard,
-.event-analytics,
 .live-players {
   background: var(--panel-2);
   border: 1px solid var(--line);
@@ -1716,33 +1715,6 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .live-player-empty {
   color: var(--muted);
   padding: 10px 0;
-}
-
-.event-summary-grid {
-  display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-bottom: 10px;
-}
-
-.event-stat {
-  background: rgba(7, 16, 23, 0.56);
-  border: 1px solid rgba(124, 200, 255, 0.16);
-  border-radius: 6px;
-  padding: 8px;
-}
-
-.event-stat span {
-  color: var(--muted);
-  display: block;
-  font-size: 0.72rem;
-}
-
-.event-stat strong {
-  color: var(--accent);
-  display: block;
-  font-size: 1.15rem;
-  line-height: 1.45;
 }
 
 .event-chip-set {

@@ -326,15 +326,23 @@ function renderLivePlayers(players = [], analytics = {}) {
 function renderEventAnalytics(analytics = {}) {
   if (!isOpsView) return;
 
-  const sourceLabel = {
-    autonomousDatabase: "ADB game_events",
-    memory: "Memory fallback",
-    browser: "Browser fallback"
-  };
-  elements.eventAnalyticsStatus.textContent = sourceLabel[analytics.source] ?? "ADB game_events";
-  elements.eventRate1m.textContent = formatEventsPerMinute(analytics.windows?.last1m, 1);
-  elements.eventRate5m.textContent = formatEventsPerMinute(analytics.windows?.last5m, 5);
-  elements.eventRate15m.textContent = formatEventsPerMinute(analytics.windows?.last15m, 15);
+  if (elements.eventAnalyticsStatus) {
+    const sourceLabel = {
+      autonomousDatabase: "ADB game_events",
+      memory: "Memory fallback",
+      browser: "Browser fallback"
+    };
+    elements.eventAnalyticsStatus.textContent = sourceLabel[analytics.source] ?? "ADB game_events";
+  }
+  if (elements.eventRate1m) {
+    elements.eventRate1m.textContent = formatEventsPerMinute(analytics.windows?.last1m, 1);
+  }
+  if (elements.eventRate5m) {
+    elements.eventRate5m.textContent = formatEventsPerMinute(analytics.windows?.last5m, 5);
+  }
+  if (elements.eventRate15m) {
+    elements.eventRate15m.textContent = formatEventsPerMinute(analytics.windows?.last15m, 15);
+  }
   renderArchitecture(telemetry.status, analytics);
 }
 
