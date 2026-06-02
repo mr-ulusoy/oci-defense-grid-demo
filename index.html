@@ -101,13 +101,13 @@
                 <path class="arch-link arch-link-api" d="M 520 318 L 636 318"></path>
                 <path class="arch-link arch-link-api" d="M 805 318 L 840 318"></path>
                 <path class="arch-link arch-link-ai" d="M 1005 290 C 1040 235 1040 190 1018 150"></path>
-                <path class="arch-link arch-link-api" d="M 1005 330 C 1018 342 1027 356 1038 366"></path>
+                <path class="arch-link arch-link-read" d="M 1005 330 C 1018 342 1027 356 1038 366"></path>
                 <path class="arch-link arch-link-read" d="M 500 318 C 560 375 615 420 636 490"></path>
                 <path class="arch-link arch-link-events" d="M 500 335 C 560 405 615 455 636 505"></path>
                 <path class="arch-link arch-link-events" d="M 717 545 L 717 585"></path>
                 <path class="arch-link arch-link-read" d="M 800 505 C 900 470 970 465 1038 493"></path>
                 <path class="arch-link arch-link-events" d="M 800 623 C 910 625 1000 575 1038 493"></path>
-                <path class="arch-link arch-link-read" d="M 800 500 C 900 438 970 405 1038 392"></path>
+                <path class="arch-link arch-link-events" d="M 800 500 C 900 438 970 405 1038 392"></path>
                 <path class="arch-link arch-link-events" d="M 800 623 L 1038 623"></path>
               </svg>
               <div class="arch-flow-label arch-label-game">Player opens the URL</div>
@@ -115,7 +115,8 @@
               <div class="arch-flow-label arch-label-api">/api/status, /api/coach</div>
               <div class="arch-flow-label arch-label-ai">VM App -> OCI GenAI</div>
               <div class="arch-flow-label arch-label-events">/api/events -> Functions</div>
-              <div class="arch-flow-label arch-label-read">Read APIs -> Cache + ADB</div>
+              <div class="arch-flow-label arch-label-read">VM App &lt;-&gt; OCI Cache</div>
+              <div class="arch-flow-label arch-label-cache-write">Functions -> OCI Cache</div>
               <div class="arch-flow-label arch-label-stream">Streaming buffers events</div>
 
               <div class="arch-node arch-pos-client" id="archPlayer">
@@ -156,7 +157,7 @@
               </div>
               <div class="arch-node arch-pos-cache" id="archCache">
                 <span>OCI Cache</span>
-                <strong id="archCacheState">Live player state</strong>
+                <strong id="archCacheState">Live state + AI cache</strong>
               </div>
               <div class="arch-node arch-node-hub arch-pos-streaming" id="archStreaming">
                 <span>Streaming</span>

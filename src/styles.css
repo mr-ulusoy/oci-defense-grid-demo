@@ -901,8 +901,14 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 .arch-label-read {
   color: rgb(255, 156, 156);
-  left: 72%;
-  top: 414px;
+  left: 87.5%;
+  top: 372px;
+}
+
+.arch-label-cache-write {
+  color: var(--accent);
+  left: 78%;
+  top: 440px;
 }
 
 .arch-label-stream {
