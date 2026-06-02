@@ -1,4 +1,4 @@
-import { initOciRuntime } from "./ociRuntime.js?v=20260602-ops-qr-code";
+import { initOciRuntime } from "./ociRuntime.js?v=20260602-ops-qr-svg";
 import BootScene from "./scenes/BootScene.js";
 import MenuScene from "./scenes/MenuScene.js";
 import GameScene from "./scenes/GameScene.js?v=20260528-lvl3-boss-v2";

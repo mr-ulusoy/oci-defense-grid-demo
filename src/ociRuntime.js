@@ -56,7 +56,7 @@ const elements = {
   opsLoginButton: document.getElementById("opsLoginButton"),
   opsLoginStatus: document.getElementById("opsLoginStatus"),
   refreshLeaderboard: document.getElementById("refreshLeaderboard"),
-  gameQrCanvas: document.getElementById("gameQrCanvas"),
+  gameQrImage: document.getElementById("gameQrImage"),
   gameQrLink: document.getElementById("gameQrLink")
 };
 
@@ -186,7 +186,7 @@ function resolvePublicGameUrl() {
 }
 
 async function renderGameQrCode() {
-  if (!isOpsView || !elements.gameQrCanvas) return;
+  if (!isOpsView || !elements.gameQrImage) return;
 
   const gameUrl = resolvePublicGameUrl();
   if (elements.gameQrLink) {
@@ -197,18 +197,21 @@ async function renderGameQrCode() {
   try {
     const qrModule = await import("qrcode");
     const qrCode = qrModule.default ?? qrModule;
-    await qrCode.toCanvas(elements.gameQrCanvas, gameUrl, {
+    const svg = await qrCode.toString(gameUrl, {
       color: {
         dark: "#071017",
         light: "#f4fbf7"
       },
       errorCorrectionLevel: "M",
       margin: 2,
-      width: 132
+      type: "svg",
+      width: 240
     });
+    elements.gameQrImage.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    elements.gameQrImage.hidden = false;
   } catch (error) {
     console.warn("Unable to render game QR code.", error);
-    elements.gameQrCanvas.hidden = true;
+    elements.gameQrImage.hidden = true;
   }
 }
 

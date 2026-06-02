@@ -183,20 +183,21 @@ body.game-active .app-shell:not(.ops-visible) .pilot-bar {
   border: 1px solid var(--line);
   border-radius: 8px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  display: grid;
-  gap: 10px;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   margin-top: 10px;
-  padding: 10px;
+  padding: 16px;
+  text-align: center;
 }
 
-.game-qr-copy {
+.game-qr-heading {
   display: grid;
-  gap: 3px;
+  gap: 5px;
   min-width: 0;
 }
 
-.game-qr-copy span {
+.game-qr-heading span {
   color: var(--muted);
   font-size: 0.68rem;
   font-weight: 900;
@@ -205,36 +206,36 @@ body.game-active .app-shell:not(.ops-visible) .pilot-bar {
   text-transform: uppercase;
 }
 
-.game-qr-copy strong {
+.game-qr-heading strong {
   color: var(--text);
-  font-size: 1rem;
+  font-size: 1.45rem;
   line-height: 1.05;
 }
 
-.game-qr-copy a {
+.game-qr-link {
   color: var(--accent-2);
   display: block;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  font-size: 0.72rem;
+  font-size: 0.86rem;
   font-weight: 800;
   line-height: 1.25;
   overflow-wrap: anywhere;
   text-decoration: none;
 }
 
-.game-qr-copy a:hover {
+.game-qr-link:hover {
   color: var(--accent);
 }
 
-.game-qr-panel canvas {
+.game-qr-image {
   background: #f4fbf7;
   border: 1px solid rgba(124, 200, 255, 0.42);
-  border-radius: 8px;
+  border-radius: 10px;
   display: block;
-  height: 106px;
+  height: 220px;
   image-rendering: pixelated;
-  padding: 6px;
-  width: 106px;
+  padding: 10px;
+  width: 220px;
 }
 
 .top-strip {
