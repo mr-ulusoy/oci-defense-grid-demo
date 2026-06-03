@@ -2077,7 +2077,9 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
   .ops-dashboard-grid {
     align-items: start;
-    grid-template-columns: minmax(0, 1.12fr) minmax(560px, 0.88fr);
+    column-gap: 16px;
+    grid-template-columns: minmax(820px, 1fr) minmax(520px, 660px);
+    row-gap: 18px;
   }
 
   .ops-layout-architecture {
@@ -2122,13 +2124,13 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
 @media (min-width: 2350px) {
   .app-shell.ops-visible .ops-panel {
-    margin-inline: auto;
-    max-width: 2360px;
+    margin-inline: 0 auto;
+    max-width: 1980px;
     width: 100%;
   }
 
   .ops-dashboard-grid {
-    grid-template-columns: minmax(0, 1fr) minmax(680px, 0.78fr);
+    grid-template-columns: minmax(0, 1fr) minmax(560px, 680px);
   }
 }
 
