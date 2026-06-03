@@ -1,7 +1,4 @@
-import * as Phaser from "phaser";
 import { initOciRuntime } from "./ociRuntime.js?v=20260603-live-toggle";
-
-globalThis.Phaser = Phaser;
 
 const GAME_WIDTH = 480;
 const BASE_GAME_HEIGHT = 640;
