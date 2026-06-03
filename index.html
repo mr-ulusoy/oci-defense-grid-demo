@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260603-wide-ops-layout" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260603-ai-above-live" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -245,14 +245,6 @@
           </div>
         </section>
 
-        <section class="live-players ops-layout-live-players">
-          <div class="section-title">
-            <span class="section-title-with-badge">Live Players <b id="livePlayersCount">0 active</b></span>
-            <strong id="livePlayersStatus">Redis live state</strong>
-          </div>
-          <div class="live-player-table" id="livePlayersList" aria-label="Live players"></div>
-        </section>
-
         <section class="insight-box ai-panel ops-layout-ai">
           <div class="ai-panel-hero">
             <div class="ai-panel-copy">
@@ -288,6 +280,14 @@
             <p id="hudInsight">Live AI is off. Use the insight buttons or enable live analysis.</p>
             <small id="copilotMeta">Live insight | Disabled</small>
           </div>
+        </section>
+
+        <section class="live-players ops-layout-live-players">
+          <div class="section-title">
+            <span class="section-title-with-badge">Live Players <b id="livePlayersCount">0 active</b></span>
+            <strong id="livePlayersStatus">Redis live state</strong>
+          </div>
+          <div class="live-player-table" id="livePlayersList" aria-label="Live players"></div>
         </section>
 
         <section class="leaderboard ops-layout-leaderboard">

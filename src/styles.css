@@ -2094,17 +2094,17 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
   .ops-layout-live-players {
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 3;
   }
 
   .ops-layout-ai {
-    grid-column: 2;
+    grid-column: 1;
     grid-row: 2;
   }
 
   .ops-layout-leaderboard {
     grid-column: 1 / -1;
-    grid-row: 3;
+    grid-row: 4;
   }
 
   .ops-layout-ai .ai-panel-hero {
