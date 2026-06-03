@@ -4,7 +4,19 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     create() {
-        document.body.classList.remove('game-active');
+        const registeredBeforeMenu = window.OCI_DEFENSE_REGISTERED_BEFORE_MENU === true;
+        window.OCI_DEFENSE_REGISTERED_BEFORE_MENU = false;
+        window.OCI_DEFENSE_MENU_READY = true;
+
+        if (registeredBeforeMenu) {
+            document.body.classList.add('game-active');
+        } else {
+            document.body.classList.remove('game-active');
+        }
+
+        this.events.once('shutdown', () => {
+            window.OCI_DEFENSE_MENU_READY = false;
+        });
         window.OCI_DEFENSE_LAYOUT_CHANGED?.();
 
         const width = this.cameras.main.width;

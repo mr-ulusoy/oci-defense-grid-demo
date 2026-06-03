@@ -42,6 +42,102 @@
           />
           <button type="button" id="startMission">Register</button>
         </div>
+        <script>
+          (() => {
+            const input = document.getElementById("pilotCallsign");
+            const button = document.getElementById("startMission");
+            const pilotBar = input?.closest(".pilot-bar");
+            let lastEarlyRegisterAt = 0;
+
+            if (!input || !button || !pilotBar) return;
+
+            const normalizeCallsign = (value) =>
+              String(value || "")
+                .trim()
+                .replace(/[^a-zA-Z0-9 _-]/g, "")
+                .replace(/\s+/g, " ")
+                .slice(0, 14)
+                .toUpperCase();
+
+            const syncCallsign = () => {
+              const callsign = normalizeCallsign(input.value);
+              input.value = callsign;
+              if (callsign) {
+                localStorage.setItem("playerCallsign", callsign);
+              } else {
+                localStorage.removeItem("playerCallsign");
+              }
+              return callsign;
+            };
+
+            const requestMobileFullscreen = () => {
+              const isSmallTouchScreen =
+                window.matchMedia?.("(max-width: 820px), (pointer: coarse)")?.matches === true;
+              const target = document.getElementById("appShell") || document.documentElement;
+
+              if (!isSmallTouchScreen || document.fullscreenElement || !target.requestFullscreen) return;
+
+              target.requestFullscreen({ navigationUI: "hide" }).catch(() => {
+                // Browser support differs; the CSS layout still fills the viewport.
+              });
+            };
+
+            const registerPilotEarly = (event) => {
+              const appShell = document.getElementById("appShell");
+              if (appShell?.classList.contains("ops-visible")) return;
+
+              const now = performance.now();
+              if (document.body.classList.contains("game-active")) {
+                if (now - lastEarlyRegisterAt < 650) {
+                  event?.preventDefault();
+                  event?.stopImmediatePropagation();
+                }
+                return;
+              }
+
+              event?.preventDefault();
+              const callsign = syncCallsign();
+
+              if (!callsign) {
+                event?.stopImmediatePropagation();
+                pilotBar.classList.add("needs-name");
+                input.focus({ preventScroll: true });
+                return;
+              }
+
+              event?.stopImmediatePropagation();
+              lastEarlyRegisterAt = now;
+              pilotBar.classList.remove("needs-name");
+              input.blur();
+
+              if (window.OCI_DEFENSE_MENU_READY !== true) {
+                window.OCI_DEFENSE_REGISTERED_BEFORE_MENU = true;
+              }
+
+              requestMobileFullscreen();
+              document.body.classList.add("game-active");
+              window.OCI_DEFENSE_LAYOUT_CHANGED?.();
+            };
+
+            input.addEventListener("input", syncCallsign);
+            input.addEventListener("keydown", (event) => {
+              if (event.key === "Enter") registerPilotEarly(event);
+            });
+            button.addEventListener("pointerup", registerPilotEarly, true);
+            button.addEventListener(
+              "click",
+              (event) => {
+                if (performance.now() - lastEarlyRegisterAt < 650) {
+                  event.preventDefault();
+                  event.stopImmediatePropagation();
+                  return;
+                }
+                registerPilotEarly(event);
+              },
+              true
+            );
+          })();
+        </script>
         <div id="gameRoot" class="game-root"></div>
         <section class="game-qr-panel" aria-label="Mobile game QR code">
           <div class="game-qr-heading">
@@ -368,6 +464,6 @@
       });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <script type="module" src="/src/main.js?v=20260603-live-toggle"></script>
+    <script type="module" src="/src/main.js?v=20260603-register-click"></script>
   </body>
 </html>
