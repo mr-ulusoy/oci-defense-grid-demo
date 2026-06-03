@@ -2089,8 +2089,47 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 
   .ops-layout-topology {
     align-self: stretch;
+    display: flex;
+    flex-direction: column;
     grid-column: 2;
     grid-row: 1;
+  }
+
+  .ops-layout-topology .topology-service-row {
+    min-height: 58px;
+  }
+
+  .ops-layout-topology .topology-connector {
+    height: 20px;
+  }
+
+  .ops-layout-topology .topology-vm-panel {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+  }
+
+  .ops-layout-topology .topology-vm-header {
+    min-height: 70px;
+  }
+
+  .ops-layout-topology .vm-metrics {
+    gap: 14px;
+    padding: 18px;
+  }
+
+  .ops-layout-topology .vm-metrics div {
+    min-height: 82px;
+    padding: 14px;
+  }
+
+  .ops-layout-topology .vm-list li {
+    min-height: 76px;
+  }
+
+  .ops-layout-topology .stress-control {
+    margin-top: auto;
+    padding: 18px;
   }
 
   .ops-layout-live-players {
