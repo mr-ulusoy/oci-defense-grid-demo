@@ -2088,17 +2088,18 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   }
 
   .ops-layout-topology {
+    align-self: stretch;
     grid-column: 2;
     grid-row: 1;
   }
 
   .ops-layout-live-players {
-    grid-column: 1;
+    grid-column: 1 / -1;
     grid-row: 3;
   }
 
   .ops-layout-ai {
-    grid-column: 1;
+    grid-column: 1 / -1;
     grid-row: 2;
   }
 
