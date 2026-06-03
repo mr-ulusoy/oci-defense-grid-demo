@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260603-live-route" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260603-live-toggle" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -259,7 +259,7 @@
               <h3>Leaderboard &amp; Performance Insight</h3>
             </div>
             <div class="copilot-actions" aria-label="Generative AI analysis modes">
-              <button class="is-active" type="button" data-copilot-mode="live" data-icon="●" title="Analyze active live players when the race state changes">Live</button>
+              <button type="button" data-copilot-mode="live" data-icon="○" aria-pressed="false" title="Toggle automatic live player analysis">Live AI Off</button>
               <button type="button" data-copilot-mode="leaderboard" title="Analyze top players and score efficiency">
                 <svg aria-hidden="true" viewBox="0 0 24 24">
                   <path d="M8 21h8" />
@@ -284,8 +284,8 @@
             </div>
           </div>
           <div class="ai-output">
-            <p id="hudInsight">Waiting for live telemetry.</p>
-            <small id="copilotMeta">AI source: waiting</small>
+            <p id="hudInsight">Live AI is off. Use the insight buttons or enable live analysis.</p>
+            <small id="copilotMeta">Live insight | Disabled</small>
           </div>
         </section>
 
@@ -306,7 +306,7 @@
         apiBase: "/api",
         telemetryIntervalMs: 1400,
         leaderboardIntervalMs: 6000,
-        copilotAutoEnabled: true,
+        copilotAutoEnabled: false,
         minAppNodes: 2,
         ...(window.OCI_DEFENSE_CONFIG ?? {})
       };
@@ -366,6 +366,6 @@
       });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <script type="module" src="/src/main.js?v=20260603-live-route"></script>
+    <script type="module" src="/src/main.js?v=20260603-live-toggle"></script>
   </body>
 </html>

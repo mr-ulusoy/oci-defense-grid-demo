@@ -1,4 +1,4 @@
-import { OciTelemetry } from "./telemetry.js?v=20260521-architecture-event-rate";
+import { OciTelemetry } from "./telemetry.js?v=20260603-live-toggle";
 
 const params = new URLSearchParams(window.location.search);
 export const isOpsView = params.get("ops") === "1";
@@ -114,6 +114,7 @@ let leaderboardInsightSignature = "";
 let leaderboardRefreshInFlight = false;
 let copilotInFlight = false;
 let liveCopilotSignatureInFlight = "";
+let liveCopilotEnabled = Boolean(window.OCI_DEFENSE_CONFIG?.copilotAutoEnabled);
 
 const VM_RECENT_MS = 30000;
 const minAppNodes = Number(window.OCI_DEFENSE_CONFIG?.minAppNodes ?? 2);
@@ -291,7 +292,7 @@ function renderLivePlayers(players = [], analytics = {}) {
     empty.className = "live-player-empty";
     empty.textContent = "Waiting for player telemetry.";
     elements.livePlayers.appendChild(empty);
-    if (activeCopilotMode() === "live" && !copilotInFlight) {
+    if (liveCopilotEnabled && !copilotInFlight) {
       showWaitingForLivePlayers();
     }
     return;
@@ -1090,13 +1091,44 @@ function renderCopilotMeta(result = {}) {
 }
 
 function activeCopilotMode() {
-  return [...elements.copilotActions].find((button) => button.classList.contains("is-active"))
-    ?.dataset.copilotMode ?? "live";
+  return [...elements.copilotActions].find((button) =>
+    button.dataset.copilotMode !== "live" && button.classList.contains("is-active")
+  )?.dataset.copilotMode ?? "leaderboard";
 }
 
-function setActiveCopilotMode(mode = "live") {
+function setActiveCopilotMode(mode = "leaderboard") {
   elements.copilotActions.forEach((button) => {
-    button.classList.toggle("is-active", (button.dataset.copilotMode ?? "live") === mode);
+    if (button.dataset.copilotMode === "live") return;
+    button.classList.toggle("is-active", button.dataset.copilotMode === mode);
+  });
+}
+
+function syncLiveCopilotToggle() {
+  const button = [...elements.copilotActions].find((action) => action.dataset.copilotMode === "live");
+  if (!button) return;
+
+  button.classList.toggle("is-active", liveCopilotEnabled);
+  button.setAttribute("aria-pressed", String(liveCopilotEnabled));
+  button.dataset.icon = liveCopilotEnabled ? "●" : "○";
+  button.textContent = liveCopilotEnabled ? "Live AI On" : "Live AI Off";
+}
+
+function setLiveCopilotEnabled(enabled) {
+  liveCopilotEnabled = Boolean(enabled);
+  syncLiveCopilotToggle();
+
+  if (liveCopilotEnabled) {
+    maybeRunLiveCopilot({ force: true });
+    return;
+  }
+
+  latestLiveCopilotSignature = "";
+  liveCopilotSignatureInFlight = "";
+  elements.insight.textContent = "Live AI is off. Use the insight buttons or enable live analysis.";
+  renderCopilotMeta({
+    mode: "live",
+    source: "disabled",
+    modelLabel: "manual mode"
   });
 }
 
@@ -1209,7 +1241,9 @@ function hasStableLiveInsight() {
 export async function askCopilot(snapshot = {}, mode = "live") {
   if (!isOpsView) return;
   if (copilotInFlight) return;
-  setActiveCopilotMode(mode);
+  if (mode !== "live") {
+    setActiveCopilotMode(mode);
+  }
   if (mode === "live" && activePlayerCount() === 0) {
     showWaitingForLivePlayers();
     return;
@@ -1230,6 +1264,9 @@ export async function askCopilot(snapshot = {}, mode = "live") {
   });
   try {
     const result = await telemetry.askCopilot(snapshot, { mode });
+    if (mode === "live" && !liveCopilotEnabled) {
+      return;
+    }
     if (mode === "live" && liveSignature) {
       liveCopilotInsights.set(liveSignature, result);
       latestLiveCopilotSignature = liveSignature;
@@ -1248,7 +1285,7 @@ export async function askCopilot(snapshot = {}, mode = "live") {
 }
 
 function maybeRunLiveCopilot({ force = false } = {}) {
-  if (!isOpsView || activeCopilotMode() !== "live" || copilotInFlight) return;
+  if (!isOpsView || !liveCopilotEnabled || copilotInFlight) return;
   if (activePlayerCount() === 0) {
     showWaitingForLivePlayers();
     return;
@@ -1386,14 +1423,15 @@ export async function initOciRuntime() {
     elements.copilotActions.forEach((button) => {
       button.addEventListener("click", () => {
         const mode = button.dataset.copilotMode ?? "live";
-        setActiveCopilotMode(mode);
         if (mode === "live") {
-          maybeRunLiveCopilot({ force: true });
+          setLiveCopilotEnabled(!liveCopilotEnabled);
           return;
         }
+        setActiveCopilotMode(mode);
         askCopilot(copilotSnapshot(), mode);
       });
     });
+    syncLiveCopilotToggle();
     if (elements.startStress && elements.startStress.dataset.stressBound !== "true") {
       elements.startStress.dataset.stressBound = "true";
       elements.startStress.addEventListener("click", () => startStress());
@@ -1409,8 +1447,6 @@ export async function initOciRuntime() {
     elements.refreshLeaderboard.addEventListener("click", async () => {
       await refreshLeaderboardBoard({ forceInsights: true });
     });
-
-    maybeRunLiveCopilot({ force: true });
 
     const leaderboardIntervalMs = Number(window.OCI_DEFENSE_CONFIG.leaderboardIntervalMs ?? 6000);
     window.setInterval(() => {

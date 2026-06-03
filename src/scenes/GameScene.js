@@ -1,5 +1,5 @@
-import { askCoach, askCopilot, emitGameEvent, telemetry, updateHud } from "../ociRuntime.js?v=20260603-live-route";
-import { createLevelAnimations, loadLevelAssets } from "../gameAssets.js?v=20260603-live-route";
+import { askCoach, askCopilot, emitGameEvent, telemetry, updateHud } from "../ociRuntime.js?v=20260603-live-toggle";
+import { createLevelAnimations, loadLevelAssets } from "../gameAssets.js?v=20260603-live-toggle";
 
 const BRIEFINGS_BY_LEVEL = {
     1: {

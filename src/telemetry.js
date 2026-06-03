@@ -2,7 +2,7 @@ const DEFAULT_CONFIG = {
   apiBase: "/api",
   telemetryIntervalMs: 1400,
   copilotIntervalMs: 12000,
-  copilotAutoEnabled: true,
+  copilotAutoEnabled: false,
   copilotEnabled: false
 };
 

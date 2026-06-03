@@ -1,9 +1,9 @@
-import { initOciRuntime } from "./ociRuntime.js?v=20260603-live-route";
-import BootScene from "./scenes/BootScene.js?v=20260603-live-route";
-import MenuScene from "./scenes/MenuScene.js?v=20260603-live-route";
-import GameScene from "./scenes/GameScene.js?v=20260603-live-route";
-import GameOverScene from "./scenes/GameOverScene.js?v=20260603-live-route";
-import VictoryScene from "./scenes/VictoryScene.js?v=20260603-live-route";
+import { initOciRuntime } from "./ociRuntime.js?v=20260603-live-toggle";
+import BootScene from "./scenes/BootScene.js?v=20260603-live-toggle";
+import MenuScene from "./scenes/MenuScene.js?v=20260603-live-toggle";
+import GameScene from "./scenes/GameScene.js?v=20260603-live-toggle";
+import GameOverScene from "./scenes/GameOverScene.js?v=20260603-live-toggle";
+import VictoryScene from "./scenes/VictoryScene.js?v=20260603-live-toggle";
 
 const GAME_WIDTH = 480;
 const BASE_GAME_HEIGHT = 640;
