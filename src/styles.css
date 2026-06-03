@@ -533,6 +533,16 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
   padding: 30px;
 }
 
+.ops-dashboard-grid {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.ops-dashboard-grid > section {
+  min-width: 0;
+}
+
 .ops-panel[hidden] {
   display: none;
 }
@@ -659,7 +669,7 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
     rgba(13, 31, 41, 0.82);
   border: 1px solid rgba(124, 200, 255, 0.3);
   border-radius: 8px;
-  margin-top: 16px;
+  margin-top: 0;
   padding: 14px;
 }
 
@@ -2054,6 +2064,72 @@ body.game-active .app-shell:not(.ops-visible) .game-root {
 .leaderboard-empty {
   color: var(--muted);
   padding: 8px 0;
+}
+
+@media (min-width: 1900px) {
+  .app-shell.ops-visible {
+    grid-template-columns: minmax(300px, 410px) minmax(0, 1fr);
+  }
+
+  .app-shell.ops-visible .ops-panel {
+    gap: 18px;
+  }
+
+  .ops-dashboard-grid {
+    align-items: start;
+    grid-template-columns: minmax(0, 1.12fr) minmax(560px, 0.88fr);
+  }
+
+  .ops-layout-architecture {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .ops-layout-topology {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .ops-layout-live-players {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .ops-layout-ai {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .ops-layout-leaderboard {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  .ops-layout-ai .ai-panel-hero {
+    align-items: start;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ops-layout-ai .copilot-actions {
+    justify-content: flex-start;
+    justify-self: start;
+  }
+
+  .ops-layout-ai .ai-panel-copy h3 {
+    font-size: clamp(1.55rem, 1.45vw, 2.1rem);
+  }
+}
+
+@media (min-width: 2350px) {
+  .app-shell.ops-visible .ops-panel {
+    margin-inline: auto;
+    max-width: 2360px;
+    width: 100%;
+  }
+
+  .ops-dashboard-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(680px, 0.78fr);
+  }
 }
 
 @media (max-width: 1180px) {
