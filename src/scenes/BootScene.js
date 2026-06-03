@@ -1,4 +1,4 @@
-import { createInitialAnimations, loadInitialAssets } from "../gameAssets.js?v=20260603-live-toggle";
+import { createInitialAnimations, loadInitialAssets } from "../gameAssets.js?v=20260603-fast-game-load";
 
 export default class BootScene extends Phaser.Scene {
     constructor() {

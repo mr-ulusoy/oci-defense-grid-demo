@@ -1,9 +1,7 @@
+import * as Phaser from "phaser";
 import { initOciRuntime } from "./ociRuntime.js?v=20260603-live-toggle";
-import BootScene from "./scenes/BootScene.js?v=20260603-register-click";
-import MenuScene from "./scenes/MenuScene.js?v=20260603-register-click";
-import GameScene from "./scenes/GameScene.js?v=20260603-register-click";
-import GameOverScene from "./scenes/GameOverScene.js?v=20260603-register-click";
-import VictoryScene from "./scenes/VictoryScene.js?v=20260603-register-click";
+
+globalThis.Phaser = Phaser;
 
 const GAME_WIDTH = 480;
 const BASE_GAME_HEIGHT = 640;
@@ -73,8 +71,19 @@ function sizeGameRoot() {
   root.style.height = `${height}px`;
 }
 
-async function boot() {
-  await initOciRuntime();
+function startOciRuntime() {
+  initOciRuntime().catch((error) => {
+    console.warn("OCI runtime init failed", error);
+    const connectionStatus = document.getElementById("connectionStatus");
+    if (connectionStatus) {
+      connectionStatus.textContent = "Offline fallback";
+      connectionStatus.classList.add("offline");
+    }
+  });
+}
+
+function boot(scenes) {
+  startOciRuntime();
   sizeGameRoot();
 
   const config = {
@@ -95,7 +104,7 @@ async function boot() {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH
     },
-    scene: [BootScene, MenuScene, GameScene, GameOverScene, VictoryScene]
+    scene: scenes
   };
 
   const game = new Phaser.Game(config);
@@ -130,4 +139,22 @@ async function boot() {
   );
 }
 
-boot();
+async function loadScenesAndBoot() {
+  const sceneModules = await Promise.all([
+    import("./scenes/BootScene.js?v=20260603-fast-game-load"),
+    import("./scenes/MenuScene.js?v=20260603-fast-game-load"),
+    import("./scenes/GameScene.js?v=20260603-fast-game-load"),
+    import("./scenes/GameOverScene.js?v=20260603-fast-game-load"),
+    import("./scenes/VictoryScene.js?v=20260603-fast-game-load")
+  ]);
+
+  boot(sceneModules.map((module) => module.default));
+}
+
+loadScenesAndBoot().catch((error) => {
+  console.error("Game boot failed", error);
+  const root = document.getElementById("gameRoot");
+  if (root && !root.firstElementChild) {
+    root.textContent = "Could not load game.";
+  }
+});

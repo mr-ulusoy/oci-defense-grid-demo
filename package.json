@@ -24,6 +24,7 @@
     "oci-objectstorage": "^2.131.1",
     "oci-streaming": "^2.131.1",
     "oracledb": "^6.7.1",
+    "phaser": "^3.60.0",
     "qrcode": "^1.5.4",
     "redis": "^5.12.1"
   },

@@ -1,5 +1,5 @@
 function audioSources(basePath) {
-    return [`${basePath}.mp3`, `${basePath}.wav`];
+    return `${basePath}.mp3`;
 }
 
 function loadAudio(scene, key, basePath) {
