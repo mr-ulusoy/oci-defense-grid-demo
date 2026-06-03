@@ -1,9 +1,9 @@
-import { initOciRuntime } from "./ociRuntime.js?v=20260602-briefings-v2";
-import BootScene from "./scenes/BootScene.js?v=20260602-briefings-v2";
-import MenuScene from "./scenes/MenuScene.js?v=20260602-briefings-v2";
-import GameScene from "./scenes/GameScene.js?v=20260602-briefings-v2";
-import GameOverScene from "./scenes/GameOverScene.js?v=20260602-briefings-v2";
-import VictoryScene from "./scenes/VictoryScene.js?v=20260602-briefings-v2";
+import { initOciRuntime } from "./ociRuntime.js?v=20260603-mobile-bounds";
+import BootScene from "./scenes/BootScene.js?v=20260603-mobile-bounds";
+import MenuScene from "./scenes/MenuScene.js?v=20260603-mobile-bounds";
+import GameScene from "./scenes/GameScene.js?v=20260603-mobile-bounds";
+import GameOverScene from "./scenes/GameOverScene.js?v=20260603-mobile-bounds";
+import VictoryScene from "./scenes/VictoryScene.js?v=20260603-mobile-bounds";
 
 const GAME_WIDTH = 480;
 const BASE_GAME_HEIGHT = 640;

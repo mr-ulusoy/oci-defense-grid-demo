@@ -1,5 +1,5 @@
-import { askCoach, askCopilot, emitGameEvent, telemetry, updateHud } from "../ociRuntime.js?v=20260602-briefings-v2";
-import { createLevelAnimations, loadLevelAssets } from "../gameAssets.js?v=20260602-briefings-v2";
+import { askCoach, askCopilot, emitGameEvent, telemetry, updateHud } from "../ociRuntime.js?v=20260603-mobile-bounds";
+import { createLevelAnimations, loadLevelAssets } from "../gameAssets.js?v=20260603-mobile-bounds";
 
 const BRIEFINGS_BY_LEVEL = {
     1: {
@@ -935,11 +935,12 @@ export default class GameScene extends Phaser.Scene {
     }
 
     updateEnemies(time) {
+        const offscreenBottom = this.offscreenBottom();
         this.enemies.getChildren().forEach(enemy => {
             // Skip if enemy was destroyed
             if (!enemy || !enemy.active) return;
 
-            if (enemy.y > 680) {
+            if (enemy.y > offscreenBottom) {
                 enemy.destroy();
                 return;
             }
@@ -973,6 +974,10 @@ export default class GameScene extends Phaser.Scene {
                 enemy.nextSpeedChange = time + Phaser.Math.Between(Math.max(240, 400 - overdrive * 40), 1000);
             }
         });
+    }
+
+    offscreenBottom(margin = 80) {
+        return this.scale.height + margin;
     }
 
     enemyShoot(enemy) {
@@ -2299,11 +2304,12 @@ export default class GameScene extends Phaser.Scene {
     }
 
     cleanupOffscreen() {
+        const bottom = this.offscreenBottom();
         this.bullets.getChildren().forEach(b => { if (b.y < -20) b.destroy(); });
         this.enemyBullets.getChildren().forEach(b => {
-            if (b.y > 660 || b.y < -20 || b.x < -20 || b.x > 500) b.destroy();
+            if (b.y > bottom || b.y < -20 || b.x < -20 || b.x > 500) b.destroy();
         });
-        this.powerups.getChildren().forEach(p => { if (p.y > 660) p.destroy(); });
+        this.powerups.getChildren().forEach(p => { if (p.y > bottom) p.destroy(); });
     }
 
     snapshot(cloudAction = 'none') {
