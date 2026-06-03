@@ -301,7 +301,7 @@ function renderLivePlayers(players = [], analytics = {}) {
 
   const header = document.createElement("div");
   header.className = "live-player-row live-player-head";
-  header.innerHTML = "<span>Callsign</span><span>Score</span><span>Lvl</span><span>Latency</span><span>Events</span><span>VM</span>";
+  header.innerHTML = "<span>Callsign</span><span>Score</span><span>Lvl</span><span>Latency</span><span>Events</span><span>Route</span>";
   elements.livePlayers.appendChild(header);
 
   for (const player of visiblePlayers.slice(0, 12)) {
@@ -313,10 +313,22 @@ function renderLivePlayers(players = [], analytics = {}) {
       `<span>${Number(player.level ?? 1)}</span>`,
       `<span>${formatPercentlessLatency(player.latencyMs)}</span>`,
       `<span class="event-chip-set">${eventChipsHtml(player.eventCounts)}</span>`,
-      `<span>${escapeHtml(player.vm ?? "unknown")}</span>`
+      `<span>${escapeHtml(livePlayerRouteLabel(player))}</span>`
     ].join("");
     elements.livePlayers.appendChild(row);
   }
+}
+
+function livePlayerRouteLabel(player = {}) {
+  const activeRoute = activeVmKey ? observedVms.get(activeVmKey)?.name : "";
+  if (activeRoute) return activeRoute;
+
+  const source = String(player.vm ?? "").trim();
+  if (!source || source.includes("event-ingest")) {
+    return "VM App route pending";
+  }
+
+  return source;
 }
 
 function renderEventAnalytics(analytics = {}) {

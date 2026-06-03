@@ -1,4 +1,4 @@
-import { createInitialAnimations, loadInitialAssets } from "../gameAssets.js?v=20260603-mobile-bounds";
+import { createInitialAnimations, loadInitialAssets } from "../gameAssets.js?v=20260603-live-route";
 
 export default class BootScene extends Phaser.Scene {
     constructor() {
