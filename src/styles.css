@@ -609,7 +609,7 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
   justify-content: flex-start;
   min-height: 100dvh;
   overflow-y: auto;
-  padding: clamp(8px, 1.8vh, 22px) clamp(18px, 5vw, 84px) clamp(18px, 3vh, 34px);
+  padding: clamp(58px, 8vh, 118px) clamp(18px, 5vw, 84px) clamp(20px, 3vh, 42px);
   position: relative;
   width: 100%;
 }
@@ -638,7 +638,7 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
   display: flex;
   flex-direction: column;
   justify-self: center;
-  max-width: min(100%, 980px);
+  max-width: min(100%, 1120px);
   min-width: 0;
   text-align: center;
   transform: none;
@@ -649,14 +649,14 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
   border: clamp(5px, 0.55vw, 8px) solid #ff2115;
   border-radius: 999px;
   display: block;
-  height: clamp(34px, 3.3vw, 48px);
-  margin-bottom: clamp(8px, 1.1vh, 14px);
-  width: clamp(112px, 9vw, 148px);
+  height: clamp(40px, 3.5vw, 56px);
+  margin-bottom: clamp(10px, 1.2vh, 16px);
+  width: clamp(132px, 9.5vw, 176px);
 }
 
 .ops-login-brand strong {
   color: #ff4434;
-  font-size: clamp(1.35rem, 2.2vw, 2.45rem);
+  font-size: clamp(1.55rem, 2.35vw, 2.7rem);
   font-weight: 900;
   letter-spacing: 0.02em;
   text-shadow: 0 4px 0 rgba(128, 10, 8, 0.82);
@@ -664,11 +664,11 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
 
 .ops-login-brand h2 {
   color: #3ddc97;
-  font-size: clamp(3.6rem, 5.9vw, 6.8rem);
+  font-size: clamp(4.15rem, 6.3vw, 7.35rem);
   font-weight: 900;
   letter-spacing: 0;
-  line-height: 0.92;
-  margin: clamp(10px, 1.6vh, 18px) 0 0;
+  line-height: 0.96;
+  margin: clamp(12px, 1.7vh, 20px) 0 0;
   max-width: none;
   text-transform: uppercase;
   text-shadow: 0 8px 0 rgba(0, 75, 53, 0.74);
@@ -677,9 +677,9 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
 
 .ops-login-subtitle {
   color: #7cc8ff;
-  font-size: clamp(1rem, 1.25vw, 1.35rem);
+  font-size: clamp(1.18rem, 1.55vw, 1.72rem);
   font-weight: 900;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.24em;
   margin: clamp(8px, 1vh, 14px) 0 0;
   text-transform: uppercase;
   text-shadow: 0 2px 0 rgba(0, 28, 46, 0.75);
@@ -687,10 +687,10 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
 
 .ops-login-brand img {
   display: block;
-  height: clamp(190px, 34dvh, 390px);
-  margin-top: clamp(12px, 2.2vh, 26px);
-  max-height: min(46dvh, 470px);
-  max-width: min(48vw, 560px);
+  height: clamp(270px, 39dvh, 510px);
+  margin-top: clamp(20px, 2.7vh, 34px);
+  max-height: min(54dvh, 560px);
+  max-width: min(54vw, 660px);
   object-fit: contain;
   width: auto;
 }
@@ -704,13 +704,6 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
   padding: 0;
   transform: none;
   width: min(100%, 560px);
-}
-
-.ops-login-card h3 {
-  color: #f4f8f5;
-  font-size: clamp(1.55rem, 1.8vw, 2.05rem);
-  line-height: 1;
-  margin: 6px 0 0;
 }
 
 .ops-login-card p {
@@ -776,12 +769,12 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
 
 @media (max-width: 1180px) {
   .ops-login {
-    padding: 28px;
+    padding: clamp(44px, 6vh, 76px) 28px 28px;
   }
 
   .ops-login-brand img {
-    max-height: 260px;
-    max-width: min(72vw, 360px);
+    max-height: 390px;
+    max-width: min(80vw, 470px);
     margin-top: 22px;
   }
 
@@ -792,33 +785,34 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
 
 @media (max-height: 780px) and (min-width: 621px) {
   .ops-login {
-    padding-block: 6px 16px;
+    padding-block: clamp(78px, 11vh, 104px) 18px;
   }
 
   .ops-login-oracle-ring {
-    height: 34px;
-    margin-bottom: 8px;
-    width: 120px;
+    height: 42px;
+    margin-bottom: 10px;
+    width: 138px;
   }
 
   .ops-login-brand strong {
-    font-size: 1.8rem;
+    font-size: clamp(1.85rem, 2.45vw, 2.35rem);
   }
 
   .ops-login-brand h2 {
-    font-size: clamp(3.3rem, 4.9vw, 5.45rem);
-    margin-top: 8px;
+    font-size: clamp(3.9rem, 5.85vw, 6.35rem);
+    line-height: 0.96;
+    margin-top: 10px;
   }
 
   .ops-login-subtitle {
-    font-size: 0.95rem;
+    font-size: 1.08rem;
     margin-top: 7px;
   }
 
   .ops-login-brand img {
-    height: clamp(185px, 36dvh, 280px);
-    margin-top: 8px;
-    max-height: min(38dvh, 300px);
+    height: clamp(240px, 37dvh, 380px);
+    margin-top: 12px;
+    max-height: min(46dvh, 410px);
   }
 
   .ops-login-card {
