@@ -1443,10 +1443,6 @@ body.game-active .app-shell:not(.ops-visible) .game-root:empty::before {
   min-width: 0;
 }
 
-.demo-reset-copy {
-  min-width: 180px;
-}
-
 .stress-control span {
   color: #a6abb4;
   display: block;
@@ -1702,6 +1698,69 @@ body.game-active .app-shell:not(.ops-visible) .game-root:empty::before {
   background: rgba(124, 200, 255, 0.13);
   border-color: rgba(124, 200, 255, 0.38);
   color: #f4f8f5;
+}
+
+.leaderboard-reset {
+  align-items: center;
+  background:
+    radial-gradient(circle at 0 100%, rgba(255, 107, 107, 0.08), transparent 32%),
+    rgba(7, 15, 22, 0.58);
+  border: 1px solid rgba(124, 200, 255, 0.18);
+  border-radius: 10px;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding: 12px 14px;
+}
+
+.leaderboard-reset span {
+  color: #a6abb4;
+  display: block;
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.leaderboard-reset strong {
+  color: #edf7f4;
+  display: block;
+  font-size: 0.88rem;
+  margin-top: 5px;
+}
+
+.leaderboard-reset small {
+  color: #8f9ba4;
+  display: block;
+  font-size: 0.72rem;
+  margin-top: 3px;
+}
+
+.leaderboard-reset button {
+  align-items: center;
+  background: rgba(255, 107, 107, 0.08);
+  border-color: rgba(255, 107, 107, 0.46);
+  border-radius: 8px;
+  color: #ff8a8a;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  font-weight: 850;
+  min-height: 36px;
+  padding: 0 14px;
+}
+
+.leaderboard-reset button:hover,
+.leaderboard-reset button:focus-visible {
+  background: rgba(255, 107, 107, 0.16);
+  border-color: rgba(255, 107, 107, 0.7);
+  color: #ffd0d0;
+}
+
+.leaderboard-reset button:disabled {
+  cursor: wait;
+  opacity: 0.62;
 }
 
 .copilot-actions {
@@ -2383,6 +2442,16 @@ body.game-active .app-shell:not(.ops-visible) .game-root:empty::before {
     border-left: 0;
     border-top: 1px solid var(--line);
     min-height: auto;
+  }
+
+  .leaderboard-reset {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .leaderboard-reset button {
+    justify-content: center;
+    width: 100%;
   }
 
   .game-root {

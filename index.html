@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260603-fast-game-load" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260604-leaderboard-reset" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -327,15 +327,9 @@
                 <strong id="stressStatus">Idle</strong>
                 <small id="scaleState">Stable</small>
               </div>
-              <div class="demo-reset-copy">
-                <span>Demo data</span>
-                <strong id="resetDemoStatus">Ready</strong>
-                <small>Requires confirmation code</small>
-              </div>
               <div class="stress-actions">
                 <button type="button" id="startStress" title="Start controlled CPU stress">Stress VMs</button>
                 <button type="button" id="stopStress" title="Release CPU stress and wait for scale-in">Scale Down</button>
-                <button type="button" id="resetDemoData" class="danger-action" title="Clear leaderboard, analytics and live player state">Full Demo Reset</button>
               </div>
             </div>
           </div>
@@ -392,6 +386,14 @@
             <button type="button" id="refreshLeaderboard" title="Refresh leaderboard">Refresh</button>
           </div>
           <div id="leaderboardList" class="leaderboard-board"></div>
+          <div class="leaderboard-reset" aria-label="Full demo reset">
+            <div>
+              <span>Demo data</span>
+              <strong id="resetDemoStatus">Ready</strong>
+              <small>Clears leaderboard, analytics and live player state after confirmation.</small>
+            </div>
+            <button type="button" id="resetDemoData" class="danger-action" title="Clear leaderboard, analytics and live player state">Full Demo Reset</button>
+          </div>
         </section>
         </div>
       </aside>
