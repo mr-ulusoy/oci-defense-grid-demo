@@ -649,9 +649,9 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
   border: clamp(5px, 0.55vw, 8px) solid #ff2115;
   border-radius: 999px;
   display: block;
-  height: clamp(40px, 3.5vw, 56px);
+  height: clamp(54px, 4vw, 72px);
   margin-bottom: clamp(10px, 1.2vh, 16px);
-  width: clamp(132px, 9.5vw, 176px);
+  width: clamp(108px, 8vw, 150px);
 }
 
 .ops-login-brand strong {
@@ -789,9 +789,9 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
   }
 
   .ops-login-oracle-ring {
-    height: 42px;
+    height: 50px;
     margin-bottom: 10px;
-    width: 138px;
+    width: 104px;
   }
 
   .ops-login-brand strong {
@@ -841,8 +841,8 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
   }
 
   .ops-login-oracle-ring {
-    height: 34px;
-    width: 102px;
+    height: 42px;
+    width: 86px;
   }
 
   .ops-login-brand h2 {
