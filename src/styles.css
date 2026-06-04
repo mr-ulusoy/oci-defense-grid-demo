@@ -688,13 +688,13 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
 .ops-login-brand img {
   display: block;
   height: clamp(270px, 39dvh, 510px);
-  margin-bottom: clamp(-34px, -3.2vh, -18px);
+  margin-bottom: clamp(-14px, -1.2vh, -8px);
   margin-top: clamp(20px, 2.7vh, 34px);
   max-height: min(54dvh, 560px);
   max-width: min(54vw, 660px);
   object-fit: contain;
   pointer-events: none;
-  transform: translateY(clamp(18px, 2.6vh, 32px));
+  transform: translateY(clamp(6px, 0.9vh, 12px));
   width: auto;
 }
 
@@ -816,10 +816,10 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
 
   .ops-login-brand img {
     height: clamp(240px, 37dvh, 380px);
-    margin-bottom: -24px;
+    margin-bottom: -10px;
     margin-top: 12px;
     max-height: min(46dvh, 410px);
-    transform: translateY(22px);
+    transform: translateY(8px);
   }
 
   .ops-login-card {
