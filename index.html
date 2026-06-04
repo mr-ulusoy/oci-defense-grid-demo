@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260604-ops-login-clean" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260604-ops-login-clean2" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -158,16 +158,20 @@
             <p class="ops-login-subtitle">Ops Dashboard</p>
             <img src="/assets/briefings/storyteller2.webp" alt="" aria-hidden="true" />
             <div class="ops-login-card">
-              <span class="eyebrow">Ops access</span>
               <h3>Admin login</h3>
-              <p>Unlock live architecture, AI insights, autoscaling controls and demo reset.</p>
               <form class="ops-login-form" id="opsLoginForm">
-                <label for="opsPassword">Password</label>
                 <div class="ops-login-row">
-                  <input id="opsPassword" name="password" type="password" autocomplete="current-password" placeholder="Enter ops password" />
+                  <input
+                    id="opsPassword"
+                    name="password"
+                    type="password"
+                    autocomplete="current-password"
+                    aria-label="Ops password"
+                    placeholder="Enter ops password"
+                  />
                   <button type="submit" id="opsLoginButton">Unlock</button>
                 </div>
-                <small id="opsLoginStatus">Enter the demo ops password.</small>
+                <small id="opsLoginStatus"></small>
               </form>
             </div>
           </div>
@@ -473,6 +477,6 @@
       });
     </script>
     <script src="/node_modules/phaser/dist/phaser.min.js?v=3.60.0"></script>
-    <script type="module" src="/src/main.js?v=20260603-phaser-local"></script>
+    <script type="module" src="/src/main.js?v=20260604-ops-login-minimal"></script>
   </body>
 </html>

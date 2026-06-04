@@ -134,7 +134,7 @@ function unlockOpsPanel() {
   }
 }
 
-function showOpsLogin(message = "Enter the demo ops password.") {
+function showOpsLogin(message = "") {
   opsPanel?.classList.add("is-locked");
   document.body.classList.add("ops-login-active");
   if (elements.opsLogin) {
@@ -154,7 +154,7 @@ function bindOpsLogin() {
     event.preventDefault();
     const password = elements.opsPassword?.value ?? "";
     if (!password) {
-      showOpsLogin("Enter the demo ops password.");
+      showOpsLogin("Password required.");
       return;
     }
 
@@ -213,7 +213,7 @@ async function ensureOpsAuthenticated() {
     return true;
   }
 
-  showOpsLogin("Enter the demo ops password.");
+  showOpsLogin();
   return false;
 }
 
