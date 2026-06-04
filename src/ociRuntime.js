@@ -143,7 +143,7 @@ function showOpsLogin(message = "Enter the demo ops password.") {
   if (elements.opsLoginStatus) {
     elements.opsLoginStatus.textContent = message;
   }
-  window.setTimeout(() => elements.opsPassword?.focus(), 0);
+  window.setTimeout(() => elements.opsPassword?.focus({ preventScroll: true }), 0);
 }
 
 function bindOpsLogin() {

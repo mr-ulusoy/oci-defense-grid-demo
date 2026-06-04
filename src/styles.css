@@ -604,13 +604,12 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
   border: 0;
   border-radius: 0;
   box-shadow: none;
-  display: grid;
-  gap: clamp(42px, 6vw, 110px);
-  grid-template-columns: minmax(520px, 860px) minmax(390px, 520px);
-  justify-content: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
   min-height: 100dvh;
-  overflow: hidden;
-  padding: clamp(28px, 5vw, 86px);
+  overflow-y: auto;
+  padding: clamp(12px, 2.4vh, 28px) clamp(18px, 5vw, 84px);
   position: relative;
   width: 100%;
 }
@@ -639,24 +638,25 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
   display: flex;
   flex-direction: column;
   justify-self: center;
-  max-width: 860px;
+  max-width: min(100%, 980px);
   min-width: 0;
   text-align: center;
-  transform: translateY(-1.5vh);
+  transform: none;
+  width: 100%;
 }
 
 .ops-login-oracle-ring {
   border: clamp(5px, 0.55vw, 8px) solid #ff2115;
   border-radius: 999px;
   display: block;
-  height: clamp(30px, 3vw, 46px);
-  margin-bottom: clamp(18px, 2.1vw, 34px);
-  width: clamp(76px, 7vw, 118px);
+  height: clamp(34px, 3.3vw, 48px);
+  margin-bottom: clamp(12px, 1.6vh, 20px);
+  width: clamp(112px, 9vw, 148px);
 }
 
 .ops-login-brand strong {
   color: #ff4434;
-  font-size: clamp(1.35rem, 2.35vw, 2.75rem);
+  font-size: clamp(1.35rem, 2.2vw, 2.45rem);
   font-weight: 900;
   letter-spacing: 0.02em;
   text-shadow: 0 4px 0 rgba(128, 10, 8, 0.82);
@@ -664,21 +664,22 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
 
 .ops-login-brand h2 {
   color: #3ddc97;
-  font-size: clamp(4.5rem, 7vw, 8.2rem);
+  font-size: clamp(3.6rem, 5.9vw, 6.8rem);
   font-weight: 900;
   letter-spacing: 0;
   line-height: 0.92;
-  margin: clamp(16px, 2.4vw, 30px) 0 0;
-  max-width: 9.2ch;
+  margin: clamp(10px, 1.6vh, 18px) 0 0;
+  max-width: none;
   text-transform: uppercase;
   text-shadow: 0 8px 0 rgba(0, 75, 53, 0.74);
+  white-space: nowrap;
 }
 
 .ops-login-brand img {
   display: block;
-  margin-top: clamp(28px, 4vh, 52px);
-  max-height: min(36dvh, 380px);
-  max-width: min(34vw, 460px);
+  margin-top: clamp(12px, 1.8vh, 20px);
+  max-height: min(21dvh, 200px);
+  max-width: min(26vw, 290px);
   object-fit: contain;
   width: auto;
 }
@@ -690,30 +691,31 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
   border: 1px solid rgba(124, 200, 255, 0.44);
   border-radius: 12px;
   box-shadow: 0 22px 70px rgba(0, 0, 0, 0.34);
-  justify-self: stretch;
-  padding: clamp(30px, 3.2vw, 48px);
-  transform: translateY(3vh);
+  margin-top: clamp(12px, 1.8vh, 20px);
+  padding: clamp(18px, 1.8vw, 24px);
+  transform: none;
+  width: min(100%, 700px);
 }
 
 .ops-login-card h3 {
   color: #f4f8f5;
-  font-size: clamp(2.45rem, 3.25vw, 3.7rem);
+  font-size: clamp(1.9rem, 2.2vw, 2.55rem);
   line-height: 1;
   margin: 10px 0 0;
 }
 
 .ops-login-card p {
   color: var(--muted);
-  font-size: clamp(1rem, 1.55vw, 1.35rem);
+  font-size: clamp(0.96rem, 1.2vw, 1.18rem);
   line-height: 1.5;
-  margin: 22px 0 0;
+  margin: 16px 0 0;
   max-width: 38ch;
 }
 
 .ops-login-form {
   display: grid;
   gap: 12px;
-  margin-top: clamp(34px, 4.4vw, 58px);
+  margin-top: clamp(16px, 2vh, 24px);
 }
 
 .ops-login-form label {
@@ -737,7 +739,7 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
   color: #f4f8f5;
   font: inherit;
   font-size: 1rem;
-  min-height: 56px;
+  min-height: 50px;
   outline: none;
   padding: 0 18px;
 }
@@ -753,7 +755,7 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
   border-radius: 7px;
   color: #090b0f;
   font-weight: 800;
-  min-height: 56px;
+  min-height: 50px;
   padding: 0 28px;
 }
 
@@ -769,13 +771,7 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
 
 @media (max-width: 1180px) {
   .ops-login {
-    grid-template-columns: 1fr;
-    overflow-y: auto;
     padding: 28px;
-  }
-
-  .ops-login-brand h2 {
-    max-width: 11ch;
   }
 
   .ops-login-brand img {
@@ -784,20 +780,74 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
     margin-top: 22px;
   }
 
-  .ops-login-brand,
   .ops-login-card {
-    transform: none;
+    width: min(100%, 620px);
+  }
+}
+
+@media (max-height: 780px) and (min-width: 621px) {
+  .ops-login {
+    padding-block: 10px 18px;
+  }
+
+  .ops-login-oracle-ring {
+    height: 34px;
+    margin-bottom: 10px;
+    width: 120px;
+  }
+
+  .ops-login-brand strong {
+    font-size: 1.8rem;
+  }
+
+  .ops-login-brand h2 {
+    font-size: clamp(3.5rem, 5.2vw, 5.8rem);
+    margin-top: 8px;
+  }
+
+  .ops-login-brand img {
+    margin-top: 10px;
+    max-height: min(16dvh, 150px);
   }
 
   .ops-login-card {
-    justify-self: center;
-    width: min(100%, 620px);
+    margin-top: 10px;
+    padding: 18px 24px;
+    width: min(100%, 680px);
+  }
+
+  .ops-login-card p {
+    margin-top: 12px;
+  }
+
+  .ops-login-form {
+    margin-top: 14px;
+  }
+
+  .ops-login-row input,
+  .ops-login-row button {
+    min-height: 46px;
   }
 }
 
 @media (max-width: 620px) {
   .ops-login {
     padding: 18px;
+  }
+
+  .ops-login-oracle-ring {
+    height: 34px;
+    width: 102px;
+  }
+
+  .ops-login-brand h2 {
+    font-size: clamp(3.2rem, 18vw, 5rem);
+    white-space: normal;
+  }
+
+  .ops-login-brand img {
+    max-height: 220px;
+    max-width: min(78vw, 320px);
   }
 
   .ops-login-row {
