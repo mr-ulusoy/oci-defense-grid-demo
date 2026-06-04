@@ -15,6 +15,7 @@ if (isOpsView) {
   appShell?.classList.add("ops-visible");
   opsPanel?.removeAttribute("hidden");
   opsPanel?.classList.add("is-locked");
+  document.body.classList.add("ops-login-active");
 }
 
 const elements = {
@@ -127,6 +128,7 @@ function setConnection(offline) {
 
 function unlockOpsPanel() {
   opsPanel?.classList.remove("is-locked");
+  document.body.classList.remove("ops-login-active");
   if (elements.opsLogin) {
     elements.opsLogin.hidden = true;
   }
@@ -134,6 +136,7 @@ function unlockOpsPanel() {
 
 function showOpsLogin(message = "Enter the demo ops password.") {
   opsPanel?.classList.add("is-locked");
+  document.body.classList.add("ops-login-active");
   if (elements.opsLogin) {
     elements.opsLogin.hidden = false;
   }

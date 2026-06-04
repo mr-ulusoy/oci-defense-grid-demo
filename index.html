@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260604-leaderboard-reset" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260604-ops-login-hero" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -151,19 +151,25 @@
 
       <aside class="ops-panel" id="opsPanel" aria-label="Cloud operations dashboard" hidden>
         <section class="ops-login" id="opsLogin" aria-label="Ops admin login" hidden>
-          <div>
-            <span class="eyebrow">Ops access</span>
-            <h2>Admin login</h2>
-            <p>Unlock live architecture, AI insights, autoscaling controls and demo reset.</p>
+          <div class="ops-login-brand" aria-hidden="true">
+            <span class="ops-login-oracle-ring"></span>
+            <strong>Oracle Cloud Infrastructure</strong>
+            <h2>Defense Grid</h2>
+            <img src="/assets/briefings/storyteller2.webp" alt="" />
           </div>
-          <form class="ops-login-form" id="opsLoginForm">
-            <label for="opsPassword">Password</label>
-            <div class="ops-login-row">
-              <input id="opsPassword" name="password" type="password" autocomplete="current-password" placeholder="Enter ops password" />
-              <button type="submit" id="opsLoginButton">Unlock</button>
-            </div>
-            <small id="opsLoginStatus">Enter the demo ops password.</small>
-          </form>
+          <div class="ops-login-card">
+            <span class="eyebrow">Ops access</span>
+            <h3>Admin login</h3>
+            <p>Unlock live architecture, AI insights, autoscaling controls and demo reset.</p>
+            <form class="ops-login-form" id="opsLoginForm">
+              <label for="opsPassword">Password</label>
+              <div class="ops-login-row">
+                <input id="opsPassword" name="password" type="password" autocomplete="current-password" placeholder="Enter ops password" />
+                <button type="submit" id="opsLoginButton">Unlock</button>
+              </div>
+              <small id="opsLoginStatus">Enter the demo ops password.</small>
+            </form>
+          </div>
         </section>
 
         <header class="panel-header">
