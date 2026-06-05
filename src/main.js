@@ -1,4 +1,4 @@
-import { initOciRuntime } from "./ociRuntime.js?v=20260605-quiz-fit";
+import { initOciRuntime } from "./ociRuntime.js?v=20260605-quiz-lift";
 
 const GAME_WIDTH = 480;
 const BASE_GAME_HEIGHT = 640;

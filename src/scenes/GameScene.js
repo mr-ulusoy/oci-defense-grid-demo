@@ -1812,9 +1812,9 @@ export default class GameScene extends Phaser.Scene {
         const extraY = Math.max(0, height - 640);
         const desktopLayout = height <= 680;
         const tallLayout = height > 720;
-        const titleY = desktopLayout ? 34 : tallLayout ? 48 : 36;
-        const subtitleY = desktopLayout ? 62 : tallLayout ? 82 : 66;
-        const promptY = desktopLayout ? 96 : tallLayout ? 128 : 100;
+        const titleY = desktopLayout ? 34 : tallLayout ? 42 : 36;
+        const subtitleY = desktopLayout ? 62 : tallLayout ? 74 : 66;
+        const promptY = desktopLayout ? 96 : tallLayout ? 112 : 100;
         const continueY = Math.min(594 + extraY, height - 46);
         const blocker = this.add.rectangle(240, height / 2, 480, height, 0x030814, 0.9).setInteractive();
         const title = this.add.text(240, titleY, question.title, {
@@ -1848,10 +1848,10 @@ export default class GameScene extends Phaser.Scene {
         const optionLineSpacing = desktopLayout ? 2 : 4;
         const optionPaddingY = desktopLayout ? 13 : 16;
         const optionMinHeight = desktopLayout ? 60 : tallLayout ? 86 : 74;
-        const optionSpacing = desktopLayout ? 12 : tallLayout ? 14 : 13;
+        const optionSpacing = desktopLayout ? 12 : tallLayout ? 12 : 13;
         const promptBottom = prompt.y + prompt.height;
         let optionTop = tallLayout
-            ? Math.max(258, promptBottom + 58)
+            ? Math.max(232, promptBottom + 30)
             : desktopLayout
                 ? Math.max(210, promptBottom + 24)
                 : Math.max(248, promptBottom + 36);
@@ -1879,12 +1879,12 @@ export default class GameScene extends Phaser.Scene {
         const lastOption = optionLayouts.at(-1);
         const lastOptionBottom = lastOption ? lastOption.top + lastOption.height : promptBottom;
         const answerY = tallLayout
-            ? Math.min(lastOptionBottom + 64, height - 300)
+            ? Math.min(lastOptionBottom + 76, height - 300)
             : desktopLayout
                 ? Math.min(lastOptionBottom + 28, height - 162)
                 : Math.min(lastOptionBottom + 58, height - 120);
         const guideY = tallLayout
-            ? Math.min(answerY + 112, height - 198)
+            ? Math.min(Math.max(answerY + 128, lastOptionBottom + 128), height - 198)
             : desktopLayout
                 ? Math.min(answerY + 92, height - 96)
                 : Math.min(answerY + 84, height - 116);
