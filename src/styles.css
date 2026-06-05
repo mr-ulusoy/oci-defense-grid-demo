@@ -446,7 +446,7 @@ h2 {
 }
 
 .pilot-bar.collects-email {
-  grid-template-columns: auto minmax(110px, 180px) minmax(160px, 240px) auto;
+  grid-template-columns: auto minmax(120px, 220px) auto;
 }
 
 .pilot-bar label {
@@ -471,16 +471,8 @@ h2 {
   text-transform: none;
 }
 
-.pilot-email-input[hidden],
-.pilot-email-hint[hidden] {
+.pilot-email-input[hidden] {
   display: none;
-}
-
-.pilot-email-hint {
-  color: var(--accent-2);
-  font-size: 0.72rem;
-  font-weight: 700;
-  grid-column: 2 / -1;
 }
 
 .pilot-bar input:focus {
@@ -518,6 +510,16 @@ body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar button {
   font: 900 1.05rem monospace;
   min-height: 48px;
   text-transform: uppercase;
+}
+
+body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar.collects-email {
+  grid-template-columns: minmax(150px, auto) minmax(220px, 1fr);
+  max-width: 520px;
+}
+
+body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar.collects-email .pilot-email-input,
+body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar.collects-email button {
+  grid-column: 1 / -1;
 }
 
 .pilot-bar.needs-name input {

@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260605-email-collection" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260605-email-layout" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -50,14 +50,12 @@
             type="email"
             hidden
           />
-          <small id="pilotEmailHint" class="pilot-email-hint" hidden>Email collection is enabled for this demo.</small>
           <button type="button" id="startMission">Register</button>
         </div>
         <script>
           (() => {
             const input = document.getElementById("pilotCallsign");
             const emailInput = document.getElementById("pilotEmail");
-            const emailHint = document.getElementById("pilotEmailHint");
             const button = document.getElementById("startMission");
             const pilotBar = input?.closest(".pilot-bar");
             let lastEarlyRegisterAt = 0;
@@ -97,9 +95,6 @@
                 emailInput.hidden = !emailCollectionEnabled;
                 emailInput.required = emailCollectionEnabled;
                 emailInput.value = normalizeEmail(emailInput.value || localStorage.getItem("playerEmail") || "");
-              }
-              if (emailHint) {
-                emailHint.hidden = !emailCollectionEnabled;
               }
             };
 
