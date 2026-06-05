@@ -28,7 +28,8 @@ function nowIso() {
 }
 
 function isOpsView() {
-  return new URLSearchParams(window.location.search).get("ops") === "1";
+  const params = new URLSearchParams(window.location.search);
+  return params.get("ops") === "1" || params.get("contacts") === "1";
 }
 
 class ApiRequestError extends Error {

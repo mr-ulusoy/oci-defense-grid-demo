@@ -1,7 +1,8 @@
-import { OciTelemetry } from "./telemetry.js?v=20260605-email-collection";
+import { OciTelemetry } from "./telemetry.js?v=20260605-contacts-page";
 
 const params = new URLSearchParams(window.location.search);
-export const isOpsView = params.get("ops") === "1";
+export const isContactsView = params.get("contacts") === "1";
+export const isOpsView = params.get("ops") === "1" || isContactsView;
 
 export const telemetry = new OciTelemetry({
   ...(window.OCI_DEFENSE_CONFIG ?? {}),
@@ -16,6 +17,10 @@ if (isOpsView) {
   opsPanel?.removeAttribute("hidden");
   opsPanel?.classList.add("is-locked");
   document.body.classList.add("ops-login-active");
+  if (isContactsView) {
+    appShell?.classList.add("contacts-visible");
+    document.body.classList.add("contacts-page-active");
+  }
 }
 
 const elements = {
@@ -49,6 +54,8 @@ const elements = {
   opsPassword: document.getElementById("opsPassword"),
   opsLoginButton: document.getElementById("opsLoginButton"),
   opsLoginStatus: document.getElementById("opsLoginStatus"),
+  opsDashboardHeader: document.getElementById("opsDashboardHeader"),
+  opsDashboardGrid: document.getElementById("opsDashboardGrid"),
   refreshLeaderboard: document.getElementById("refreshLeaderboard"),
   gameQrImage: document.getElementById("gameQrImage"),
   gameQrLink: document.getElementById("gameQrLink"),
@@ -136,6 +143,19 @@ function unlockOpsPanel() {
   if (elements.opsLogin) {
     elements.opsLogin.hidden = true;
   }
+
+  if (isContactsView) {
+    elements.opsDashboardHeader?.setAttribute("hidden", "");
+    elements.opsDashboardGrid?.setAttribute("hidden", "");
+    elements.emailCollectionPanel?.removeAttribute("hidden");
+    return;
+  }
+
+  elements.opsDashboardHeader?.removeAttribute("hidden");
+  elements.opsDashboardGrid?.removeAttribute("hidden");
+  if (elements.emailCollectionPanel) {
+    elements.emailCollectionPanel.hidden = true;
+  }
 }
 
 function showOpsLogin(message = "") {
@@ -207,7 +227,7 @@ async function renderGameQrCode() {
 }
 
 function shouldRevealEmailCollectionPanel() {
-  return params.get("emails") === "1" || window.location.hash === "#email-collection";
+  return isContactsView;
 }
 
 function formatEmailDate(value) {
@@ -305,17 +325,6 @@ function bindEmailCollectionControls() {
     } finally {
       elements.emailCollectionToggle.disabled = false;
     }
-  });
-
-  elements.emailCollectionLink?.addEventListener("click", async (event) => {
-    event.preventDefault();
-    const url = new window.URL(window.location.href);
-    url.searchParams.set("ops", "1");
-    url.searchParams.set("emails", "1");
-    url.hash = "email-collection";
-    window.history.replaceState(null, "", url);
-    await refreshEmailCollectionEntries({ reveal: true });
-    elements.emailCollectionPanel?.scrollIntoView({ block: "start", behavior: "smooth" });
   });
 }
 
@@ -1510,10 +1519,16 @@ export async function initOciRuntime() {
 
   await telemetry.init();
   if (isOpsView) {
-    renderGameQrCode();
+    if (!isContactsView) {
+      renderGameQrCode();
+    }
     renderStatus(telemetry.status);
     bindEmailCollectionControls();
     await refreshEmailCollectionControls({ reveal: shouldRevealEmailCollectionPanel() });
+    if (isContactsView) {
+      setConnection(telemetry.offline);
+      return;
+    }
     renderLivePlayers(await telemetry.refreshLivePlayers());
     renderEventAnalytics(await telemetry.eventAnalytics());
     await refreshLeaderboardBoard();

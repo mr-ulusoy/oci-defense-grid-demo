@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260605-email-layout" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260605-contacts-page" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -40,13 +40,14 @@
             placeholder="ENTER NAME"
             type="text"
           />
+          <label id="pilotEmailLabel" class="pilot-email-label" for="pilotEmail" hidden>Email</label>
           <input
             id="pilotEmail"
             class="pilot-email-input"
             autocomplete="email"
             inputmode="email"
             maxlength="254"
-            placeholder="EMAIL ADDRESS"
+            placeholder="user@company.com"
             type="email"
             hidden
           />
@@ -56,6 +57,7 @@
           (() => {
             const input = document.getElementById("pilotCallsign");
             const emailInput = document.getElementById("pilotEmail");
+            const emailLabel = document.getElementById("pilotEmailLabel");
             const button = document.getElementById("startMission");
             const pilotBar = input?.closest(".pilot-bar");
             let lastEarlyRegisterAt = 0;
@@ -91,6 +93,9 @@
               emailCollectionEnabled = enabled === true;
               pilotBar.classList.toggle("collects-email", emailCollectionEnabled);
               pilotBar.classList.remove("needs-email");
+              if (emailLabel) {
+                emailLabel.hidden = !emailCollectionEnabled;
+              }
               if (emailInput) {
                 emailInput.hidden = !emailCollectionEnabled;
                 emailInput.required = emailCollectionEnabled;
@@ -264,7 +269,7 @@
               <span>Email collection</span>
             </label>
             <span id="emailCollectionState">Off</span>
-            <a id="emailCollectionLink" href="/?ops=1&emails=1#email-collection">View list</a>
+            <a id="emailCollectionLink" href="/?contacts=1">View list</a>
           </div>
         </section>
       </section>
@@ -296,13 +301,31 @@
           </div>
         </section>
 
-        <header class="panel-header">
+        <section class="email-collection-panel contacts-page" id="email-collection" hidden>
+          <div class="contacts-page-header">
+            <div>
+              <span class="eyebrow">Pilot Contacts</span>
+              <h2>Email collection</h2>
+              <p>Collected pilot callsigns and email addresses.</p>
+            </div>
+            <div class="contacts-page-actions">
+              <a id="emailCsvDownload" href="/api/email-collection/export.csv" download>Download CSV</a>
+              <a class="contacts-back-link" href="/?ops=1">Back to ops</a>
+            </div>
+          </div>
+          <div class="section-title">
+            <span class="section-title-with-badge">Pilot contacts <b id="emailCollectionCount">0 saved</b></span>
+          </div>
+          <div class="email-collection-table" id="emailCollectionList" aria-label="Collected pilot emails"></div>
+        </section>
+
+        <header class="panel-header" id="opsDashboardHeader">
           <span class="eyebrow">Cloud Ops HUD</span>
           <h2>Region Defense</h2>
           <p>Live routing, telemetry and fleet state</p>
         </header>
 
-        <div class="ops-dashboard-grid">
+        <div class="ops-dashboard-grid" id="opsDashboardGrid">
           <section class="live-architecture ops-layout-architecture" aria-label="Live OCI architecture">
             <div class="architecture-title">
               <div>
@@ -510,14 +533,6 @@
           <div class="live-player-table" id="livePlayersList" aria-label="Live players"></div>
         </section>
 
-        <section class="email-collection-panel ops-layout-email-collection" id="email-collection" hidden>
-          <div class="section-title">
-            <span class="section-title-with-badge">Email Collection <b id="emailCollectionCount">0 saved</b></span>
-            <a id="emailCsvDownload" href="/api/email-collection/export.csv" download>Download CSV</a>
-          </div>
-          <div class="email-collection-table" id="emailCollectionList" aria-label="Collected pilot emails"></div>
-        </section>
-
         <section class="leaderboard ops-layout-leaderboard">
           <div class="section-title">
             <span>Leaderboard</span>
@@ -604,6 +619,6 @@
       });
     </script>
     <script src="/node_modules/phaser/dist/phaser.min.js?v=3.60.0"></script>
-    <script type="module" src="/src/main.js?v=20260605-email-collection"></script>
+    <script type="module" src="/src/main.js?v=20260605-contacts-page"></script>
   </body>
 </html>

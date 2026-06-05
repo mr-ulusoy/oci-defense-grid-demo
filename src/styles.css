@@ -65,6 +65,23 @@ button:disabled {
   grid-template-columns: minmax(300px, 390px) minmax(620px, 1fr);
 }
 
+.app-shell.contacts-visible {
+  display: block;
+  min-height: 100dvh;
+}
+
+.app-shell.contacts-visible .game-stage {
+  display: none;
+}
+
+.app-shell.contacts-visible .ops-panel {
+  border-left: 0;
+  margin: 0 auto;
+  max-width: 1180px;
+  min-height: 100dvh;
+  width: 100%;
+}
+
 .game-stage {
   display: flex;
   flex-direction: column;
@@ -471,6 +488,7 @@ h2 {
   text-transform: none;
 }
 
+.pilot-email-label[hidden],
 .pilot-email-input[hidden] {
   display: none;
 }
@@ -513,13 +531,39 @@ body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar button {
 }
 
 body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar.collects-email {
-  grid-template-columns: minmax(150px, auto) minmax(220px, 1fr);
-  max-width: 520px;
+  align-items: center;
+  grid-template-columns: minmax(150px, 0.4fr) minmax(0, 1fr);
+  max-width: 650px;
 }
 
-body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar.collects-email .pilot-email-input,
+body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar.collects-email label[for="pilotCallsign"] {
+  grid-column: 1;
+}
+
+body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar.collects-email #pilotCallsign {
+  grid-column: 2;
+}
+
+body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar.collects-email .pilot-email-label {
+  grid-column: 1;
+}
+
+body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar.collects-email .pilot-email-input {
+  grid-column: 2;
+}
+
 body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar.collects-email button {
   grid-column: 1 / -1;
+}
+
+@media (max-width: 560px) {
+  body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar.collects-email {
+    grid-template-columns: minmax(112px, 0.38fr) minmax(0, 1fr);
+  }
+
+  body:not(.game-active) .app-shell:not(.ops-visible) .pilot-bar.collects-email label {
+    font-size: 0.82rem;
+  }
 }
 
 .pilot-bar.needs-name input {
@@ -663,6 +707,11 @@ body.game-active .app-shell:not(.ops-visible) .game-root:empty::before {
 
 .ops-dashboard-grid > section {
   min-width: 0;
+}
+
+.ops-dashboard-grid[hidden],
+.panel-header[hidden] {
+  display: none;
 }
 
 .ops-panel[hidden] {
@@ -2047,6 +2096,87 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
   color: #ffffff;
 }
 
+.contacts-page {
+  background:
+    linear-gradient(135deg, rgba(61, 220, 151, 0.08), rgba(124, 200, 255, 0.06)),
+    rgba(16, 24, 32, 0.88);
+  border: 1px solid rgba(124, 200, 255, 0.28);
+  border-radius: 12px;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  padding: clamp(18px, 3vw, 34px);
+  position: relative;
+}
+
+.contacts-page[hidden] {
+  display: none;
+}
+
+.contacts-page-header {
+  align-items: flex-start;
+  border-bottom: 1px solid rgba(124, 200, 255, 0.18);
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+}
+
+.contacts-page-header h2 {
+  color: var(--text);
+  font-size: clamp(2rem, 4vw, 4.2rem);
+  line-height: 1;
+  margin: 6px 0 8px;
+}
+
+.contacts-page-header p {
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.contacts-page-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.contacts-page-actions a {
+  align-items: center;
+  background: rgba(24, 34, 51, 0.92);
+  border: 1px solid rgba(124, 200, 255, 0.24);
+  border-radius: 10px;
+  color: #eaf4f0;
+  display: inline-flex;
+  font-size: 0.86rem;
+  font-weight: 850;
+  min-height: 38px;
+  padding: 0 14px;
+  text-decoration: none;
+}
+
+.contacts-page-actions a:first-child {
+  background: #f4f8f5;
+  border-color: #f4f8f5;
+  color: #081018;
+}
+
+.contacts-page-actions a:hover,
+.contacts-page-actions a:focus-visible {
+  border-color: rgba(61, 220, 151, 0.55);
+  color: var(--accent);
+}
+
+.contacts-page-actions a:first-child:hover,
+.contacts-page-actions a:first-child:focus-visible {
+  color: #081018;
+}
+
 .email-collection-table {
   display: grid;
   gap: 8px;
@@ -2883,6 +3013,15 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
   .leaderboard-reset button {
     justify-content: center;
     width: 100%;
+  }
+
+  .contacts-page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .contacts-page-actions {
+    justify-content: flex-start;
   }
 
   .game-root {
