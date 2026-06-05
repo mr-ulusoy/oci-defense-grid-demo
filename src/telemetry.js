@@ -418,6 +418,17 @@ export class OciTelemetry {
     return `${this.apiBase}/email-collection/export.csv`;
   }
 
+  async resetEmailCollection(confirmationCode) {
+    const result = await fetch(`${this.apiBase}/email-collection/reset`, {
+      method: "POST",
+      headers: this.jsonHeaders(),
+      credentials: "same-origin",
+      body: JSON.stringify({ confirmationCode })
+    }).then(readJson);
+    this.offline = false;
+    return result;
+  }
+
   async askCopilot(snapshot, options = {}) {
     if (!this.config.copilotEnabled) {
       return {

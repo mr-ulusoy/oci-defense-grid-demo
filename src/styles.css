@@ -2146,7 +2146,8 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
   justify-content: flex-end;
 }
 
-.contacts-page-actions a {
+.contacts-page-actions a,
+.contacts-page-actions button {
   align-items: center;
   background: rgba(24, 34, 51, 0.92);
   border: 1px solid rgba(124, 200, 255, 0.24);
@@ -2155,6 +2156,7 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
   display: inline-flex;
   font-size: 0.86rem;
   font-weight: 850;
+  font-family: inherit;
   min-height: 38px;
   padding: 0 14px;
   text-decoration: none;
@@ -2175,6 +2177,25 @@ body.ops-login-active .app-shell.ops-visible .ops-panel {
 .contacts-page-actions a:first-child:hover,
 .contacts-page-actions a:first-child:focus-visible {
   color: #081018;
+}
+
+.contacts-page-actions .contacts-danger-action {
+  background: rgba(255, 101, 111, 0.08);
+  border-color: rgba(255, 101, 111, 0.42);
+  color: #ff9298;
+  cursor: pointer;
+}
+
+.contacts-page-actions .contacts-danger-action:hover,
+.contacts-page-actions .contacts-danger-action:focus-visible {
+  background: rgba(255, 101, 111, 0.14);
+  border-color: rgba(255, 101, 111, 0.68);
+  color: #ffd1d4;
+}
+
+.contacts-page-actions .contacts-danger-action:disabled {
+  cursor: wait;
+  opacity: 0.55;
 }
 
 .email-collection-table {

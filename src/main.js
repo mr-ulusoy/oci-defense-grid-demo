@@ -1,4 +1,4 @@
-import { initOciRuntime } from "./ociRuntime.js?v=20260605-contacts-page";
+import { initOciRuntime } from "./ociRuntime.js?v=20260605-email-reset";
 
 const GAME_WIDTH = 480;
 const BASE_GAME_HEIGHT = 640;

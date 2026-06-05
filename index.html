@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260605-contacts-page" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260605-email-reset" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -310,11 +310,13 @@
             </div>
             <div class="contacts-page-actions">
               <a id="emailCsvDownload" href="/api/email-collection/export.csv" download>Download CSV</a>
+              <button type="button" id="resetEmailCollection" class="contacts-danger-action">Clear contacts</button>
               <a class="contacts-back-link" href="/?ops=1">Back to ops</a>
             </div>
           </div>
           <div class="section-title">
             <span class="section-title-with-badge">Pilot contacts <b id="emailCollectionCount">0 saved</b></span>
+            <strong id="emailCollectionResetStatus">Ready</strong>
           </div>
           <div class="email-collection-table" id="emailCollectionList" aria-label="Collected pilot emails"></div>
         </section>
@@ -619,6 +621,6 @@
       });
     </script>
     <script src="/node_modules/phaser/dist/phaser.min.js?v=3.60.0"></script>
-    <script type="module" src="/src/main.js?v=20260605-contacts-page"></script>
+    <script type="module" src="/src/main.js?v=20260605-email-reset"></script>
   </body>
 </html>

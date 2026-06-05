@@ -1,4 +1,4 @@
-import { OciTelemetry } from "./telemetry.js?v=20260605-contacts-page";
+import { OciTelemetry } from "./telemetry.js?v=20260605-email-reset";
 
 const params = new URLSearchParams(window.location.search);
 export const isContactsView = params.get("contacts") === "1";
@@ -66,7 +66,9 @@ const elements = {
   emailCollectionPanel: document.getElementById("email-collection"),
   emailCollectionList: document.getElementById("emailCollectionList"),
   emailCollectionCount: document.getElementById("emailCollectionCount"),
-  emailCsvDownload: document.getElementById("emailCsvDownload")
+  emailCsvDownload: document.getElementById("emailCsvDownload"),
+  resetEmailCollection: document.getElementById("resetEmailCollection"),
+  emailCollectionResetStatus: document.getElementById("emailCollectionResetStatus")
 };
 
 const architecture = {
@@ -324,6 +326,33 @@ function bindEmailCollectionControls() {
       }
     } finally {
       elements.emailCollectionToggle.disabled = false;
+    }
+  });
+
+  elements.resetEmailCollection?.addEventListener("click", async () => {
+    const confirmationCode = window.prompt("Type !Oracle#2026! to clear collected pilot contacts.");
+    if (confirmationCode === null) {
+      if (elements.emailCollectionResetStatus) elements.emailCollectionResetStatus.textContent = "Reset cancelled";
+      return;
+    }
+
+    elements.resetEmailCollection.disabled = true;
+    if (elements.emailCollectionResetStatus) {
+      elements.emailCollectionResetStatus.textContent = "Clearing...";
+    }
+
+    try {
+      await telemetry.resetEmailCollection(confirmationCode);
+      if (elements.emailCollectionResetStatus) {
+        elements.emailCollectionResetStatus.textContent = "Contacts cleared";
+      }
+      await refreshEmailCollectionEntries({ reveal: true });
+    } catch (error) {
+      if (elements.emailCollectionResetStatus) {
+        elements.emailCollectionResetStatus.textContent = error?.message ?? "Reset failed";
+      }
+    } finally {
+      elements.resetEmailCollection.disabled = false;
     }
   });
 }

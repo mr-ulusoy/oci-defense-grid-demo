@@ -557,6 +557,27 @@ test("email collection is opt-in and exportable by ops", async () => {
   assert.match(csv.response.headers.get("content-type"), /text\/csv/);
   assert.match(csv.body, /callsign,email,created_at/);
   assert.match(csv.body, /EMAIL PILOT,pilot@example\.com/);
+
+  const invalidReset = await request(app, "/api/email-collection/reset", {
+    method: "POST",
+    headers: jsonHeaders(cookie),
+    body: JSON.stringify({ confirmationCode: "wrong" })
+  });
+  assert.equal(invalidReset.response.status, 403);
+
+  const reset = await request(app, "/api/email-collection/reset", {
+    method: "POST",
+    headers: jsonHeaders(cookie),
+    body: JSON.stringify({ confirmationCode: "!Oracle#2026!" })
+  });
+  assert.equal(reset.response.status, 202);
+  assert.equal(reset.body.ok, true);
+
+  const clearedEntries = await request(app, "/api/email-collection/entries", {
+    headers: { Cookie: cookie }
+  });
+  assert.equal(clearedEntries.response.status, 200);
+  assert.equal(clearedEntries.body.count, 0);
 });
 
 test("stress endpoint starts bounded ops stress", async () => {

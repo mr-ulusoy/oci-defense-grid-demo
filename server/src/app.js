@@ -458,6 +458,25 @@ export function createApp({
       .send(emailSignupsCsv(result.entries));
   });
 
+  app.post("/api/email-collection/reset", requireOpsAccess, opsControlRateLimit, async (req, res) => {
+    if (String(req.body?.confirmationCode ?? "") !== DEMO_RESET_CONFIRMATION_CODE) {
+      res.status(403).json({ error: "Invalid reset confirmation code." });
+      return;
+    }
+
+    try {
+      const reset = await store.resetEmailCollection();
+      res.status(202).json({
+        ok: true,
+        reset,
+        resetAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.warn("Email collection reset failed.", error.message);
+      res.status(500).json({ error: "Email collection reset failed." });
+    }
+  });
+
   app.get("/api/leaderboard", async (req, res) => {
     res.json({ entries: await store.leaderboard() });
   });

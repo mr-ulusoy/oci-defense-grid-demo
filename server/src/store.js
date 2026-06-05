@@ -460,6 +460,25 @@ export function createStore() {
     }
   }
 
+  async function resetEmailSignupsInAutonomousDb() {
+    const connection = await createOracleConnection();
+    if (!connection) {
+      return "disabled";
+    }
+
+    try {
+      await ensureAutonomousSchema(connection);
+      await connection.execute("delete from email_signups");
+      await connection.commit();
+      return "cleared";
+    } catch (error) {
+      await connection.rollback().catch(() => {});
+      throw error;
+    } finally {
+      await connection.close();
+    }
+  }
+
   async function eventAnalyticsFromAutonomousDb() {
     const connection = await createOracleConnection();
     if (!connection) {
@@ -894,6 +913,16 @@ export function createStore() {
           createdAt: entry.createdAt
         })),
         source: "memory"
+      };
+    },
+
+    async resetEmailCollection() {
+      emailCollection.signups.splice(0, emailCollection.signups.length);
+
+      const autonomousResult = await resetEmailSignupsInAutonomousDb();
+      return {
+        memory: "cleared",
+        autonomousDatabase: autonomousResult
       };
     },
 
