@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="OCI Defense Grid" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/src/styles.css?v=20260604-ops-login-guide-slight-overlap" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260605-email-collection" />
   </head>
   <body>
     <main class="app-shell" id="appShell">
@@ -40,14 +40,30 @@
             placeholder="ENTER NAME"
             type="text"
           />
+          <input
+            id="pilotEmail"
+            class="pilot-email-input"
+            autocomplete="email"
+            inputmode="email"
+            maxlength="254"
+            placeholder="EMAIL ADDRESS"
+            type="email"
+            hidden
+          />
+          <small id="pilotEmailHint" class="pilot-email-hint" hidden>Email collection is enabled for this demo.</small>
           <button type="button" id="startMission">Register</button>
         </div>
         <script>
           (() => {
             const input = document.getElementById("pilotCallsign");
+            const emailInput = document.getElementById("pilotEmail");
+            const emailHint = document.getElementById("pilotEmailHint");
             const button = document.getElementById("startMission");
             const pilotBar = input?.closest(".pilot-bar");
             let lastEarlyRegisterAt = 0;
+            let emailCollectionEnabled = false;
+            let emailCollectionReady = false;
+            let registerInFlight = false;
 
             if (!input || !button || !pilotBar) return;
 
@@ -70,6 +86,89 @@
               return callsign;
             };
 
+            const normalizeEmail = (value) => String(value || "").trim().toLowerCase().slice(0, 254);
+            const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+            const applyEmailCollectionState = (enabled) => {
+              emailCollectionEnabled = enabled === true;
+              pilotBar.classList.toggle("collects-email", emailCollectionEnabled);
+              pilotBar.classList.remove("needs-email");
+              if (emailInput) {
+                emailInput.hidden = !emailCollectionEnabled;
+                emailInput.required = emailCollectionEnabled;
+                emailInput.value = normalizeEmail(emailInput.value || localStorage.getItem("playerEmail") || "");
+              }
+              if (emailHint) {
+                emailHint.hidden = !emailCollectionEnabled;
+              }
+            };
+
+            const refreshEmailCollectionStatus = async () => {
+              try {
+                const response = await fetch("/api/email-collection/status", {
+                  cache: "no-store"
+                });
+                const body = await response.json();
+                applyEmailCollectionState(body.enabled === true);
+                emailCollectionReady = true;
+              } catch {
+                applyEmailCollectionState(false);
+                emailCollectionReady = true;
+              }
+            };
+
+            const savePilotDetails = async () => {
+              const callsign = syncCallsign();
+
+              if (!callsign) {
+                pilotBar.classList.add("needs-name");
+                input.focus({ preventScroll: true });
+                return { ok: false, reason: "callsign" };
+              }
+
+              if (!emailCollectionReady) {
+                await refreshEmailCollectionStatus();
+              }
+
+              if (!emailCollectionEnabled) {
+                pilotBar.classList.remove("needs-name", "needs-email");
+                return { ok: true, callsign };
+              }
+
+              const email = normalizeEmail(emailInput?.value);
+              if (emailInput) {
+                emailInput.value = email;
+              }
+
+              if (!isValidEmail(email)) {
+                pilotBar.classList.remove("needs-name");
+                pilotBar.classList.add("needs-email");
+                emailInput?.focus({ preventScroll: true });
+                return { ok: false, reason: "email" };
+              }
+
+              try {
+                button.disabled = true;
+                const response = await fetch("/api/email-collection/entries", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ callsign, email })
+                });
+                if (!response.ok) {
+                  throw new Error("Email signup failed.");
+                }
+                localStorage.setItem("playerEmail", email);
+                pilotBar.classList.remove("needs-name", "needs-email");
+                return { ok: true, callsign, email };
+              } catch {
+                pilotBar.classList.add("needs-email");
+                emailInput?.focus({ preventScroll: true });
+                return { ok: false, reason: "email-save" };
+              } finally {
+                button.disabled = false;
+              }
+            };
+
             const requestMobileFullscreen = () => {
               const isSmallTouchScreen =
                 window.matchMedia?.("(max-width: 820px), (pointer: coarse)")?.matches === true;
@@ -82,7 +181,21 @@
               });
             };
 
-            const registerPilotEarly = (event) => {
+            const completeEarlyRegister = () => {
+              pilotBar.classList.remove("needs-name", "needs-email");
+              input.blur();
+              emailInput?.blur();
+
+              if (window.OCI_DEFENSE_MENU_READY !== true) {
+                window.OCI_DEFENSE_REGISTERED_BEFORE_MENU = true;
+              }
+
+              requestMobileFullscreen();
+              document.body.classList.add("game-active");
+              window.OCI_DEFENSE_LAYOUT_CHANGED?.();
+            };
+
+            const registerPilotEarly = async (event) => {
               const appShell = document.getElementById("appShell");
               if (appShell?.classList.contains("ops-visible")) return;
 
@@ -96,31 +209,34 @@
               }
 
               event?.preventDefault();
-              const callsign = syncCallsign();
-
-              if (!callsign) {
+              if (registerInFlight) {
                 event?.stopImmediatePropagation();
-                pilotBar.classList.add("needs-name");
-                input.focus({ preventScroll: true });
                 return;
               }
 
               event?.stopImmediatePropagation();
-              lastEarlyRegisterAt = now;
-              pilotBar.classList.remove("needs-name");
-              input.blur();
+              registerInFlight = true;
+              const result = await savePilotDetails();
+              registerInFlight = false;
 
-              if (window.OCI_DEFENSE_MENU_READY !== true) {
-                window.OCI_DEFENSE_REGISTERED_BEFORE_MENU = true;
+              if (!result.ok) {
+                return;
               }
 
-              requestMobileFullscreen();
-              document.body.classList.add("game-active");
-              window.OCI_DEFENSE_LAYOUT_CHANGED?.();
+              lastEarlyRegisterAt = now;
+              completeEarlyRegister();
             };
 
+            window.OCI_DEFENSE_REGISTER_PILOT_DETAILS = savePilotDetails;
             input.addEventListener("input", syncCallsign);
+            emailInput?.addEventListener("input", () => {
+              emailInput.value = normalizeEmail(emailInput.value);
+              pilotBar.classList.remove("needs-email");
+            });
             input.addEventListener("keydown", (event) => {
+              if (event.key === "Enter") registerPilotEarly(event);
+            });
+            emailInput?.addEventListener("keydown", (event) => {
               if (event.key === "Enter") registerPilotEarly(event);
             });
             button.addEventListener("pointerup", registerPilotEarly, true);
@@ -136,6 +252,7 @@
               },
               true
             );
+            refreshEmailCollectionStatus();
           })();
         </script>
         <div id="gameRoot" class="game-root"></div>
@@ -146,6 +263,14 @@
           </div>
           <img id="gameQrImage" class="game-qr-image" alt="QR code for the playable URL" />
           <a id="gameQrLink" class="game-qr-link" href="/" target="_blank" rel="noreferrer">Public Load Balancer</a>
+          <div class="email-collection-control" id="emailCollectionControl">
+            <label class="email-collection-toggle">
+              <input id="emailCollectionToggle" type="checkbox" />
+              <span>Email collection</span>
+            </label>
+            <span id="emailCollectionState">Off</span>
+            <a id="emailCollectionLink" href="/?ops=1&emails=1#email-collection">View list</a>
+          </div>
         </section>
       </section>
 
@@ -390,6 +515,14 @@
           <div class="live-player-table" id="livePlayersList" aria-label="Live players"></div>
         </section>
 
+        <section class="email-collection-panel ops-layout-email-collection" id="email-collection" hidden>
+          <div class="section-title">
+            <span class="section-title-with-badge">Email Collection <b id="emailCollectionCount">0 saved</b></span>
+            <a id="emailCsvDownload" href="/api/email-collection/export.csv" download>Download CSV</a>
+          </div>
+          <div class="email-collection-table" id="emailCollectionList" aria-label="Collected pilot emails"></div>
+        </section>
+
         <section class="leaderboard ops-layout-leaderboard">
           <div class="section-title">
             <span>Leaderboard</span>
@@ -476,6 +609,6 @@
       });
     </script>
     <script src="/node_modules/phaser/dist/phaser.min.js?v=3.60.0"></script>
-    <script type="module" src="/src/main.js?v=20260604-ops-login-minimal"></script>
+    <script type="module" src="/src/main.js?v=20260605-email-collection"></script>
   </body>
 </html>

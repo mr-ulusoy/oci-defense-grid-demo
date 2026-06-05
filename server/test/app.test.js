@@ -508,6 +508,57 @@ test("ops endpoints allow callers with an ops session cookie", async () => {
   assert.equal(authorized.body.insight, "authorized");
 });
 
+test("email collection is opt-in and exportable by ops", async () => {
+  const app = createApp();
+
+  const initial = await request(app, "/api/email-collection/status");
+  assert.equal(initial.response.status, 200);
+  assert.equal(initial.body.enabled, false);
+
+  const disabledSignup = await request(app, "/api/email-collection/entries", {
+    method: "POST",
+    headers: jsonHeaders(),
+    body: JSON.stringify({ callsign: "email pilot", email: "pilot@example.com" })
+  });
+  assert.equal(disabledSignup.response.status, 409);
+
+  const unauthorizedEntries = await request(app, "/api/email-collection/entries");
+  assert.equal(unauthorizedEntries.response.status, 401);
+
+  const cookie = await opsCookie(app);
+  const enabled = await request(app, "/api/email-collection/status", {
+    method: "POST",
+    headers: jsonHeaders(cookie),
+    body: JSON.stringify({ enabled: true })
+  });
+  assert.equal(enabled.response.status, 200);
+  assert.equal(enabled.body.enabled, true);
+
+  const signup = await request(app, "/api/email-collection/entries", {
+    method: "POST",
+    headers: jsonHeaders(),
+    body: JSON.stringify({ callsign: "email pilot", email: "Pilot@Example.COM" })
+  });
+  assert.equal(signup.response.status, 202);
+  assert.equal(signup.body.entry.callsign, "EMAIL PILOT");
+  assert.equal(signup.body.entry.email, "pilot@example.com");
+
+  const entries = await request(app, "/api/email-collection/entries", {
+    headers: { Cookie: cookie }
+  });
+  assert.equal(entries.response.status, 200);
+  assert.equal(entries.body.count, 1);
+  assert.equal(entries.body.entries[0].callsign, "EMAIL PILOT");
+
+  const csv = await requestText(app, "/api/email-collection/export.csv", {
+    headers: { Cookie: cookie }
+  });
+  assert.equal(csv.response.status, 200);
+  assert.match(csv.response.headers.get("content-type"), /text\/csv/);
+  assert.match(csv.body, /callsign,email,created_at/);
+  assert.match(csv.body, /EMAIL PILOT,pilot@example\.com/);
+});
+
 test("stress endpoint starts bounded ops stress", async () => {
   const app = createApp({
     stressController: {

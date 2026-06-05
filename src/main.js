@@ -1,4 +1,4 @@
-import { initOciRuntime } from "./ociRuntime.js?v=20260603-live-toggle";
+import { initOciRuntime } from "./ociRuntime.js?v=20260605-email-collection";
 
 const GAME_WIDTH = 480;
 const BASE_GAME_HEIGHT = 640;

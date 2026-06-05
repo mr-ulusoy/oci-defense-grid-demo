@@ -35,3 +35,19 @@ create table ai_insights (
   insight varchar2(500) not null,
   created_at timestamp with time zone default systimestamp not null
 );
+
+create table demo_settings (
+  setting_key varchar2(64) primary key,
+  setting_value varchar2(4000),
+  updated_at timestamp with time zone default systimestamp not null
+);
+
+create table email_signups (
+  id varchar2(64) primary key,
+  callsign varchar2(32) not null,
+  email varchar2(254) not null,
+  created_at timestamp with time zone default systimestamp not null
+);
+
+create index email_signups_created_idx on email_signups (created_at desc);
+create index email_signups_email_idx on email_signups (email);

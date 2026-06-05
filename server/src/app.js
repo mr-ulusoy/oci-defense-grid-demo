@@ -30,6 +30,7 @@ const DEFAULT_OPS_SESSION_TTL_MINUTES = 480;
 const DEFAULT_OPS_AI_RATE_LIMIT_PER_MINUTE = 30;
 const DEFAULT_COACH_AI_RATE_LIMIT_PER_MINUTE = 12;
 const DEFAULT_OPS_CONTROL_RATE_LIMIT_PER_MINUTE = 8;
+const DEFAULT_EMAIL_SIGNUP_RATE_LIMIT_PER_MINUTE = 20;
 
 function positiveInteger(value, fallback) {
   const parsed = Number(value);
@@ -269,6 +270,29 @@ function normalizeCallsign(value) {
   return normalized || "UNKNOWN";
 }
 
+function normalizeEmail(value) {
+  return String(value ?? "").trim().toLowerCase().slice(0, 254);
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254;
+}
+
+function csvEscape(value) {
+  const text = String(value ?? "");
+  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function emailSignupsCsv(entries = []) {
+  const rows = [
+    "callsign,email,created_at",
+    ...entries.map((entry) =>
+      [entry.callsign, entry.email, entry.createdAt].map(csvEscape).join(",")
+    )
+  ];
+  return `${rows.join("\n")}\n`;
+}
+
 export function createApp({
   store = createStore(),
   createInsight = createCopilotInsight,
@@ -304,6 +328,15 @@ export function createApp({
     ),
     keyFn: (req) => `${clientIp(req)}:${String(req.body?.sessionId ?? "anonymous").slice(0, 80)}`,
     message: "Coach AI rate limit exceeded."
+  });
+  const emailSignupRateLimit = createFixedWindowRateLimit({
+    name: "email-signup",
+    max: positiveInteger(
+      process.env.EMAIL_SIGNUP_RATE_LIMIT_PER_MINUTE,
+      DEFAULT_EMAIL_SIGNUP_RATE_LIMIT_PER_MINUTE
+    ),
+    keyFn: clientIp,
+    message: "Email signup rate limit exceeded."
   });
 
   app.set("trust proxy", true);
@@ -377,6 +410,52 @@ export function createApp({
 
     await store.recordEvents(events);
     res.status(202).json({ accepted: events.length });
+  });
+
+  app.get("/api/email-collection/status", async (req, res) => {
+    res.json(await store.emailCollectionStatus());
+  });
+
+  app.post("/api/email-collection/status", requireOpsAccess, opsControlRateLimit, async (req, res) => {
+    res.json(await store.setEmailCollectionEnabled(req.body?.enabled === true));
+  });
+
+  app.post("/api/email-collection/entries", emailSignupRateLimit, async (req, res) => {
+    const status = await store.emailCollectionStatus();
+    if (!status.enabled) {
+      res.status(409).json({ error: "Email collection is disabled." });
+      return;
+    }
+
+    const callsign = normalizeCallsign(req.body?.callsign);
+    const email = normalizeEmail(req.body?.email);
+    if (callsign === "UNKNOWN") {
+      res.status(400).json({ error: "Callsign is required." });
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      res.status(400).json({ error: "A valid email address is required." });
+      return;
+    }
+
+    res.status(202).json(await store.recordEmailSignup({ callsign, email }));
+  });
+
+  app.get("/api/email-collection/entries", requireOpsAccess, async (req, res) => {
+    const result = await store.emailSignups();
+    res.json({
+      ...result,
+      count: result.entries.length
+    });
+  });
+
+  app.get("/api/email-collection/export.csv", requireOpsAccess, async (req, res) => {
+    const result = await store.emailSignups();
+    res
+      .type("text/csv")
+      .set("Content-Disposition", 'attachment; filename="oci-defense-grid-emails.csv"')
+      .send(emailSignupsCsv(result.entries));
   });
 
   app.get("/api/leaderboard", async (req, res) => {

@@ -1,5 +1,6 @@
 import { archiveEventsToObjectStorage, publishEventsToStreaming } from "./ociSinks.js";
 import { createRedisLivePlayers } from "./livePlayers.js";
+import { randomUUID } from "node:crypto";
 
 const MAX_EVENTS = 5000;
 const SEED_LEADERBOARD = process.env.SEED_DEMO_LEADERBOARD === "true" ? [
@@ -95,6 +96,27 @@ async function ensureAutonomousSchema(connection) {
       )
     `)
   );
+  await ignoreAlreadyExists(() =>
+    connection.execute(`
+      create table demo_settings (
+        setting_key varchar2(64) primary key,
+        setting_value varchar2(4000),
+        updated_at timestamp with time zone default systimestamp not null
+      )
+    `)
+  );
+  await ignoreAlreadyExists(() =>
+    connection.execute(`
+      create table email_signups (
+        id varchar2(64) primary key,
+        callsign varchar2(32) not null,
+        email varchar2(254) not null,
+        created_at timestamp with time zone default systimestamp not null
+      )
+    `)
+  );
+  await ignoreAlreadyExists(() => connection.execute("create index email_signups_created_idx on email_signups (created_at desc)"));
+  await ignoreAlreadyExists(() => connection.execute("create index email_signups_email_idx on email_signups (email)"));
 
   schemaReady = true;
 }
@@ -187,6 +209,10 @@ export function createStore() {
   const leaderboard = [...SEED_LEADERBOARD];
   const insights = [];
   const livePlayers = createRedisLivePlayers();
+  const emailCollection = {
+    enabled: false,
+    signups: []
+  };
 
   async function persistToAutonomousDb(batch) {
     const connection = await createOracleConnection();
@@ -319,6 +345,116 @@ export function createStore() {
     } catch (error) {
       await connection.rollback().catch(() => {});
       throw error;
+    } finally {
+      await connection.close();
+    }
+  }
+
+  async function readDemoSettingFromAutonomousDb(key) {
+    const connection = await createOracleConnection();
+    if (!connection) {
+      return null;
+    }
+
+    try {
+      await ensureAutonomousSchema(connection);
+      const result = await connection.execute(
+        `select setting_value
+         from demo_settings
+         where setting_key = :settingKey
+         fetch first 1 rows only`,
+        { settingKey: key },
+        await oracleObjectOptions()
+      );
+      return result.rows?.[0]?.SETTING_VALUE ?? null;
+    } finally {
+      await connection.close();
+    }
+  }
+
+  async function writeDemoSettingToAutonomousDb(key, value) {
+    const connection = await createOracleConnection();
+    if (!connection) {
+      return "disabled";
+    }
+
+    try {
+      await ensureAutonomousSchema(connection);
+      await connection.execute(
+        `merge into demo_settings target
+         using (
+           select :settingKey setting_key, :settingValue setting_value
+           from dual
+         ) source
+         on (target.setting_key = source.setting_key)
+         when matched then update set
+           target.setting_value = source.setting_value,
+           target.updated_at = systimestamp
+         when not matched then insert (
+           setting_key, setting_value
+         ) values (
+           source.setting_key, source.setting_value
+         )`,
+        { settingKey: key, settingValue: String(value) },
+        { autoCommit: true }
+      );
+      return "connected";
+    } finally {
+      await connection.close();
+    }
+  }
+
+  async function recordEmailSignupToAutonomousDb(entry) {
+    const connection = await createOracleConnection();
+    if (!connection) {
+      return "disabled";
+    }
+
+    try {
+      await ensureAutonomousSchema(connection);
+      await connection.execute(
+        `insert into email_signups (
+           id, callsign, email, created_at
+         ) values (
+           :id, :callsign, :email, :createdAt
+         )`,
+        {
+          id: entry.id,
+          callsign: entry.callsign,
+          email: entry.email,
+          createdAt: new Date(entry.createdAt)
+        },
+        { autoCommit: true }
+      );
+      return "connected";
+    } finally {
+      await connection.close();
+    }
+  }
+
+  async function emailSignupsFromAutonomousDb() {
+    const connection = await createOracleConnection();
+    if (!connection) {
+      return null;
+    }
+
+    try {
+      await ensureAutonomousSchema(connection);
+      const result = await connection.execute(
+        `select callsign, email,
+                to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.FF3"Z"') created_at
+         from email_signups
+         order by created_at desc
+         fetch first 1000 rows only`,
+        [],
+        await oracleObjectOptions()
+      );
+
+      return (result.rows ?? []).map((row) => ({
+        callsign: row.CALLSIGN,
+        email: row.EMAIL,
+        createdAt: row.CREATED_AT
+      }));
     } finally {
       await connection.close();
     }
@@ -669,6 +805,96 @@ export function createStore() {
     async recordInsight(insight) {
       insights.push(insight);
       insights.splice(0, Math.max(0, insights.length - 50));
+    },
+
+    async emailCollectionStatus() {
+      try {
+        const stored = await readDemoSettingFromAutonomousDb("email_collection_enabled");
+        if (stored !== null) {
+          emailCollection.enabled = stored === "true";
+          return {
+            enabled: emailCollection.enabled,
+            source: "autonomousDatabase"
+          };
+        }
+      } catch (error) {
+        console.warn("Autonomous Database email collection status read failed, using memory fallback.", error.message);
+      }
+
+      return {
+        enabled: emailCollection.enabled,
+        source: "memory"
+      };
+    },
+
+    async setEmailCollectionEnabled(enabled) {
+      emailCollection.enabled = enabled === true;
+      try {
+        const source = await writeDemoSettingToAutonomousDb(
+          "email_collection_enabled",
+          emailCollection.enabled ? "true" : "false"
+        );
+        return {
+          enabled: emailCollection.enabled,
+          source: source === "connected" ? "autonomousDatabase" : "memory"
+        };
+      } catch (error) {
+        console.warn("Autonomous Database email collection status write failed, using memory fallback.", error.message);
+      }
+
+      return {
+        enabled: emailCollection.enabled,
+        source: "memory"
+      };
+    },
+
+    async recordEmailSignup({ callsign, email }) {
+      const entry = {
+        id: randomUUID(),
+        callsign,
+        email,
+        createdAt: new Date().toISOString()
+      };
+      emailCollection.signups.unshift(entry);
+      emailCollection.signups.splice(500);
+
+      try {
+        const source = await recordEmailSignupToAutonomousDb(entry);
+        return {
+          entry: { callsign: entry.callsign, email: entry.email, createdAt: entry.createdAt },
+          source: source === "connected" ? "autonomousDatabase" : "memory"
+        };
+      } catch (error) {
+        console.warn("Autonomous Database email signup write failed, using memory fallback.", error.message);
+      }
+
+      return {
+        entry: { callsign: entry.callsign, email: entry.email, createdAt: entry.createdAt },
+        source: "memory"
+      };
+    },
+
+    async emailSignups() {
+      try {
+        const entries = await emailSignupsFromAutonomousDb();
+        if (entries) {
+          return {
+            entries,
+            source: "autonomousDatabase"
+          };
+        }
+      } catch (error) {
+        console.warn("Autonomous Database email signup read failed, using memory fallback.", error.message);
+      }
+
+      return {
+        entries: emailCollection.signups.map((entry) => ({
+          callsign: entry.callsign,
+          email: entry.email,
+          createdAt: entry.createdAt
+        })),
+        source: "memory"
+      };
     },
 
     async resetDemoData() {

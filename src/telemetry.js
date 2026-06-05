@@ -357,6 +357,66 @@ export class OciTelemetry {
     }
   }
 
+  async emailCollectionStatus() {
+    try {
+      const result = await fetch(`${this.apiBase}/email-collection/status`, {
+        credentials: "same-origin",
+        cache: "no-store"
+      }).then(readJson);
+      this.offline = false;
+      return result;
+    } catch {
+      this.offline = true;
+      return {
+        enabled: false,
+        source: "fallback"
+      };
+    }
+  }
+
+  async setEmailCollectionEnabled(enabled) {
+    const result = await fetch(`${this.apiBase}/email-collection/status`, {
+      method: "POST",
+      headers: this.jsonHeaders(),
+      credentials: "same-origin",
+      body: JSON.stringify({ enabled: enabled === true })
+    }).then(readJson);
+    this.offline = false;
+    return result;
+  }
+
+  async saveEmailSignup({ callsign, email }) {
+    const result = await fetch(`${this.apiBase}/email-collection/entries`, {
+      method: "POST",
+      headers: this.jsonHeaders(),
+      credentials: "same-origin",
+      body: JSON.stringify({ callsign, email })
+    }).then(readJson);
+    this.offline = false;
+    return result;
+  }
+
+  async emailCollectionEntries() {
+    try {
+      const result = await fetch(`${this.apiBase}/email-collection/entries`, {
+        credentials: "same-origin",
+        cache: "no-store"
+      }).then(readJson);
+      this.offline = false;
+      return result;
+    } catch {
+      this.offline = true;
+      return {
+        entries: [],
+        source: "fallback"
+      };
+    }
+  }
+
+  emailCollectionExportUrl() {
+    return `${this.apiBase}/email-collection/export.csv`;
+  }
+
   async askCopilot(snapshot, options = {}) {
     if (!this.config.copilotEnabled) {
       return {

@@ -1,4 +1,4 @@
-import { OciTelemetry } from "./telemetry.js?v=20260603-live-toggle";
+import { OciTelemetry } from "./telemetry.js?v=20260605-email-collection";
 
 const params = new URLSearchParams(window.location.search);
 export const isOpsView = params.get("ops") === "1";
@@ -36,10 +36,6 @@ const elements = {
   livePlayers: document.getElementById("livePlayersList"),
   livePlayersCount: document.getElementById("livePlayersCount"),
   livePlayersStatus: document.getElementById("livePlayersStatus"),
-  eventAnalyticsStatus: document.getElementById("eventAnalyticsStatus"),
-  eventRate1m: document.getElementById("eventRate1m"),
-  eventRate5m: document.getElementById("eventRate5m"),
-  eventRate15m: document.getElementById("eventRate15m"),
   leaderboard: document.getElementById("leaderboardList"),
   askCopilot: document.getElementById("askCopilot"),
   copilotActions: document.querySelectorAll("[data-copilot-mode]"),
@@ -55,7 +51,15 @@ const elements = {
   opsLoginStatus: document.getElementById("opsLoginStatus"),
   refreshLeaderboard: document.getElementById("refreshLeaderboard"),
   gameQrImage: document.getElementById("gameQrImage"),
-  gameQrLink: document.getElementById("gameQrLink")
+  gameQrLink: document.getElementById("gameQrLink"),
+  emailCollectionControl: document.getElementById("emailCollectionControl"),
+  emailCollectionToggle: document.getElementById("emailCollectionToggle"),
+  emailCollectionState: document.getElementById("emailCollectionState"),
+  emailCollectionLink: document.getElementById("emailCollectionLink"),
+  emailCollectionPanel: document.getElementById("email-collection"),
+  emailCollectionList: document.getElementById("emailCollectionList"),
+  emailCollectionCount: document.getElementById("emailCollectionCount"),
+  emailCsvDownload: document.getElementById("emailCsvDownload")
 };
 
 const architecture = {
@@ -202,6 +206,119 @@ async function renderGameQrCode() {
   elements.gameQrImage.hidden = false;
 }
 
+function shouldRevealEmailCollectionPanel() {
+  return params.get("emails") === "1" || window.location.hash === "#email-collection";
+}
+
+function formatEmailDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "--";
+  return date.toLocaleString([], {
+    dateStyle: "medium",
+    timeStyle: "short"
+  });
+}
+
+function renderEmailCollectionStatus(status = {}) {
+  const enabled = status.enabled === true;
+  if (elements.emailCollectionToggle) {
+    elements.emailCollectionToggle.checked = enabled;
+  }
+  if (elements.emailCollectionState) {
+    elements.emailCollectionState.textContent = enabled ? "On" : "Off";
+    elements.emailCollectionState.classList.toggle("is-on", enabled);
+  }
+  elements.emailCollectionControl?.classList.toggle("is-enabled", enabled);
+}
+
+function renderEmailCollectionEntries(result = {}) {
+  const entries = Array.isArray(result.entries) ? result.entries : [];
+  if (elements.emailCollectionCount) {
+    elements.emailCollectionCount.textContent = `${entries.length} saved`;
+  }
+  if (!elements.emailCollectionList) return;
+
+  if (entries.length === 0) {
+    elements.emailCollectionList.innerHTML = '<p class="email-collection-empty">No pilot emails collected yet.</p>';
+    return;
+  }
+
+  elements.emailCollectionList.innerHTML = `
+    <div class="email-collection-row is-header">
+      <span>Callsign</span>
+      <span>Email</span>
+      <span>Created</span>
+    </div>
+    ${entries.map((entry) => `
+      <div class="email-collection-row">
+        <strong>${escapeHtml(entry.callsign ?? "UNKNOWN")}</strong>
+        <a href="mailto:${escapeHtml(entry.email ?? "")}">${escapeHtml(entry.email ?? "")}</a>
+        <span>${escapeHtml(formatEmailDate(entry.createdAt))}</span>
+      </div>
+    `).join("")}
+  `;
+}
+
+async function refreshEmailCollectionEntries({ reveal = false } = {}) {
+  if (!isOpsView || !elements.emailCollectionPanel) return;
+  if (reveal) {
+    elements.emailCollectionPanel.hidden = false;
+  }
+  renderEmailCollectionEntries(await telemetry.emailCollectionEntries());
+}
+
+async function refreshEmailCollectionControls({ reveal = false } = {}) {
+  if (!isOpsView || !elements.emailCollectionToggle) return;
+  renderEmailCollectionStatus(await telemetry.emailCollectionStatus());
+  if (reveal || (elements.emailCollectionPanel && !elements.emailCollectionPanel.hidden)) {
+    await refreshEmailCollectionEntries({ reveal: true });
+  }
+}
+
+function bindEmailCollectionControls() {
+  if (!isOpsView || !elements.emailCollectionControl || elements.emailCollectionControl.dataset.bound === "true") return;
+  elements.emailCollectionControl.dataset.bound = "true";
+
+  if (elements.emailCsvDownload) {
+    elements.emailCsvDownload.href = telemetry.emailCollectionExportUrl();
+  }
+
+  elements.emailCollectionToggle?.addEventListener("change", async () => {
+    const wanted = elements.emailCollectionToggle.checked;
+    elements.emailCollectionToggle.disabled = true;
+    if (elements.emailCollectionState) {
+      elements.emailCollectionState.textContent = "Saving...";
+    }
+
+    try {
+      const status = await telemetry.setEmailCollectionEnabled(wanted);
+      renderEmailCollectionStatus(status);
+      if (status.enabled) {
+        await refreshEmailCollectionEntries({ reveal: true });
+      }
+    } catch {
+      elements.emailCollectionToggle.checked = !wanted;
+      if (elements.emailCollectionState) {
+        elements.emailCollectionState.textContent = "Failed";
+        elements.emailCollectionState.classList.remove("is-on");
+      }
+    } finally {
+      elements.emailCollectionToggle.disabled = false;
+    }
+  });
+
+  elements.emailCollectionLink?.addEventListener("click", async (event) => {
+    event.preventDefault();
+    const url = new window.URL(window.location.href);
+    url.searchParams.set("ops", "1");
+    url.searchParams.set("emails", "1");
+    url.hash = "email-collection";
+    window.history.replaceState(null, "", url);
+    await refreshEmailCollectionEntries({ reveal: true });
+    elements.emailCollectionPanel?.scrollIntoView({ block: "start", behavior: "smooth" });
+  });
+}
+
 async function ensureOpsAuthenticated() {
   if (!isOpsView) return true;
 
@@ -337,24 +454,6 @@ function livePlayerRouteLabel(player = {}) {
 
 function renderEventAnalytics(analytics = {}) {
   if (!isOpsView) return;
-
-  if (elements.eventAnalyticsStatus) {
-    const sourceLabel = {
-      autonomousDatabase: "ADB game_events",
-      memory: "Memory fallback",
-      browser: "Browser fallback"
-    };
-    elements.eventAnalyticsStatus.textContent = sourceLabel[analytics.source] ?? "ADB game_events";
-  }
-  if (elements.eventRate1m) {
-    elements.eventRate1m.textContent = formatEventsPerMinute(analytics.windows?.last1m, 1);
-  }
-  if (elements.eventRate5m) {
-    elements.eventRate5m.textContent = formatEventsPerMinute(analytics.windows?.last5m, 5);
-  }
-  if (elements.eventRate15m) {
-    elements.eventRate15m.textContent = formatEventsPerMinute(analytics.windows?.last15m, 15);
-  }
   renderArchitecture(telemetry.status, analytics);
 }
 
@@ -444,11 +543,6 @@ function eventChipsHtml(eventCounts = {}) {
     (eventType) =>
       `<span class="event-chip"><span>${eventType.label}</span><strong>${Number(eventCounts[eventType.key] ?? 0)}</strong></span>`
   ).join("");
-}
-
-function formatEventsPerMinute(count, minutes) {
-  const rate = Number(count ?? 0) / minutes;
-  return rate >= 10 ? String(Math.round(rate)) : rate.toFixed(1);
 }
 
 function formatPercentlessLatency(value) {
@@ -1418,6 +1512,8 @@ export async function initOciRuntime() {
   if (isOpsView) {
     renderGameQrCode();
     renderStatus(telemetry.status);
+    bindEmailCollectionControls();
+    await refreshEmailCollectionControls({ reveal: shouldRevealEmailCollectionPanel() });
     renderLivePlayers(await telemetry.refreshLivePlayers());
     renderEventAnalytics(await telemetry.eventAnalytics());
     await refreshLeaderboardBoard();
@@ -1471,6 +1567,9 @@ export async function initOciRuntime() {
       ]);
       renderLivePlayers(livePlayers, analytics);
       renderEventAnalytics(eventAnalytics);
+      if (elements.emailCollectionPanel && !elements.emailCollectionPanel.hidden) {
+        await refreshEmailCollectionEntries();
+      }
     }
     setConnection(telemetry.offline);
   }, window.OCI_DEFENSE_CONFIG.telemetryIntervalMs);

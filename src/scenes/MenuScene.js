@@ -295,6 +295,7 @@ export default class MenuScene extends Phaser.Scene {
 
     setupCallsignControls() {
         this.callsignInput = document.getElementById('pilotCallsign');
+        this.emailInput = document.getElementById('pilotEmail');
         this.startButton = document.getElementById('startMission');
         this.pilotBar = this.callsignInput?.closest('.pilot-bar');
 
@@ -309,6 +310,9 @@ export default class MenuScene extends Phaser.Scene {
             this.saveCallsign();
             this.callsignLabel?.setText(this.callsignText());
             this.pilotBar?.classList.remove('needs-name');
+        };
+        this.emailInputHandler = () => {
+            this.pilotBar?.classList.remove('needs-email');
         };
 
         this.lastPilotPointerActionAt = 0;
@@ -330,13 +334,17 @@ export default class MenuScene extends Phaser.Scene {
         };
 
         this.callsignInput.addEventListener('input', this.inputHandler);
+        this.emailInput?.addEventListener('input', this.emailInputHandler);
         this.callsignInput.addEventListener('keydown', this.inputKeyHandler);
+        this.emailInput?.addEventListener('keydown', this.inputKeyHandler);
         this.startButton.addEventListener('pointerup', this.pointerPilotHandler);
         this.startButton.addEventListener('click', this.launchHandler);
 
         this.events.once('shutdown', () => {
             this.callsignInput?.removeEventListener('input', this.inputHandler);
+            this.emailInput?.removeEventListener('input', this.emailInputHandler);
             this.callsignInput?.removeEventListener('keydown', this.inputKeyHandler);
+            this.emailInput?.removeEventListener('keydown', this.inputKeyHandler);
             this.startButton?.removeEventListener('pointerup', this.pointerPilotHandler);
             this.startButton?.removeEventListener('click', this.launchHandler);
         });
@@ -391,7 +399,8 @@ export default class MenuScene extends Phaser.Scene {
         this.launch();
     }
 
-    registerPilot() {
+    async registerPilot() {
+        if (this.registeringPilot) return;
         this.syncCallsignFromInput();
 
         if (!this.callsign) {
@@ -399,8 +408,32 @@ export default class MenuScene extends Phaser.Scene {
             return;
         }
 
-        this.pilotBar?.classList.remove('needs-name');
+        const registerPilotDetails = window.OCI_DEFENSE_REGISTER_PILOT_DETAILS;
+        if (typeof registerPilotDetails === 'function') {
+            this.registeringPilot = true;
+            if (this.startButton) {
+                this.startButton.disabled = true;
+            }
+            try {
+                const result = await registerPilotDetails();
+                this.syncCallsignFromInput();
+                if (!result?.ok) {
+                    if (result?.reason === 'callsign') {
+                        this.showCallsignRequired();
+                    }
+                    return;
+                }
+            } finally {
+                this.registeringPilot = false;
+                if (this.startButton) {
+                    this.startButton.disabled = false;
+                }
+            }
+        }
+
+        this.pilotBar?.classList.remove('needs-name', 'needs-email');
         this.callsignInput?.blur();
+        this.emailInput?.blur();
         this.requestMobileFullscreen();
         document.body.classList.add('game-active');
         window.OCI_DEFENSE_LAYOUT_CHANGED?.();

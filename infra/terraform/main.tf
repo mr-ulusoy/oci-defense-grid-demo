@@ -558,6 +558,33 @@ resource "oci_apigateway_deployment" "demo" {
     }
 
     routes {
+      path    = "/api/email-collection/status"
+      methods = ["GET", "POST", "OPTIONS"]
+      backend {
+        type = "HTTP_BACKEND"
+        url  = "http://${local.api_lb_ip}:3000/api/email-collection/status"
+      }
+    }
+
+    routes {
+      path    = "/api/email-collection/entries"
+      methods = ["GET", "POST", "OPTIONS"]
+      backend {
+        type = "HTTP_BACKEND"
+        url  = "http://${local.api_lb_ip}:3000/api/email-collection/entries"
+      }
+    }
+
+    routes {
+      path    = "/api/email-collection/export.csv"
+      methods = ["GET", "OPTIONS"]
+      backend {
+        type = "HTTP_BACKEND"
+        url  = "http://${local.api_lb_ip}:3000/api/email-collection/export.csv"
+      }
+    }
+
+    routes {
       path    = "/api/stress"
       methods = ["GET", "POST", "OPTIONS"]
       backend {
