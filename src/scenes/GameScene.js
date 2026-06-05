@@ -1841,21 +1841,48 @@ export default class GameScene extends Phaser.Scene {
             lineSpacing: desktopLayout ? 3 : 5,
             wordWrap: { width: desktopLayout ? 392 : 384 }
         });
-        const optionGap = desktopLayout ? 72 : tallLayout ? 90 : 84;
-        const optionHeight = desktopLayout ? 60 : tallLayout ? 78 : 70;
-        const optionLabelOffsetY = desktopLayout ? 22 : tallLayout ? 29 : 27;
+        const optionWidth = 408;
+        const optionTextWidth = desktopLayout ? 358 : 350;
+        const optionFontSize = desktopLayout ? '12px' : '14px';
+        const optionStrokeThickness = desktopLayout ? 2 : 3;
+        const optionLineSpacing = desktopLayout ? 2 : 4;
+        const optionPaddingY = desktopLayout ? 13 : 16;
+        const optionMinHeight = desktopLayout ? 60 : tallLayout ? 86 : 74;
+        const optionSpacing = desktopLayout ? 12 : tallLayout ? 14 : 13;
         const promptBottom = prompt.y + prompt.height;
-        const optionStartY = tallLayout
-            ? 266
+        let optionTop = tallLayout
+            ? Math.max(258, promptBottom + 58)
             : desktopLayout
-                ? Math.max(220, promptBottom + optionHeight / 2 + 20)
-                : Math.max(260, promptBottom + optionHeight / 2 + 28);
-        const lastOptionY = optionStartY + optionGap * (question.options.length - 1);
+                ? Math.max(210, promptBottom + 24)
+                : Math.max(248, promptBottom + 36);
+        const optionLayouts = question.options.map((option, index) => {
+            const measure = this.add.text(-1000, -1000, `${String.fromCharCode(65 + index)}. ${option}`, {
+                fontFamily: 'monospace',
+                fontSize: optionFontSize,
+                fontStyle: 'bold',
+                strokeThickness: optionStrokeThickness,
+                lineSpacing: optionLineSpacing,
+                wordWrap: { width: optionTextWidth, useAdvancedWrap: true }
+            });
+            const height = Math.max(optionMinHeight, Math.ceil(measure.height + optionPaddingY * 2));
+            measure.destroy();
+
+            const layout = {
+                top: optionTop,
+                centerY: optionTop + height / 2,
+                height,
+                labelY: optionTop + optionPaddingY
+            };
+            optionTop += height + optionSpacing;
+            return layout;
+        });
+        const lastOption = optionLayouts.at(-1);
+        const lastOptionBottom = lastOption ? lastOption.top + lastOption.height : promptBottom;
         const answerY = tallLayout
-            ? Math.min(optionStartY + optionGap * 3 + 74, height - 300)
+            ? Math.min(lastOptionBottom + 64, height - 300)
             : desktopLayout
-                ? Math.min(lastOptionY + optionHeight / 2 + 28, height - 162)
-                : Math.min(lastOptionY + optionHeight / 2 + 58, height - 120);
+                ? Math.min(lastOptionBottom + 28, height - 162)
+                : Math.min(lastOptionBottom + 58, height - 120);
         const guideY = tallLayout
             ? Math.min(answerY + 112, height - 198)
             : desktopLayout
@@ -1890,19 +1917,19 @@ export default class GameScene extends Phaser.Scene {
         let coachPanel = null;
 
         question.options.forEach((option, index) => {
-            const y = optionStartY + index * optionGap;
-            const button = this.add.rectangle(240, y, 408, optionHeight, 0x102432, 0.94)
+            const layout = optionLayouts[index];
+            const button = this.add.rectangle(240, layout.centerY, optionWidth, layout.height, 0x102432, 0.94)
                 .setStrokeStyle(1, 0x2e4450)
                 .setInteractive({ useHandCursor: true });
-            const label = this.add.text(58, y - optionLabelOffsetY, `${String.fromCharCode(65 + index)}. ${option}`, {
+            const label = this.add.text(58, layout.labelY, `${String.fromCharCode(65 + index)}. ${option}`, {
                 fontFamily: 'monospace',
-                fontSize: desktopLayout ? '12px' : '14px',
+                fontSize: optionFontSize,
                 fontStyle: 'bold',
                 fill: '#ffffff',
                 stroke: '#000000',
-                strokeThickness: desktopLayout ? 2 : 3,
-                lineSpacing: desktopLayout ? 2 : 4,
-                wordWrap: { width: desktopLayout ? 358 : 350, useAdvancedWrap: true }
+                strokeThickness: optionStrokeThickness,
+                lineSpacing: optionLineSpacing,
+                wordWrap: { width: optionTextWidth, useAdvancedWrap: true }
             });
 
             button.on('pointerover', () => {
