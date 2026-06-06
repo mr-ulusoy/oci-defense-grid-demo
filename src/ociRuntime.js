@@ -1,4 +1,4 @@
-import { OciTelemetry } from "./telemetry.js?v=20260605-quiz-lift";
+import { OciTelemetry } from "./telemetry.js?v=20260606-quiz-clear";
 
 const params = new URLSearchParams(window.location.search);
 export const isContactsView = params.get("contacts") === "1";
