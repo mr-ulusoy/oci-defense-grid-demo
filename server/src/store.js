@@ -785,7 +785,7 @@ export function createStore() {
     },
 
     async livePlayers() {
-      return addEventCountsByRun(await livePlayers.list());
+      return livePlayers.list();
     },
 
     async liveAnalytics(runId) {

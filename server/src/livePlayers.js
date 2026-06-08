@@ -1,5 +1,6 @@
 const DEFAULT_TTL_SECONDS = 60;
 const EVENT_WINDOW_MS = 10000;
+const EVENT_TYPES = ["enemy_killed", "player_hit", "powerup", "extra_life", "boss_phase", "run_end", "heartbeat"];
 
 let redisClientPromise;
 
@@ -68,7 +69,27 @@ function playerIndexKey() {
   return `${redisPrefix()}:players`;
 }
 
-function playerSnapshot(event) {
+function emptyEventCounts() {
+  return Object.fromEntries(EVENT_TYPES.map((type) => [type, 0]));
+}
+
+function normalizeEventCounts(eventCounts) {
+  const normalized = emptyEventCounts();
+  for (const type of EVENT_TYPES) {
+    normalized[type] = Number(eventCounts?.[type] ?? 0);
+  }
+  return normalized;
+}
+
+function incrementEventCounts(eventCounts, type) {
+  const nextCounts = normalizeEventCounts(eventCounts);
+  if (EVENT_TYPES.includes(type)) {
+    nextCounts[type] += 1;
+  }
+  return nextCounts;
+}
+
+function playerSnapshot(event, eventCounts = emptyEventCounts()) {
   return {
     sessionId: event.sessionId,
     runId: event.runId,
@@ -81,6 +102,7 @@ function playerSnapshot(event) {
     fps: Number(event.metrics?.fps ?? 0),
     cloudAction: event.cloudAction ?? "none",
     eventType: event.type,
+    eventCounts: normalizeEventCounts(eventCounts),
     vm: event.vm?.name ?? "unknown",
     region: event.vm?.region ?? "unknown",
     lastSeen: event.serverTs ?? new Date().toISOString()
@@ -121,7 +143,9 @@ export function createMemoryLivePlayers() {
     async update(batch) {
       const now = Date.now();
       for (const event of batch) {
-        players.set(event.sessionId, playerSnapshot(event));
+        const existing = players.get(event.sessionId);
+        const eventCounts = incrementEventCounts(existing?.eventCounts, event.type);
+        players.set(event.sessionId, playerSnapshot(event, eventCounts));
         const timestamps = recentEvents.get(event.sessionId) ?? [];
         timestamps.push(now);
         recentEvents.set(event.sessionId, timestamps);
@@ -135,6 +159,7 @@ export function createMemoryLivePlayers() {
       return [...players.values()]
         .map((player) => ({
           ...player,
+          eventCounts: normalizeEventCounts(player.eventCounts),
           eventsPerSecond: Number(((recentEvents.get(player.sessionId)?.length ?? 0) / 10).toFixed(1))
         }))
         .sort((left, right) => right.score - left.score || Date.parse(right.lastSeen) - Date.parse(left.lastSeen));
@@ -184,10 +209,22 @@ export function createRedisLivePlayers() {
     const ttl = ttlSeconds();
     const cutoff = Date.now() - ttl * 1000;
     const eventCutoff = Date.now() - EVENT_WINDOW_MS;
+    const sessionIds = [...new Set(batch.map((event) => event.sessionId).filter(Boolean))];
+    const previousSnapshots = sessionIds.length > 0
+      ? (await client.mGet(sessionIds.map(playerKey))).map(parseSnapshot)
+      : [];
+    const countsBySession = new Map(
+      sessionIds.map((sessionId, index) => [sessionId, normalizeEventCounts(previousSnapshots[index]?.eventCounts)])
+    );
+
+    for (const event of batch) {
+      countsBySession.set(event.sessionId, incrementEventCounts(countsBySession.get(event.sessionId), event.type));
+    }
+
     const multi = client.multi();
 
     for (const event of batch) {
-      const snapshot = playerSnapshot(event);
+      const snapshot = playerSnapshot(event, countsBySession.get(event.sessionId));
       const seen = Date.parse(snapshot.lastSeen);
       multi.set(playerKey(snapshot.sessionId), JSON.stringify(snapshot), { EX: ttl });
       multi.zAdd(playerIndexKey(), [{ score: seen, value: snapshot.sessionId }]);
@@ -240,6 +277,7 @@ export function createRedisLivePlayers() {
         return snapshots
           .map((player, index) => ({
             ...player,
+            eventCounts: normalizeEventCounts(player.eventCounts),
             eventsPerSecond: Number((eventCounts[index] / 10).toFixed(1))
           }))
           .sort((left, right) => right.score - left.score || Date.parse(right.lastSeen) - Date.parse(left.lastSeen));
