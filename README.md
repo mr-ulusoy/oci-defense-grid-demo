@@ -85,9 +85,9 @@ See the full wireframe in [docs/oci-defense-grid-wireframe.md](docs/oci-defense-
 | OCI Cache | Stores short-lived live player snapshots shared across Functions and app VMs. |
 | Streaming | Durable backbone for gameplay telemetry events. The ops diagram shows Streaming delivering to data services; technically a background consumer/processor reads the stream. |
 | Object Storage | Receives raw NDJSON event archives written by the Streaming consumer/processor. |
-| Autonomous Database | Receives curated `game_events` rows from the Streaming consumer/processor for SQL analytics and the ops Event Analytics panel. |
+| Autonomous Database | Receives curated `game_events` rows from the Streaming consumer/processor for leaderboard, live architecture context and GenAI analytics. |
 | OCI Generative AI | GPT-OSS ops copilot insight and Flash-Lite player hints via the OCI SDK. |
-| IAM Dynamic Group and Policies | Manually created prerequisites that let app VMs and Functions call Streaming, Object Storage and GenAI, and let API Gateway invoke Functions. |
+| IAM Dynamic Group and Policies | Terraform-managed optional prerequisites that let app VMs and Functions call Streaming, Object Storage and GenAI, and let API Gateway invoke Functions. |
 | OCI Functions | Optional serverless cloud API path for `POST /api/events`, `GET /api/leaderboard`, `GET /api/players/live`, `GET /api/analytics/live` and `GET /api/analytics/events`. |
 
 ## Runtime API
@@ -158,7 +158,7 @@ heartbeat
 2. Create `infra/terraform/demo.tfvars` from the sanitized example.
 3. Fill in tenancy, compartment, region, SSH key, Ubuntu image OCID and `app_repo_url`.
 4. Keep `instance_pool_min_size = 2`, `instance_pool_initial_size = 2`, `instance_pool_max_size = 4` for the default autoscaling demo.
-5. Confirm the manual IAM prerequisites below exist before enabling `function_image`.
+5. Enable Terraform-managed IAM for new tenancies with `manage_demo_iam = true` before enabling `function_image`.
 6. Run:
 
 ```bash
@@ -184,19 +184,23 @@ terraform -chdir=infra/terraform apply -var-file=demo.tfvars
 
 Terraform outputs `game_url` and `api_gateway_endpoint`. The VM cloud-init writes `config.js` so the player browser calls API Gateway rather than bypassing it. The ops dashboard overrides that at runtime and calls same-origin `/api` for session-protected presenter endpoints.
 
-## Manual IAM Prerequisites
+## Terraform IAM Prerequisites
 
-This project treats IAM dynamic groups and policies as manual prerequisites. That keeps Terraform focused on demo infrastructure and avoids accidental changes to shared tenancy-level identity resources.
+For new tenancies, Terraform can create the IAM dynamic group and policies required by the demo. Enable it in your local `demo.tfvars`:
 
-Use these exact names for the current demo:
+```hcl
+manage_demo_iam = true
+```
+
+Terraform then creates these resources in the tenancy home region:
 
 | Resource | Name | Where |
 | --- | --- | --- |
-| Dynamic group | `dg_cengiz` | Identity domain `OracleIdentityCloudService` |
-| Telemetry/GenAI policy | `Game-Demo` | Demo compartment |
-| API Gateway invoke policy | `oci-defense-grid-apigw-functions` | Demo compartment |
+| Dynamic group | `dg_cengiz` | Tenancy root |
+| Telemetry/GenAI policy | `Game-Demo` | Tenancy root by default |
+| API Gateway invoke policy | `oci-defense-grid-apigw-functions` | Tenancy root by default |
 
-`dg_cengiz` must match both app VMs and OCI Functions in the demo compartment:
+`dg_cengiz` matches both app VMs and OCI Functions in the demo compartment:
 
 ```text
 Any {
@@ -205,7 +209,7 @@ Any {
 }
 ```
 
-`Game-Demo` must contain these statements. Use the identity-domain-qualified dynamic group name:
+`Game-Demo` grants the runtime principals access to Streaming, Object Storage and OCI Generative AI:
 
 ```text
 Allow dynamic-group OracleIdentityCloudService/dg_cengiz to use stream-push in compartment id <compartment_ocid>
@@ -216,13 +220,13 @@ Allow dynamic-group OracleIdentityCloudService/dg_cengiz to use generative-ai-fa
 
 For this demo, `<genai_compartment_ocid>` is usually the same as `<compartment_ocid>`. The Object Storage bucket name is available after Terraform creates the bucket, for example `oci-defense-grid-9591c7-raw-events`.
 
-`oci-defense-grid-apigw-functions` allows API Gateway to invoke OCI Functions backends:
+`oci-defense-grid-apigw-functions` lets API Gateway invoke OCI Functions backends:
 
 ```text
 Allow any-user to use functions-family in compartment id <compartment_ocid> where ALL {request.principal.type = 'ApiGateway', request.resource.compartment.id = '<compartment_ocid>'}
 ```
 
-If you rebuild in the same tenancy, keep the manual IAM resources above. If you deploy in a new tenancy, create the same dynamic group and policies before switching `/api/events` to OCI Functions.
+If your tenancy already has these shared IAM resources, keep `manage_demo_iam = false` and reuse the existing policies. If policy names differ, set `demo_dynamic_group_name`, `demo_runtime_policy_name`, and `api_gateway_invoke_policy_name` in `demo.tfvars`.
 
 ## OCI Functions Event Ingest
 
@@ -369,7 +373,7 @@ adb_data_storage_size_gb = 20
 adb_is_free_tier         = false
 ```
 
-Autonomous Database is the source of truth for permanent highscores and the ops Event Analytics panel. OCI Cache is only used for live player state and fast presenter metrics.
+Autonomous Database is the source of truth for permanent highscores, run summaries and analytics used by the ops dashboard and GenAI insights. OCI Cache is only used for live player state and fast presenter metrics.
 
 ## OCI Generative AI
 
@@ -436,9 +440,9 @@ ADB_PASSWORD=...
 ADB_CONNECT_STRING=...
 ```
 
-## Event Analytics
+## Analytics Data
 
-The presenter view reads `/api/analytics/events`, which summarizes the `game_events` table in Autonomous Database:
+The presenter view and GenAI insight layer read `/api/analytics/events`, which summarizes the `game_events` table in Autonomous Database:
 
 - Events per minute over the last 1, 5 and 15 minutes.
 - Counts for `enemy_killed`, `player_hit`, `powerup`, `extra_life`, `boss_phase`, `run_end` and `heartbeat`.
@@ -469,7 +473,7 @@ The customer-facing demo checks are:
 - Leaderboard shows score, level reached and event chips including extra lives.
 - Gameplay events appear in Streaming first, then a background consumer/processor writes Object Storage raw files.
 - Autonomous Database receives `game_events` from the background consumer/processor.
-- Ops HUD Event Analytics reads from Autonomous Database and falls back to memory locally.
+- Ops HUD live architecture and GenAI insight context read analytics from Autonomous Database and fall back to memory locally.
 - Ops HUD updates score, active VM, CPU, RAM, cores, disk throughput, latency, events/sec and copilot insight.
 - `/api/copilot` returns `401` without the ops session cookie and `200` after ops login.
 - Ops copilot returns an OCI GenAI insight when GenAI auth/policy is configured, otherwise a deterministic fallback.

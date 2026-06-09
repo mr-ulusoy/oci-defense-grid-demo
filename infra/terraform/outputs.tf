@@ -62,3 +62,18 @@ output "event_ingest_function_id" {
   description = "OCI Functions function OCID for event ingest when function_image is set."
   value       = try(oci_functions_function.optional_ingest[0].id, null)
 }
+
+output "demo_dynamic_group_name" {
+  description = "Terraform-managed IAM dynamic group name when manage_demo_iam is enabled."
+  value       = var.manage_demo_iam ? var.demo_dynamic_group_name : null
+}
+
+output "demo_runtime_policy_name" {
+  description = "Terraform-managed runtime policy name when manage_demo_iam is enabled."
+  value       = var.manage_demo_iam ? var.demo_runtime_policy_name : null
+}
+
+output "api_gateway_invoke_policy_name" {
+  description = "Terraform-managed API Gateway invoke policy name when manage_demo_iam is enabled."
+  value       = var.manage_demo_iam ? var.api_gateway_invoke_policy_name : null
+}

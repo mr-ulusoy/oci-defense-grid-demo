@@ -305,3 +305,39 @@ variable "function_image" {
   type        = string
   default     = ""
 }
+
+variable "manage_demo_iam" {
+  description = "Create the demo IAM dynamic group and policies in the tenancy home region. Enable this for new tenancies where the demo IAM prerequisites do not already exist."
+  type        = bool
+  default     = false
+}
+
+variable "demo_dynamic_group_name" {
+  description = "Name for the dynamic group that grants app VMs and OCI Functions resource-principal access to demo services."
+  type        = string
+  default     = "dg_cengiz"
+}
+
+variable "demo_identity_domain_name" {
+  description = "Identity domain prefix used when referring to the dynamic group in OCI policy statements."
+  type        = string
+  default     = "OracleIdentityCloudService"
+}
+
+variable "demo_runtime_policy_name" {
+  description = "Name for the policy that grants Streaming, Object Storage and GenAI access to the demo dynamic group."
+  type        = string
+  default     = "Game-Demo"
+}
+
+variable "api_gateway_invoke_policy_name" {
+  description = "Name for the policy that lets OCI API Gateway invoke demo OCI Functions."
+  type        = string
+  default     = "oci-defense-grid-apigw-functions"
+}
+
+variable "demo_iam_policy_compartment_ocid" {
+  description = "Compartment where Terraform creates IAM policies. Leave null to create tenancy-scoped policies in the root compartment."
+  type        = string
+  default     = null
+}

@@ -1,10 +1,10 @@
 #cloud-config
 package_update: true
 packages:
+  - ca-certificates
+  - curl
   - git
   - nginx
-  - nodejs
-  - npm
 
 write_files:
   - path: /tmp/oci-defense-config.js
@@ -96,7 +96,7 @@ write_files:
       server {
         listen 80;
         server_name _;
-        root /opt/oci-defense-grid;
+        root /opt/oci-defense-grid/dist;
         index index.html;
 
         location / {
@@ -113,13 +113,21 @@ write_files:
       }
 
 runcmd:
+  - curl -fsSL https://deb.nodesource.com/setup_20.x -o /tmp/nodesource_setup.sh
+  - bash /tmp/nodesource_setup.sh
+  - apt-get install -y nodejs
   - rm -rf /opt/oci-defense-grid
   - git clone --depth 1 --branch ${app_git_ref} ${app_repo_url} /opt/oci-defense-grid
   - cp /tmp/oci-defense-config.js /opt/oci-defense-grid/config.js
-  - cd /opt/oci-defense-grid && npm install --omit=dev
+  - cd /opt/oci-defense-grid && npm ci
+  - cd /opt/oci-defense-grid && npm run build
+  - cp /tmp/oci-defense-config.js /opt/oci-defense-grid/dist/config.js
   - printf 'INSTANCE_NAME=%s\n' "$(hostname)" > /etc/oci-defense-instance.env
   - rm -f /etc/nginx/sites-enabled/default
+  - rm -f /etc/nginx/conf.d/default.conf
   - systemctl daemon-reload
   - systemctl enable --now oci-defense-firewall
   - systemctl enable --now oci-defense-api
-  - systemctl enable --now nginx
+  - systemctl enable nginx
+  - nginx -t
+  - systemctl restart nginx

@@ -6,6 +6,11 @@ home_region      = "eu-frankfurt-1"
 oci_auth                = "SecurityToken"
 oci_config_file_profile = "DEFAULT"
 
+manage_demo_iam                = true
+demo_dynamic_group_name        = "dg_cengiz"
+demo_runtime_policy_name       = "Game-Demo"
+api_gateway_invoke_policy_name = "oci-defense-grid-apigw-functions"
+
 ssh_public_key      = "ssh-rsa AAAA..."
 instance_image_ocid = "ocid1.image.oc1.eu-stockholm-1.replace"
 

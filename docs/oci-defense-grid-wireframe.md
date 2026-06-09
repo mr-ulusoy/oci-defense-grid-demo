@@ -25,7 +25,7 @@ flowchart LR
     cache["OCI Cache<br/>Live player snapshots"]
     stream["OCI Streaming<br/>Gameplay events"]
     bucket["Object Storage<br/>Raw NDJSON events"]
-    adb["Autonomous Database<br/>game_events table<br/>ops Event Analytics"]
+    adb["Autonomous Database<br/>game_events table<br/>leaderboard and GenAI analytics"]
   end
 
   subgraph ai["OCI Generative AI"]
@@ -77,7 +77,7 @@ flowchart TB
   publicUrl["Public game URL<br/>http://&lt;web-lb-ip&gt;/"]
   playerView["Player view<br/>Original shooter, callsign, leaderboard"]
   opsUrl["Presenter URL<br/>http://&lt;web-lb-ip&gt;/?ops=1"]
-  opsHud["Ops HUD<br/>Active VM, CPU, RAM, cores, disk throughput,<br/>live players, leaderboard level, event chips,<br/>Event Analytics, AI insight"]
+  opsHud["Ops HUD<br/>Active VM, CPU, RAM, cores, disk throughput,<br/>live players, leaderboard level, event chips,<br/>live architecture and AI insight"]
 
   publicUrl --> playerView
   opsUrl --> playerView
@@ -96,9 +96,9 @@ flowchart TB
 | OCI Cache | Keeps live player snapshots shared across all active VM API backends. |
 | Streaming | Durable backbone between event ingest and downstream persistence. The ops HUD shows Streaming delivering to data services; the technical implementation uses a background consumer/processor to perform the writes. |
 | Object Storage | Stores raw event archives written by the Streaming consumer/processor as NDJSON for replay and audit. |
-| Autonomous Database | Stores curated `game_events` rows written by the Streaming consumer/processor for SQL analytics and the ops Event Analytics panel. |
+| Autonomous Database | Stores curated `game_events` rows written by the Streaming consumer/processor for leaderboard, live architecture context and GenAI analytics. |
 | Generative AI | GPT-OSS ops copilot insight and Flash-Lite player hints via OCI GenAI SDK. |
-| IAM Dynamic Group and Policies | Manually managed prerequisites. `dg_cengiz` matches app VMs and Functions; `Game-Demo` grants Streaming/Object Storage/GenAI; `oci-defense-grid-apigw-functions` lets API Gateway invoke Functions. |
+| IAM Dynamic Group and Policies | Terraform-managed optional prerequisites. `dg_cengiz` matches app VMs and Functions; `Game-Demo` grants Streaming/Object Storage/GenAI; `oci-defense-grid-apigw-functions` lets API Gateway invoke Functions. |
 | OCI Functions | Optional cloud API backend for `POST /api/events`, leaderboard, live players and analytics reads when `function_image` points to an OCIR image. |
 
 ## Current GenAI Path

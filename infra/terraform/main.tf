@@ -682,6 +682,8 @@ resource "oci_functions_function" "optional_ingest" {
     ADB_CONNECT_STRING          = local.adb_app_connect_string
     ADB_PASSWORD                = var.adb_admin_password
     ADB_USER                    = var.adb_user
+    OCI_BUCKET_NAME             = oci_objectstorage_bucket.raw_events.name
+    OCI_NAMESPACE               = data.oci_objectstorage_namespace.namespace.namespace
     OCI_REGION                  = var.region
     OCI_STREAM_MESSAGE_ENDPOINT = oci_streaming_stream.events.messages_endpoint
     OCI_STREAM_OCID             = oci_streaming_stream.events.id
