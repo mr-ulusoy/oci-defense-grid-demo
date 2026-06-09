@@ -61,6 +61,9 @@ const BRIEFINGS_BY_LEVEL = {
     }
 };
 
+const BRIEFING_SCROLL_SPEED = 0.62;
+const BRIEFING_CONTINUE_READY_AT = 0.78;
+
 const QUIZ_BY_LEVEL = {
     1: {
         id: 'region-fault-domains',
@@ -1617,6 +1620,7 @@ export default class GameScene extends Phaser.Scene {
             ease: 'Power2'
         });
         let scrollTween = null;
+        let continueReadyTimer = null;
 
         const setContinueReady = (ready) => {
             briefingReady = ready;
@@ -1626,12 +1630,18 @@ export default class GameScene extends Phaser.Scene {
 
         const startScroll = () => {
             if (scrollTween) scrollTween.stop();
+            if (continueReadyTimer) continueReadyTimer.remove(false);
             bodyText.setY(textStartY);
             setContinueReady(false);
+            const scrollDuration = Math.max(12000, Math.round(briefing.durationMs * BRIEFING_SCROLL_SPEED));
+            continueReadyTimer = this.time.delayedCall(
+                Math.round(scrollDuration * BRIEFING_CONTINUE_READY_AT),
+                () => setContinueReady(true)
+            );
             scrollTween = this.tweens.add({
                 targets: bodyText,
                 y: 274 - bodyText.height,
-                duration: briefing.durationMs,
+                duration: scrollDuration,
                 ease: 'Linear',
                 onComplete: () => setContinueReady(true)
             });
@@ -1643,6 +1653,7 @@ export default class GameScene extends Phaser.Scene {
             if (finished || !briefingReady) return;
             finished = true;
             if (scrollTween) scrollTween.stop();
+            if (continueReadyTimer) continueReadyTimer.remove(false);
             this.input.keyboard.off('keydown-SPACE', handleBriefingKey);
             this.input.keyboard.off('keydown-ENTER', handleBriefingKey);
             this.tweens.add({
